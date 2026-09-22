@@ -1,6 +1,30 @@
-# SAMI v2.7.13 — Test report
+# SAMI v2.7.14 — Test report
 
 Tested 22 September 2026. A pass below means the check was run against the final release tree; limitations are stated explicitly.
+
+## v2.7.14 feedback-fix verification
+
+The v2.7.14 delta was built from the completed v2.7.13 field/CAD/services release. The following checks were rerun against the final v2.7.14 source tree:
+
+| Area | Result | Evidence |
+|---|---|---|
+| JavaScript syntax | **PASS** | All 23 shipped `.js` files pass `node --check`. |
+| CSS parse | **PASS** | `app.css` parses with zero top-level `tinycss2` errors. |
+| Version/manifest | **PASS** | `VERSION.json`, generated runtime version, service worker and manifest are stamped `2.7.14`; manifest primary display is `standalone` and no longer prefers window-controls-overlay. |
+| Installed-app detection | **PASS — static** | Bootstrap, cinema, engine and workspace recognise standalone, minimal-ui, window-controls-overlay and `navigator.windowControlsOverlay.visible`. |
+| Precision controls | **PASS — static/syntax** | Unified pointer drag path is present; exact pointer-up placement, map-tap repositioning, **＋ Point**, **◎ Me**, current-position geolocation, nudge/keyboard actions and map-under-crosshair guidance are present. |
+| Placement stale-state fix | **PASS — static/syntax** | Tool start and route-pick paths clear stale click/drag/pan suppression before accepting a deliberate map point. |
+| Route W3W | **PASS — static/syntax** | Dropped route point calls reverse-geocode and what3words conversion when a key is configured; route state stores coordinate/address/W3W independently. |
+| Services | **PASS — static/syntax** | Checked layers trigger the existing mapping refresh; public reference query includes gas/water/wastewater plus drain/ditch tags and retains failure fallbacks. |
+| OHL popup | **PASS — static/syntax** | Compact OHL card contains immediate Add/Update support and Edit actions. Existing v2.7.13 OHL fixture coverage remains unchanged. |
+| Promo timing | **PASS — static** | From the PLAN ACCESS cue onwards the visual text lead changes from 0.9 s to 1.5 s, including the closing SAMI morph sequence. |
+| Light UI/sidebar/tabs | **PASS — CSS parse/static** | Light-mode topbar/bubbles/inspector/precision controls use appearance tokens; nested compact sections lose stagger indentation; inspector tabs have zero gap/radius and connect to panel body. |
+
+### Browser-run limitation for this delta
+
+A new Playwright v2.7.14 integration script was prepared for installed-PWA detection, touch cursor drag, asset placement, route W3W, services/OHL and light-theme rendering. Chromium launches in this environment, but every navigation is blocked by the host policy with `net::ERR_BLOCKED_BY_ADMINISTRATOR`, including a fully intercepted synthetic HTTPS origin. Therefore **no fresh v2.7.14 browser/device pass is claimed**. The v2.7.13 results below are retained as the immediately preceding regression baseline and the v2.7.14-specific behaviours are marked for first-priority real-device acceptance.
+
+## v2.7.13 regression baseline
 
 ## Release provenance
 
@@ -12,7 +36,7 @@ Tested 22 September 2026. A pass below means the check was run against the final
 
 | Area | Result | Evidence |
 |---|---|---|
-| Static integrity | **PASS** | 24 JavaScript files passed `node --check`; version 2.7.13 is consistent; manifest and 34 HTML references validated; all baseline files retained and classified; recorded voice wording is unchanged. |
+| Static integrity | **PASS** | v2.7.13 baseline: 24 JavaScript files passed `node --check`; manifest/references and recorded voice wording were validated. |
 | Feature inventory | **PASS** | Baseline v2.7.12: 191 literal controls, 113 literal actions, 24 literal storage keys. v2.7.13: 194 controls, 117 actions, 26 keys. No baseline literal control, action or key is missing. |
 | v2.7.6 storage compatibility | **PASS** | A v2.7.6-shaped project preserved ID `v276-preserved-project`, data and edits after reload. No destructive database cleanup was detected. |
 | Save failure handling | **PASS** | localStorage recovery quota failure still saved to IndexedDB and showed a backup warning. Simulated IndexedDB failure showed `Save failed`, retained the active project and allowed retry. |
@@ -49,7 +73,13 @@ Host Brotli/gzip will materially reduce transfers, but real-device measurement i
 
 Use `MANUAL_TEST_CHECKLIST.md` before production rollout.
 
-## Package validation
+## Previous v2.7.13 package validation
 
 - `SAMI_v2_7_13_FIELD_CAD_SERVICES_ROOT_FLAT_PWA.zip`: **PASS** — 90 entries, every entry at archive root, and `unzip -t` reported no errors.
-- The companion `.sha256` line names the actual ZIP. Its digest was generated only after the final archive was written.
+
+## v2.7.14 package validation
+
+- `SAMI_v2_7_14_FIELD_TOUCH_SERVICES_UI_ROOT_FLAT_PWA.zip`: **PASS** — produced from exactly **90** tracked release files, with every entry at archive root and no containing directory.
+- `unzip -t`: **PASS** — no compressed-data errors.
+- Archive-path check: **PASS** — zero entries contain `/`.
+- The companion SHA-256 is generated only after the definitive ZIP is written and names this exact archive.

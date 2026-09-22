@@ -508,7 +508,10 @@ window.SAMIStudioEngine = function (C, O) {
           ["Line", info.lineName || m.label || m.lineRef],
           ["Owner", info.owner || m.owner || info.operator || m.operator],
           ["Description", info.note || info.design || info.material],
-        ].filter(([, value]) => value);
+        ].filter(([, value]) => value),
+          supportAlreadyAdded = S.project.features.some(
+            (x) => x.properties.ohlNodeKey === key,
+          );
         marker.bindPopup(
           '<section class="ohl-compact-info"><strong>' +
             esc(typeLabel) +
@@ -523,14 +526,48 @@ window.SAMIStudioEngine = function (C, O) {
                   "</p>",
               )
               .join("") +
-            '<button type="button" class="mini-btn" data-edit-ohl>Edit details</button></section>',
+            '<div class="ohl-popup-actions"><button type="button" class="mini-btn primary" data-add-ohl>' +
+            (supportAlreadyAdded ? "Update support" : "+ Add support") +
+            '</button><button type="button" class="mini-btn" data-edit-ohl>Edit</button></div></section>',
           { className: "ohl-info-popup", minWidth: 190, maxWidth: 280 },
         );
         marker.on("popupopen", () => {
-          const edit = marker
-            .getPopup()
-            ?.getElement()
-            ?.querySelector("[data-edit-ohl]");
+          const popup = marker.getPopup()?.getElement(),
+            edit = popup?.querySelector("[data-edit-ohl]"),
+            add = popup?.querySelector("[data-add-ohl]");
+          if (add)
+            add.onclick = () => {
+              const supportKind =
+                type !== "unknown"
+                  ? type
+                  : info.mappedKind && info.mappedKind !== "unknown"
+                    ? info.mappedKind
+                    : kind === "pylon" || kind === "tower"
+                      ? "pylon"
+                      : kind === "pole"
+                        ? "pole"
+                        : "unknown";
+              if (supportKind === "unknown") {
+                marker.closePopup();
+                C.chooseOhlSupport(f.id, key);
+                return;
+              }
+              commitSupport(
+                f.id,
+                key,
+                supportKind,
+                info.ref || "",
+                info.voltage || m.voltage || "",
+              );
+              C.commit();
+              C.render();
+              marker.closePopup();
+              C.toast(
+                supportAlreadyAdded
+                  ? "OHL support updated on the plan."
+                  : "OHL support added to the plan.",
+              );
+            };
           if (edit)
             edit.onclick = () => {
               marker.closePopup();
@@ -999,6 +1036,11 @@ window.SAMIStudioEngine = function (C, O) {
   }
   function startTool(t, o = {}) {
     if (S.mode === "create") C.setMode(S.modeBeforeCreator || "map");
+    // A prior drag/pan can leave the short click-suppression window active.
+    // Starting a deliberate placement tool must make the very next tap usable.
+    ui.dragging = false;
+    ui.panning = false;
+    S.suppressMapClick = 0;
     O.startTool(t, { ...o, snap: o.snap ?? ui.snap });
     C.updateLock();
     updateActiveTools();
@@ -1019,7 +1061,9 @@ window.SAMIStudioEngine = function (C, O) {
     );
   }
   function onMapClick(e) {
-    if (ui.dragging || ui.panning) return;
+    // Route-point picking is a deliberate one-tap action and must not be
+    // blocked by a stale drag/pan flag from the previous interaction.
+    if ((ui.dragging || ui.panning) && !S.routePick) return;
     if (S.tool === "accessPoint") {
       const c = C.coord(e.latlng);
       C.cancelDraw();
@@ -1485,8 +1529,11 @@ window.SAMIStudioEngine = function (C, O) {
       ...S.project.hgv,
       end: copy(f.geometry.coordinates),
       endText:
-        f.properties.label +
-        (f.properties.address ? " · " + f.properties.address : ""),
+        f.properties.what3words ||
+        f.properties.address ||
+        C.coordLabel(f.geometry.coordinates),
+      endAddress: f.properties.address || "",
+      endW3w: f.properties.what3words || "",
       accessPointId: id,
     };
     C.commit();

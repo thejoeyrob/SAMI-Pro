@@ -1,11 +1,24 @@
-# SAMI v2.7.13 — Real-device acceptance checklist
+# SAMI v2.7.14 — Real-device acceptance checklist
 
 Deploy the flat ZIP to a staging HTTPS origin. Export a v2.7.6/v2.7.12 project backup before replacing production files.
+
+
+## 0. v2.7.14 feedback fixes — test before anything else
+
+- [ ] **Windows/macOS installed PWA:** launch from the installed app icon. It must enter SAMI and must not remain trapped on the browser/install screen. Test Chrome/Edge PWA on Windows and Chrome/Edge/Safari-supported install mode on macOS.
+- [ ] **iPad/iPhone measurement:** drag the crosshair with one finger and confirm it stays under the finger on release. Also test the alternative workflow: pan the map beneath the crosshair, tap **＋ Point**, and use **◎ Me** to centre on current position before adding a point.
+- [ ] **Tap placement:** verify at least one non-Trakway asset, Route destination and measurement point all respond to a deliberate map tap immediately after switching tools.
+- [ ] **Route W3W:** with a valid what3words key configured, drop the destination pin and confirm coordinate, address and W3W populate automatically. Repeat offline/without key: coordinate must still remain usable and no project data is lost.
+- [ ] **Services:** enable OHL, gas, water and drainage/sewerage. Checked layers should start their refresh without a hidden extra step. Compare public reference data with known source plans.
+- [ ] **OHL support popup:** tap a mapped pole/tower. Confirm the compact card shows **+ Add support / Update support** and **Edit** side by side without first opening an edit dialog.
+- [ ] **Promo:** replay Why SAMI and watch from **PLAN ACCESS** onwards. Text/scene cues should no longer lag behind the recorded voice.
+- [ ] **Arctic Light / Paper / Studio Light:** header, selected-object bubble, area/draw status, inspector, menu and measurement panel must remain readable and belong to the chosen appearance.
+- [ ] **Sidebar:** open nested asset/service groups. Subgroups must open directly below their parent with no increasing horizontal stagger. Inspector tabs must visually join the panel below.
 
 ## 1. Data and update — test first
 
 - [ ] In the old version create a named project containing a site area, Trakway run, service, note, photo/logo and custom shape; export a `.sami` backup.
-- [ ] Deploy v2.7.13 while the old app remains open. Confirm it does not reload mid-edit. Choose **Save & reload** and verify project identity, geometry, notes, images and history.
+- [ ] Deploy v2.7.14 while the old app remains open. Confirm it does not reload mid-edit. Choose **Save & reload** and verify project identity, geometry, notes, images and history.
 - [ ] Edit, wait for **Saved**, force-close and reopen offline. Repeat with a simulated save failure; the project must stay open and **Retry**/**Export backup** must work.
 - [ ] Export and re-import a backup. Confirm endpoints/API preferences are not included in the portable project.
 - [ ] Test persistent-storage granted, denied and unsupported. Back up before clearing browser data or uninstalling.
@@ -63,4 +76,4 @@ Deploy the flat ZIP to a staging HTTPS origin. Export a v2.7.6/v2.7.12 project b
 - [ ] Validate manifest/installability, maskable icon, phone/wide screenshots and New/Last/Route shortcuts from the installed app.
 - [ ] Serve the extracted files directly from the repository publication root with HTTPS. Do not add a containing folder; retain `.nojekyll`.
 
-Record device model, OS, browser/PWA mode, build `2.7.13`, pass/fail, screenshot and reproduction steps for every failure.
+Record device model, OS, browser/PWA mode, build `2.7.14`, pass/fail, screenshot and reproduction steps for every failure.

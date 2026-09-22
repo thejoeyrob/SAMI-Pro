@@ -1,3 +1,32 @@
+# SAMI v2.7.14 — Field Touch, Services & UI
+
+## Fixed in v2.7.14
+
+- Installed desktop PWAs now recognise `standalone`, `minimal-ui` and window-controls-overlay display states, so a correctly installed app is not left behind the browser/install gate.
+- Precision measurement now uses one pointer-event path for touch, pen and mouse. The cursor is placed at the exact release coordinate, and the old competing touch handlers were removed.
+- Added a permanent **＋ Point** action, **◎ Me** current-position action and explicit on-screen guidance for both workflows: drag/tap the cursor, or move the map beneath the fixed cursor.
+- Cleared stale map-click suppression and drag/pan flags when starting placement or route tools so deliberate map taps are not discarded after changing tools.
+- Route destination pins now reverse-geocode automatically and populate what3words automatically when the user has configured a what3words key; coordinates remain usable when either network service is unavailable.
+- Reconnected checked service layers to the existing refresh path and broadened public reference discovery for gas, water, wastewater/sewerage and mapped drains/ditches without treating missing public data as proof of absence.
+- OHL support popups now show **+ Add support / Update support** and **Edit** side-by-side immediately, while retaining the compact information-first popup.
+- Tightened the promo text lead from **PLAN ACCESS** onwards so the visual sequence starts earlier relative to the recorded voice.
+- Corrected light-theme top-bar, selection/status bubble, inspector and precision-panel colours so Arctic Light, Paper and Studio Light no longer retain inappropriate dark chrome/readability combinations.
+- Removed nested-sidebar indentation/stagger and made inspector tabs join cleanly to their section body.
+
+## Improved in v2.7.14
+
+- The precision panel remains compact and avoids a blocking modal: **＋ Point**, **◎ Me**, Undo, Done, More and Close stay directly available.
+- A map tap can reposition the measurement crosshair without committing a point; committing is an explicit **＋ Point** action.
+- Installed-app detection is consistent across early bootstrap, cinematic launch, core engine and workspace shortcut handling.
+- Utility and OHL refreshes retain the existing last-known-good/local-workflow behaviour on provider failure.
+- The PWA manifest no longer prefers window-controls-overlay; `standalone` is the primary install mode for more predictable Windows/macOS behaviour.
+
+## Verification note
+
+All JavaScript syntax checks, CSS parsing, manifest/version checks and targeted v2.7.14 source assertions pass. This execution environment blocks Chromium navigation with `ERR_BLOCKED_BY_ADMINISTRATOR`, so the new v2.7.14 touch/install paths still require the real-device checks in `MANUAL_TEST_CHECKLIST.md`. The comprehensive v2.7.13 browser suite remains the regression baseline, not a claimed v2.7.14 browser pass.
+
+---
+
 # SAMI v2.7.13 - Field CAD & Services
 
 ## Fixed

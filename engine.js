@@ -2415,12 +2415,31 @@
         ...state.project.hgv,
         [which]: raw,
         [which + "Text"]: coordLabel(raw),
+        [which + "Address"]: "",
+        [which + "W3w"]: "",
       };
       commit();
       openDrawer("routeToSite");
       toast(
-        "Route " + (which === "start" ? "start" : "destination") + " selected.",
+        "Route " +
+          (which === "start" ? "start" : "destination") +
+          " selected · looking up address / what3words…",
       );
+      routePointDetails(raw).then((details) => {
+        const current = state.project.hgv?.[which];
+        if (!current || G.distance(current, raw) > 0.2) return;
+        const text = details.what3words || details.address || coordLabel(raw);
+        state.project.hgv = {
+          ...state.project.hgv,
+          [which + "Text"]: text,
+          [which + "Address"]: details.address,
+          [which + "W3w"]: details.what3words,
+        };
+        commit();
+        if (state.drawer === "routeToSite") renderDrawer("routeToSite");
+        if (details.what3words)
+          toast("what3words added to the route point automatically.");
+      });
       return;
     }
     if (!state.tool) {
@@ -5719,6 +5738,31 @@
       ? Number(c[1]).toFixed(6) + ", " + Number(c[0]).toFixed(6)
       : "Not set";
   }
+  async function routePointDetails(c) {
+    const out = { address: "", what3words: "" };
+    try {
+      const r = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(c[1])}&lon=${encodeURIComponent(c[0])}&zoom=18`,
+          {
+            signal: AbortSignal.timeout(10000),
+            headers: { Accept: "application/json" },
+          },
+        ),
+        d = await boundedJSON(r, 250000);
+      if (r.ok) out.address = String(d?.display_name || "");
+    } catch {}
+    const key = w3wKey();
+    if (key)
+      try {
+        const r = await fetch(
+            `https://api.what3words.com/v3/convert-to-3wa?coordinates=${encodeURIComponent(c[1] + "," + c[0])}&key=${encodeURIComponent(key)}`,
+            { signal: AbortSignal.timeout(10000) },
+          ),
+          d = await boundedJSON(r, 250000);
+        if (r.ok && d?.words) out.what3words = "///" + d.words;
+      } catch {}
+    return out;
+  }
   function routeToSiteHTML() {
     const h = state.project.hgv || fresh().hgv,
       p = HGV_PROFILES[h.profile] || HGV_PROFILES.custom,
@@ -5767,7 +5811,14 @@
         h.startText || "",
       ) +
       '<div class="subtle">' +
-      (h.start ? "Map point: " + coordLabel(h.start) : "") +
+      [
+        h.start ? "Map point: " + coordLabel(h.start) : "",
+        h.startW3w || "",
+        h.startAddress || "",
+      ]
+        .filter(Boolean)
+        .map(esc)
+        .join(" · ") +
       '</div></div><button class="mini-btn" data-action="pickRoute:start" title="Pick start on map">◎</button></div>' +
       section("To") +
       '<div class="route-endpoint"><div>' +
@@ -5777,7 +5828,14 @@
         h.endText || "",
       ) +
       '<div class="subtle">' +
-      (h.end ? "Map point: " + coordLabel(h.end) : "") +
+      [
+        h.end ? "Map point: " + coordLabel(h.end) : "",
+        h.endW3w || "",
+        h.endAddress || "",
+      ]
+        .filter(Boolean)
+        .map(esc)
+        .join(" · ") +
       '</div></div><button class="mini-btn" data-action="pickRoute:end" title="Pick destination on map">◎</button></div>' +
       button(
         last ? "Re-check / refresh HGV route" : "Plan HGV route to site",
@@ -6107,6 +6165,7 @@
   }
   function pickRoutePoint(which) {
     state.routePick = which;
+    state.suppressMapClick = 0;
     closeDrawer();
     if (state.mode === "plan") setMode("map");
     toast(
@@ -6679,6 +6738,7 @@
       manMade === "wastewater_plant" ||
       manMade === "storm_drain" ||
       manMade === "culvert" ||
+      ["drain", "ditch"].includes(String(tags.waterway || "")) ||
       manhole === "drain" ||
       manhole === "unknown" ||
       manhole === "yes" ||
@@ -6833,6 +6893,8 @@
         bbox +
         ');way["utility"~"^(power|electricity|electric|gas|water|telecom|sewer|drainage)$"](' +
         bbox +
+        ');way["substance"~"^(gas|water|sewage|wastewater)$"](' +
+        bbox +
         ');way["man_made"="pipeline"](' +
         bbox +
         ');way["pipeline"](' +
@@ -6840,6 +6902,8 @@
         ');way["sewer"](' +
         bbox +
         ');way["water"="wastewater"](' +
+        bbox +
+        ');way["waterway"~"^(drain|ditch)$"](' +
         bbox +
         ');way["man_made"="culvert"](' +
         bbox +
@@ -8372,8 +8436,11 @@
   });
   function isStandaloneApp() {
     return (
-      window.matchMedia?.("(display-mode: standalone)").matches ||
-      window.navigator.standalone === true
+      window.navigator.standalone === true ||
+      window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      window.matchMedia?.("(display-mode: window-controls-overlay)")?.matches ||
+      window.matchMedia?.("(display-mode: minimal-ui)")?.matches ||
+      window.navigator.windowControlsOverlay?.visible === true
     );
   }
   function setupLaunchGate() {

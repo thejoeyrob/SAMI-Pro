@@ -677,7 +677,7 @@ window.SAMIWorkspaceController = function (C, O) {
       )
       .join(
         "",
-      )}</div><div class="section-title">Highlight colour</div><label class="accent-picker"><span>Selected accent</span><input id="appearanceAccent" type="color" value="${accent}"></label><div class="accent-presets">${presets.map((x) => `<button data-action="accent:${x}" style="--chip:${x}" aria-label="Use ${x}"></button>`).join("")}</div><div class="inline-note">Build v${esc(window.SAMI_VERSION?.version || document.documentElement.dataset.samiVersion || "2.7.13")} · Installed PWA icons can remain cached until the device refreshes the app.</div>`;
+      )}</div><div class="section-title">Highlight colour</div><label class="accent-picker"><span>Selected accent</span><input id="appearanceAccent" type="color" value="${accent}"></label><div class="accent-presets">${presets.map((x) => `<button data-action="accent:${x}" style="--chip:${x}" aria-label="Use ${x}"></button>`).join("")}</div><div class="inline-note">Build v${esc(window.SAMI_VERSION?.version || document.documentElement.dataset.samiVersion || "2.7.14")} · Installed PWA icons can remain cached until the device refreshes the app.</div>`;
   }
   function chrome() {
     if (!ui.ready) return;
@@ -1553,6 +1553,13 @@ window.SAMIWorkspaceController = function (C, O) {
             S.project.serviceVisibility[el.dataset.service] = el.checked;
             S.project.serviceVisibilityConfigured = true;
             C.commit();
+            if (el.checked) {
+              clearTimeout(ui.serviceRefreshTimer);
+              ui.serviceRefreshTimer = setTimeout(
+                () => C.runAction("showServiceMapping"),
+                220,
+              );
+            }
           }),
       );
     if (k === "routeToSite") base.bindDrawer(k);
@@ -2319,8 +2326,7 @@ window.SAMIWorkspaceController = function (C, O) {
   }
   let precisionRefreshFrame = 0,
     precisionTouchIds = new Set(),
-    precisionDragMapWasEnabled = false,
-    precisionTouchDrag = null;
+    precisionDragMapWasEnabled = false;
   function schedulePrecisionRefresh() {
     if (precisionRefreshFrame) return;
     precisionRefreshFrame = requestAnimationFrame(() => {
@@ -2379,6 +2385,37 @@ window.SAMIWorkspaceController = function (C, O) {
     ui.precision.cursorCoord = next;
     schedulePrecisionRefresh();
   }
+  async function locatePrecision() {
+    if (!navigator.geolocation) {
+      C.toast("Current location is not available in this browser.");
+      return;
+    }
+    C.toast("Getting current location…");
+    try {
+      const pos = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 15000,
+        }),
+      );
+      const c = [pos.coords.longitude, pos.coords.latitude],
+        zoom = Math.max(S.map?.getZoom?.() || 0, 18);
+      S.map.setView([c[1], c[0]], zoom, { animate: false });
+      requestAnimationFrame(() => {
+        resetPrecisionCursor();
+        ui.precision.cursorCoord = c;
+        refreshPrecision(true);
+      });
+      C.toast("Map centred on your position · tap ＋ Point to add it.");
+    } catch (error) {
+      C.toast(
+        error?.code === 1
+          ? "Location permission was not granted. You can still move the map under the cursor."
+          : "Current location could not be obtained. Move the map under the cursor instead.",
+      );
+    }
+  }
   async function setPrecisionWake(on) {
     C.setPref("sami.measure.wake", on ? "on" : "off");
     try {
@@ -2422,7 +2459,6 @@ window.SAMIWorkspaceController = function (C, O) {
       } catch {}
     }
     ui.precision.drag = null;
-    precisionTouchDrag = null;
     restoreMapDragAfterPrecision();
   }
   function ensurePrecisionUI() {
@@ -2435,7 +2471,7 @@ window.SAMIWorkspaceController = function (C, O) {
       precisionCursor.className = "precision-cursor";
       precisionCursor.setAttribute(
         "aria-label",
-        "Measurement cursor. Drag with one finger to position. Tap the cursor to place a point.",
+        "Measurement cursor. Drag with one finger to position. Tap it or use Plus Point to add a point.",
       );
       precisionCursor.innerHTML =
         '<i></i><b></b><span class="precision-live" aria-hidden="true"></span>';
@@ -2445,7 +2481,6 @@ window.SAMIWorkspaceController = function (C, O) {
       );
       precisionCursor.addEventListener("pointerdown", (e) => {
         if (
-          e.pointerType === "touch" ||
           !ui.precision.active ||
           e.button > 0 ||
           e.isPrimary === false ||
@@ -2471,7 +2506,6 @@ window.SAMIWorkspaceController = function (C, O) {
         e.stopPropagation();
       });
       precisionCursor.addEventListener("pointermove", (e) => {
-        if (e.pointerType === "touch") return;
         const d = ui.precision.drag;
         if (
           !d ||
@@ -2487,10 +2521,11 @@ window.SAMIWorkspaceController = function (C, O) {
         e.stopPropagation();
       });
       const finish = (e) => {
-        if (e.pointerType === "touch") return;
         const d = ui.precision.drag;
         if (!d || d.kind !== "pointer" || d.id !== e.pointerId) return;
-        const moved = d.moved;
+        const moved = d.moved, r = precisionMapRect();
+        if (r && Number.isFinite(e.clientX) && Number.isFinite(e.clientY))
+          positionPrecisionCursor(e.clientX - r.left, e.clientY - r.top, true, r);
         cancelPrecisionDrag();
         if (moved) S.suppressMapClick = performance.now() + 450;
         if (!moved && !ui.precision.multi) dropPrecisionPoint();
@@ -2503,105 +2538,6 @@ window.SAMIWorkspaceController = function (C, O) {
         if (d?.kind === "pointer" && d.id === e.pointerId)
           cancelPrecisionDrag();
       });
-      const findTouch = (list, id) => {
-        for (const t of list) if (t.identifier === id) return t;
-        return null;
-      };
-      precisionCursor.addEventListener(
-        "touchstart",
-        (e) => {
-          if (
-            !ui.precision.active ||
-            ui.precision.multi ||
-            e.touches.length !== 1
-          )
-            return;
-          const t = e.changedTouches[0],
-            r = precisionMapRect();
-          if (!t || !r) return;
-          precisionDragMapWasEnabled = !!S.map?.dragging?.enabled?.();
-          if (precisionDragMapWasEnabled) S.map.dragging.disable();
-          precisionTouchDrag = {
-            id: t.identifier,
-            startX: t.clientX,
-            startY: t.clientY,
-            moved: false,
-          };
-          ui.precision.drag = {
-            kind: "touch",
-            id: t.identifier,
-            startX: t.clientX,
-            startY: t.clientY,
-            moved: false,
-          };
-          positionPrecisionCursor(
-            t.clientX - r.left,
-            t.clientY - r.top,
-            true,
-            r,
-          );
-          e.preventDefault();
-          e.stopPropagation();
-        },
-        { passive: false },
-      );
-      precisionCursor.addEventListener(
-        "touchmove",
-        (e) => {
-          const d = precisionTouchDrag;
-          if (!d || ui.precision.multi) return;
-          const t =
-            findTouch(e.touches, d.id) || findTouch(e.changedTouches, d.id);
-          if (!t) return;
-          if (Math.hypot(t.clientX - d.startX, t.clientY - d.startY) > 4) {
-            d.moved = true;
-            if (ui.precision.drag) ui.precision.drag.moved = true;
-          }
-          schedulePrecisionCursor(t.clientX, t.clientY);
-          e.preventDefault();
-          e.stopPropagation();
-        },
-        { passive: false },
-      );
-      const finishTouch = (e) => {
-        const d = precisionTouchDrag;
-        if (!d) return;
-        const t = findTouch(e.changedTouches, d.id);
-        if (!t) return;
-        const moved = d.moved,
-          r = precisionMapRect();
-        if (r)
-          positionPrecisionCursor(
-            t.clientX - r.left,
-            t.clientY - r.top,
-            true,
-            r,
-          );
-        precisionTouchDrag = null;
-        ui.precision.drag = null;
-        S.suppressMapClick = performance.now() + 550;
-        restoreMapDragAfterPrecision();
-        if (!moved && !ui.precision.multi) dropPrecisionPoint();
-        e.preventDefault();
-        e.stopPropagation();
-      };
-      precisionCursor.addEventListener("touchend", finishTouch, {
-        passive: false,
-      });
-      precisionCursor.addEventListener(
-        "touchcancel",
-        (e) => {
-          if (precisionTouchDrag) {
-            precisionTouchDrag = null;
-            ui.precision.drag = null;
-            S.suppressMapClick = performance.now() + 550;
-            restoreMapDragAfterPrecision();
-          }
-          e.preventDefault();
-          e.stopPropagation();
-        },
-        { passive: false },
-      );
       precisionCursor.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2740,7 +2676,7 @@ window.SAMIWorkspaceController = function (C, O) {
       precisionPanel.className = "precision-panel precision-panel-compact";
       precisionPanel.hidden = true;
       precisionPanel.innerHTML =
-        '<div class="precision-toolbar"><div class="precision-modes" aria-label="Measurement type"><button data-pc="line">Distance</button><button data-pc="area">Area</button></div><div class="precision-readout" id="precisionReadout">Drag the cursor, then tap it to place point 1.<small class="precision-coordinates" id="precisionCoordinates"></small></div><div class="precision-quick"><button data-pc="undo" aria-label="Undo last point" title="Undo">↶</button><button data-pc="finish" class="primary">Done</button><button data-pc="more" aria-label="More measurement actions" title="More">•••</button><button data-pc="close" aria-label="Close measurement" title="Close">×</button></div></div><div class="precision-overflow" id="precisionOverflow" hidden><div class="precision-nudge" aria-label="Nudge measurement cursor"><button data-pc="north" aria-label="Nudge north">↑</button><button data-pc="west" aria-label="Nudge west">←</button><button data-pc="drop" aria-label="Place point at cursor">＋</button><button data-pc="east" aria-label="Nudge east">→</button><button data-pc="south" aria-label="Nudge south">↓</button></div><label class="precision-step">Nudge step<select id="precisionStep"><option value="1">1 m</option><option value="5">5 m</option></select></label><label class="precision-wake">Keep screen awake<button type="button" data-pc="wake" aria-pressed="false">Off</button></label><button data-pc="site">Use measured area for site plan</button><button data-pc="clear">Clear points</button></div>';
+        '<div class="precision-toolbar"><div class="precision-modes" aria-label="Measurement type"><button data-pc="line">Distance</button><button data-pc="area">Area</button></div><div class="precision-readout" id="precisionReadout">Move the cursor or move the map under it, then tap ＋ Point.<small class="precision-coordinates" id="precisionCoordinates"></small></div><div class="precision-quick"><button data-pc="drop" class="primary" aria-label="Add point at cursor">＋ Point</button><button data-pc="locate" aria-label="Centre map on current position" title="Current position">◎ Me</button><button data-pc="undo" aria-label="Undo last point" title="Undo">↶</button><button data-pc="finish">Done</button><button data-pc="more" aria-label="More measurement actions" title="More">•••</button><button data-pc="close" aria-label="Close measurement" title="Close">×</button></div></div><div class="precision-overflow" id="precisionOverflow" hidden><p class="precision-help">Drag the crosshair with one finger, tap the map to reposition it, or move the map beneath the fixed crosshair. ＋ Point records the crosshair position.</p><div class="precision-nudge" aria-label="Nudge measurement cursor"><button data-pc="north" aria-label="Nudge north">↑</button><button data-pc="west" aria-label="Nudge west">←</button><button data-pc="drop" aria-label="Place point at cursor">＋</button><button data-pc="east" aria-label="Nudge east">→</button><button data-pc="south" aria-label="Nudge south">↓</button></div><label class="precision-step">Nudge step<select id="precisionStep"><option value="1">1 m</option><option value="5">5 m</option></select></label><label class="precision-wake">Keep screen awake<button type="button" data-pc="wake" aria-pressed="false">Off</button></label><button data-pc="site">Use measured area for site plan</button><button data-pc="clear">Clear points</button></div>';
       ($("#mapViewport") || $("#workspace")).append(precisionPanel);
       precisionPanel.onclick = (e) => {
         const a = e.target.closest("[data-pc]")?.dataset.pc;
@@ -2764,6 +2700,7 @@ window.SAMIWorkspaceController = function (C, O) {
           refreshPrecision(true);
         } else if (a === "site") commitPrecision(true);
         else if (a === "drop") dropPrecisionPoint();
+        else if (a === "locate") locatePrecision();
         else if (a === "north") nudgePrecision(0, 1);
         else if (a === "south") nudgePrecision(0, -1);
         else if (a === "west") nudgePrecision(-1, 0);
@@ -2776,6 +2713,7 @@ window.SAMIWorkspaceController = function (C, O) {
   }
   function setPrecision(on, target = "measure") {
     ensurePrecisionUI();
+    if (on) S.suppressMapClick = 0;
     ui.precision.active = !!on;
     ui.precision.target = target;
     ui.precision.points = [];
@@ -2800,8 +2738,8 @@ window.SAMIWorkspaceController = function (C, O) {
       });
       C.toast(
         target === "draw"
-          ? "Precision cursor · drag it with one finger, then tap it to place the point."
-          : "Measure · drag the cursor with one finger. Tap the cursor to place each point.",
+          ? "Precision cursor · drag it, tap the map to reposition, or move the map underneath it. Tap ＋ Point to place."
+          : "Measure · drag the cursor, tap the map to reposition, or move the map underneath it. Tap ＋ Point to record each point.",
       );
       if (C.readPref("sami.measure.wake") === "on") setPrecisionWake(true);
     } else {
@@ -2968,8 +2906,8 @@ window.SAMIWorkspaceController = function (C, O) {
     if (el) {
       let measure;
       if (ui.precision.target === "draw")
-        measure = "Drag cursor · tap cursor to place";
-      else if (!ps.length) measure = "Drag cursor · tap it to place point 1";
+        measure = "Move cursor or map · tap ＋ Point to place";
+      else if (!ps.length) measure = "Move cursor or map · tap ＋ Point for point 1";
       else if (ui.precision.mode === "area") {
         const preview = [...ps, c],
           a = preview.length >= 3 ? polygonAreaMeters(preview) : 0;
@@ -3370,6 +3308,13 @@ window.SAMIWorkspaceController = function (C, O) {
         S.project.serviceVisibilityConfigured = true;
         C.commit();
         renderDrawer("services");
+        if (visible) {
+          clearTimeout(ui.serviceRefreshTimer);
+          ui.serviceRefreshTimer = setTimeout(
+            () => C.runAction("showServiceMapping"),
+            180,
+          );
+        }
         return;
       }
       if (action === "fieldNote" || action === "fieldPhoto") {
@@ -3520,7 +3465,7 @@ window.SAMIWorkspaceController = function (C, O) {
         const version =
           window.SAMI_VERSION?.version ||
           document.documentElement.dataset.samiVersion ||
-          "2.7.13";
+          "2.7.14";
         C.showModal(
           "SAMI",
           '<img src="sami-wordmark.png" class="about-logo about-wordmark" alt="SAMI"><p>Spatial Analysis Mapping Intelligence</p><p>Version ' +
@@ -4117,7 +4062,10 @@ window.SAMIWorkspaceController = function (C, O) {
       await dashboard();
       const installed =
           navigator.standalone === true ||
-          window.matchMedia?.("(display-mode: standalone)")?.matches,
+          window.matchMedia?.("(display-mode: standalone)")?.matches ||
+          window.matchMedia?.("(display-mode: window-controls-overlay)")?.matches ||
+          window.matchMedia?.("(display-mode: minimal-ui)")?.matches ||
+          navigator.windowControlsOverlay?.visible === true,
         launchAction = installed
           ? new URLSearchParams(location.search).get("action")
           : null;

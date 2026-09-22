@@ -21,8 +21,11 @@
     document.documentElement.dataset.theme = "graphite";
   }
   const installed =
+    navigator.standalone === true ||
     matchMedia("(display-mode: standalone)").matches ||
-    navigator.standalone === true;
+    matchMedia("(display-mode: window-controls-overlay)").matches ||
+    matchMedia("(display-mode: minimal-ui)").matches ||
+    navigator.windowControlsOverlay?.visible === true;
   if (!installed) document.documentElement.classList.add("install-required");
   else if (localStorageSafe("sami.launch.seen") !== "yes")
     document.documentElement.classList.add("intro-running");

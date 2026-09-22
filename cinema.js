@@ -16,8 +16,11 @@
   const welcomeAudio = $("#welcomeAudio"),
     salesAudio = $("#salesAudio");
   const isInstalled = () =>
+    navigator.standalone === true ||
     matchMedia?.("(display-mode: standalone)")?.matches ||
-    navigator.standalone === true;
+    matchMedia?.("(display-mode: window-controls-overlay)")?.matches ||
+    matchMedia?.("(display-mode: minimal-ui)")?.matches ||
+    navigator.windowControlsOverlay?.visible === true;
   if (!isInstalled())
     document.documentElement.classList.add("install-required");
   const PROCESS = [
@@ -106,7 +109,8 @@
     LOGO_MORPH = 68.25,
     SIGNATURE_START = 69.35,
     SIGNATURE_END = 71.4,
-    TEXT_LEAD = 0.9;
+    TEXT_LEAD = 0.9,
+    TAIL_TEXT_LEAD = 1.5;
   const rnd = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
@@ -1388,26 +1392,30 @@
       [55.25, 58.8, "ASK SAMI TO MAKE THE CHANGES FOR YOU"],
       [WORK_SMARTER, 65.7, "IT’S TIME TO WORK SMARTER"],
     ];
-    const x = items.find(([a, b]) => t >= a - TEXT_LEAD && t < b - TEXT_LEAD);
+    const x = items.find(([a, b]) => {
+      const lead = a >= 48.2 ? TAIL_TEXT_LEAD : TEXT_LEAD;
+      return t >= a - lead && t < b - lead;
+    });
     if (x) {
       const [a, b, text] = x;
-      const aa = a - TEXT_LEAD,
-        bb = b - TEXT_LEAD;
+      const lead = a >= 48.2 ? TAIL_TEXT_LEAD : TEXT_LEAD,
+        aa = a - lead,
+        bb = b - lead;
       setSentence(
         text,
         smooth((t - aa) / 0.3) * (1 - smooth((t - bb + 0.27) / 0.27)),
       );
-    } else if (t < TIME_TO - TEXT_LEAD) setSentence("", 0);
+    } else if (t < TIME_TO - TAIL_TEXT_LEAD) setSentence("", 0);
   }
   function letterMorph(t) {
-    if (mode !== "sales" || t < TIME_TO - TEXT_LEAD) return;
+    if (mode !== "sales" || t < TIME_TO - TAIL_TEXT_LEAD) return;
     const selectedPhrase = "…ASK SAMI",
       selected = [5, 6, 7, 8],
       centres = [0.153, 0.413, 0.724, 0.942],
-      pauseEnd = 66.78 - TEXT_LEAD,
-      pauseFade = 66.66 - TEXT_LEAD,
-      askAt = ASK_SAMI - TEXT_LEAD,
-      morphAt = LOGO_MORPH - TEXT_LEAD;
+      pauseEnd = 66.78 - TAIL_TEXT_LEAD,
+      pauseFade = 66.66 - TAIL_TEXT_LEAD,
+      askAt = ASK_SAMI - TAIL_TEXT_LEAD,
+      morphAt = LOGO_MORPH - TAIL_TEXT_LEAD;
     if (t < pauseEnd) {
       if (sentence.dataset.text !== "__time_pause__") {
         sentence.innerHTML = [..."IT’S TIME TO…"]
@@ -1416,7 +1424,7 @@
         sentence.dataset.text = "__time_pause__";
       }
       const show =
-        smooth((t - (TIME_TO - TEXT_LEAD)) / 0.28) *
+        smooth((t - (TIME_TO - TAIL_TEXT_LEAD)) / 0.28) *
         (1 - smooth((t - pauseFade) / 0.2));
       sentence.style.opacity = String(show);
       return;
