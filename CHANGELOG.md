@@ -1,3 +1,56 @@
+# SAMI v2.7.17 — Touch-target pass 1
+
+## Fixed in v2.7.17
+
+- `.selection-bar button` grown from 32px to the 44px touch floor. Verified safe: the container is absolutely positioned with an auto height and a flexible, ellipsis-truncating label in the middle — the bar simply grows a little taller and the label truncates further under pressure; nothing else depends on its old height.
+
+## Checked and deliberately left alone this round
+
+- `.top-actions button` — attempted the same 39→44px bump, then reverted it. `.top-actions` sits inside `.topbar`, which has a **fixed height** (58px including padding on mobile, per its own `@media (max-width: 600px)` rule) with no per-breakpoint override for this button size. Growing the buttons there would very likely overflow that fixed bar on mobile. Fixing this properly means also adjusting the mobile topbar height, which is a coordinated two-part change I'm not making without being able to see the rendered result.
+- `.history-controls button`, `.canvas-quick-tools button`, `#inspectorTabs button`, `.object-row > .icon-btn` — each has multiple breakpoint-specific rule blocks (3–8 occurrences across the stylesheet) that would each need the same container/sibling check `.selection-bar` and `.top-actions` got before touching. Not done yet — queued for the next pass, one group at a time, same method.
+
+## Why this is going slower than a blanket resize
+
+A global find-and-replace across the 93 declarations flagged in v2.7.16 would be fast but is exactly the kind of change the brief explicitly forbids ("do not introduce regressions"). Two of five groups checked this round; one was safe to fix, one had a real fixed-height conflict that a blind resize would have shipped as a visual bug. Continuing at this pace rather than guessing.
+
+---
+
+# SAMI v2.7.16 — Northern Ireland constraints, Studio Prestige mode, licensing
+
+## Added in v2.7.16
+
+- **Live Northern Ireland ASSI constraints** (NIEA/DAERA) — confirmed against NIEA's own officially-attributed ArcGIS FeatureServer (`NI_ASSIs`, contact `NIEA.GIS@daera-ni.gov.uk`), using the standard Esri REST query pattern. This is on firmer ground than the Scotland/Wales WFS connectors added in v2.7.15, which were built from service documentation rather than a confirmed live endpoint. New "Northern Ireland ASSI sites" button in Services & constraints. All four UK nations now have a live public constraint connector.
+- **Prestige mode toggle added to the desktop Studio settings panel** (previously Workspace-only), same on/off semantics and same shine-sweep effect.
+- **LICENSE file added at repo root** — proprietary notice covering the first-party source, assets, and trademarks, distinct from the existing third-party OSS license files (Leaflet, polygon-clipping, QR code) which are unaffected.
+
+## Audited, not yet changed
+
+- Static analysis of `app.css` (multi-line-aware, not just a single-line grep) found 93 button/control declarations across dense toolbars — `.selection-bar button` (29–32px), `.canvas-quick-tools button` (36px), `.top-actions button` (39px), `.history-controls button` (34–37px), `#inspectorTabs button` (35–42px) — under the 44px touch-target floor. There is no `pointer: coarse` / `hover: none` split anywhere in the stylesheet, so these apply identically to touch and mouse. The earlier audit's "44px — Fixed" claim (A01) evidently didn't reach every dense toolbar row. Not patched in this pass: these are tightly packed horizontal toolbars, and resizing 93 declarations without the ability to see the rendered layout risks overflow/wrapping regressions. Needs a visually-verified pass, ideally on a real device, before touching.
+
+## Still open from v2.7.15
+
+- Scotland/Wales WFS connectors remain unverified against a live round-trip (no outbound network access in this build environment).
+- Code minification/obfuscation for the release build, and moving any future live secrets server-side, not yet done.
+
+---
+
+# SAMI v2.7.15 — Services, self-service what3words & Prestige mode
+
+## Added in v2.7.15
+
+- **what3words is now self-service.** Settings shows a plain status line — "Currently using the built-in demo what3words key" or "Using your own what3words account" — plus a direct link to get a personal API key. The field itself no longer pre-fills the demo key into a visible/copyable password box; it stays blank until the user adds their own. The demo key in `config.js` remains the default fallback everywhere (route pins, access points, PDF export), so nothing breaks for anyone who doesn't set their own key. Identical behaviour in both the field Workspace and desktop Studio settings panels (traced both render paths — Studio reuses the Workspace/engine field, not a separate copy).
+- **Live Scotland protected-site constraints** (NatureScot: SSSI, SAC, SPA, NNR, Ramsar, World Heritage Site) via a new WFS connector against `ogc.nature.scot/geoserver/protectedareas`, mapped into the existing SSSI/ecology/heritage constraint types. New "Scotland protected sites" button in Services & constraints.
+- **Live Wales protected-site constraints** (Natural Resources Wales SSSI) via a new WFS connector against `datamap.gov.wales/geoserver`. New "Wales protected sites (NRW)" button.
+- **Prestige mode**, a named, toggleable presentation mode. On (default): a subtle travelling shine sweep on primary action buttons on hover, plus a slight press-scale, matching the existing brand-logo pulse treatment. Off = **Simple mode**: flat, instant, no shine — for glare, older devices, or battery life. Fully additive CSS gated the same way the app already gates its cinematic-motion setting, so it stacks correctly with (and never overrides) the OS-level `prefers-reduced-motion` setting.
+
+## Known gap carried forward
+
+- Northern Ireland (DAERA) equivalent constraint connector is not yet built — not enough was confirmed about its live API in this pass to ship it responsibly; it remains "data-pack" (import-only) for now.
+- The Scotland/Wales WFS connectors above were built from published service documentation, not confirmed against a live request-response round trip (this environment has no outbound network access to test that here). They follow the same graceful-failure pattern as the existing England connector — if a layer name or endpoint shape has changed upstream, the request fails with a visible toast rather than silently showing zero results, consistent with the app's existing "absence is not proof of absence" principle. Treat as first-priority for real-network verification before relying on them operationally.
+- Prestige mode's settings toggle is currently only exposed in the field Workspace settings panel, not the desktop Studio panel.
+
+---
+
 # SAMI v2.7.14 — Field Touch, Services & UI
 
 ## Fixed in v2.7.14
