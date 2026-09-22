@@ -1,5 +1,5 @@
 {
-  "version": "2.7.14",
+  "version": "2.7.17",
   "shell": [
     "./app.css",
     "./bearing.js",
@@ -91,6 +91,7 @@
     "FEATURE_INVENTORY.md",
     "IMPLEMENTATION_PLAN.md",
     "LEAFLET-LICENSE.txt",
+    "LICENSE",
     "MANUAL_TEST_CHECKLIST.md",
     "PHASE_1_AUDIT.md",
     "POLYGON-CLIPPING-LICENSE.md",
