@@ -1,0 +1,48 @@
+SAMI — Proprietary Software License
+
+Copyright (c) 2026 Joseph Whelan Entertainment and Digital Solutions
+("JW EDS"). All rights reserved.
+
+This repository contains the source code, assets, and documentation for
+SAMI ("the Software"), a proprietary application owned by Joseph Whelan
+Entertainment and Digital Solutions.
+
+The app itself may be made available for use via a hosted link at the
+owner's discretion. Being usable via that link grants no rights to the
+underlying source code, and does not place the Software in the public
+domain or under an open license.
+
+1. Ownership
+   The Software, including its source code, design, UI/UX, documentation,
+   trademarks ("SAMI" and associated marks), and all associated assets,
+   is the exclusive property of JW EDS.
+
+2. Restrictions
+   Except as expressly permitted in writing by JW EDS, no person or
+   organisation may:
+   - copy, reproduce, distribute, sublicense, sell, or otherwise make
+     available the Software or any portion of it;
+   - reverse engineer, decompile, disassemble, or otherwise attempt to
+     derive the source code, algorithms, or data schemas of the Software;
+   - use the Software, its name, or its assets to build a competing or
+     derivative product;
+   - remove or alter any copyright, trademark, or proprietary notice
+     contained in the Software.
+
+3. Third-party components
+   The Software includes third-party open-source libraries (see
+   LEAFLET-LICENSE.txt, POLYGON-CLIPPING-LICENSE.md, and
+   QR-CODE-LICENSE.txt), each of which remains licensed under its own
+   respective terms. Nothing in this license affects those terms.
+
+4. No warranty
+   The Software is provided "as is" without warranty of any kind. Use of
+   the Software for construction, engineering, or safety-related
+   decisions remains subject to independent professional verification;
+   see the in-app source/coverage caveats.
+
+5. Contact
+   For licensing enquiries, contact JW EDS directly.
+
+Unauthorised use, copying, or distribution of this Software is a breach
+of this license and may result in legal action.
