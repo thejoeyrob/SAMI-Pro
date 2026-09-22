@@ -120,7 +120,7 @@ window.SAMIWorkspaceController = function (C, O) {
   };
   const METHODS = {
     place: ["▣", "Place"],
-    line: ["⌁", "Point line"],
+    line: ["⎁", "Point line"],
     area: ["⬡", "Point area"],
     freeLine: ["〰", "Freehand line"],
     freeArea: ["◌", "Freehand area"],
@@ -223,7 +223,7 @@ window.SAMIWorkspaceController = function (C, O) {
                 : a.category || "Site asset",
       thumb =
         kind === "surface"
-          ? "⌁"
+          ? "⎁"
           : kind === "annotation"
             ? k.endsWith("textBox")
               ? "T"
@@ -500,7 +500,7 @@ window.SAMIWorkspaceController = function (C, O) {
       dash = q.dash || (k === "ohl" ? "solid" : "dashed"),
       opacity = Math.round((q.opacity ?? 1) * 100),
       fillOpacity = Math.round((q.fillOpacity ?? 0.15) * 100);
-    return `<div class="service-style-card"><div class="service-style-head"><i style="background:${baseColor}"></i><div><small>EDIT SERVICE APPEARANCE</small><strong>${esc(v.name)}</strong><span>${count} project ${count === 1 ? "record" : "records"} · changes apply to every ${esc(v.name)} item</span></div></div><div class="property-grid"><label>Line colour<input id="serviceStyleColor" type="color" value="${baseColor}"></label><label>Line width<input id="serviceStyleWeight" type="number" min="0.5" max="12" step="0.5" value="${weight}"></label></div>${C.choice("serviceStyleDash", "Line style", { solid: "Solid", dashed: "Dashed", dotted: "Dotted" }, dash)}<label class="field-label" for="serviceStyleOpacity">Line opacity <output>${opacity}%</output></label><input id="serviceStyleOpacity" type="range" min="5" max="100" value="${opacity}">${v.area ? `<div class="property-grid"><label>Fill colour<input id="serviceStyleFill" type="color" value="${baseFill}"></label><label>Fill opacity<input id="serviceStyleFillOpacity" type="range" min="0" max="80" value="${fillOpacity}"></label></div>` : ""}<div class="button-pair">${B("Reset", "resetServiceStyle:" + k)}${B("Apply to all", "applyServiceStyle:" + k, true)}</div></div>`;
+    return `<div class="service-style-card"><div class="service-style-head"><i style="background:${baseColor}"></i><div><small>EDIT SERVICE APPEARANCE</small><strong>${esc(v.name)}</strong><span>${count} project ${count === 1 ? "record" : "records"} · changes apply to every ${esc(v.name)} item</span></div></div><div class="property-grid"><label>Line colour<input id="serviceStyleColor" type="color" value="${baseColor}"></label><label>Line width<input id="serviceStyleWeight" type="number" min="0.5" max="12" step="0.5" value="${weight}"></label></div>${C.choice("serviceStyleDash", "Line style", { solid: "Solid", dashed: "Dashed", dotted: "Dotted" }, dash)}<label class="field-label" for="serviceStyleOpacity">Line opacity <o>${opacity}%</o></label><input id="serviceStyleOpacity" type="range" min="5" max="100" value="${opacity}">${v.area ? `<div class="property-grid"><label>Fill colour<input id="serviceStyleFill" type="color" value="${baseFill}"></label><label>Fill opacity<input id="serviceStyleFillOpacity" type="range" min="0" max="80" value="${fillOpacity}"></label></div>` : ""}<div class="button-pair">${B("Reset", "resetServiceStyle:" + k)}${B("Apply to all", "applyServiceStyle:" + k, true)}</div></div>`;
   }
   function servicesHTML() {
     const counts = {};
@@ -756,7 +756,7 @@ window.SAMIWorkspaceController = function (C, O) {
         ? `<img class="reference-preview" src="${esc(r.dataUrl)}" alt="Reference map image"><label class="field-label">Is the site in the UK?<select class="field" id="referenceCountry"><option value="GB" ${r.country === "GB" ? "selected" : ""}>Yes · United Kingdom</option><option value="" ${!r.country ? "selected" : ""}>No / unknown</option></select></label><label class="field-label">Nearest known place (optional)<input class="field" id="referenceHint" value="${esc(r.hint || "")}" placeholder="Town, road, postcode, landmark"></label>
       <div class="reference-status">${r.gps ? `Embedded location found: ${r.gps[1].toFixed(6)}, ${r.gps[0].toFixed(6)}` : "No embedded GPS location found."}</div>
       <button data-action="matchReferenceImage" class="primary">Find this site</button>
-      <div class="reference-controls"><label>Image rotation <output id="referenceRotationOut">${r.rotation || 0}°</output><input id="referenceRotation" type="range" min="0" max="359" value="${r.rotation || 0}"></label><label>Overlay opacity <output id="referenceOpacityOut">${Math.round((r.opacity ?? 0.55) * 100)}%</output><input id="referenceOpacity" type="range" min="10" max="100" value="${Math.round((r.opacity ?? 0.55) * 100)}"></label><label>Overlay scale <output id="referenceScaleOut">${Math.round((r.scale ?? 1) * 100)}%</output><input id="referenceScale" type="range" min="50" max="180" value="${Math.round((r.scale ?? 1) * 100)}"></label></div>
+      <div class="reference-controls"><label>Image rotation <output id="referenceRotationOut">${r.rotation || 0}°</o><input id="referenceRotation" type="range" min="0" max="359" value="${r.rotation || 0}"></label><label>Overlay opacity <output id="referenceOpacityOut">${Math.round((r.opacity ?? 0.55) * 100)}%</o><input id="referenceOpacity" type="range" min="10" max="100" value="${Math.round((r.opacity ?? 0.55) * 100)}"></label><label>Overlay scale <output id="referenceScaleOut">${Math.round((r.scale ?? 1) * 100)}%</o><input id="referenceScale" type="range" min="50" max="180" value="${Math.round((r.scale ?? 1) * 100)}"></label></div>
       <div class="row equal"><button data-action="overlayCurrentView">Fit overlay to current view</button><button data-action="removeReferenceOverlay">Hide overlay</button></div>
       <p class="subtle">Pan/zoom the live map, adjust rotation and opacity, then use “Fit overlay to current view” to re-register the reference image.</p>`
         : ""
@@ -1057,7 +1057,7 @@ window.SAMIWorkspaceController = function (C, O) {
     }
   }
   function settingsHTML() {
-    return `<div class="section-title">Drawing assistance</div><label class="switch-row">Snap to geometry<input id="settingSnap" type="checkbox" ${base.ui.snap ? "checked" : ""}></label><label class="switch-row">Measurement grid snap<input id="settingGridSnap" type="checkbox" ${S.project.gridSnap !== false ? "checked" : ""}></label>${C.choice("settingGridStep", "Measurement grid", { 0.1: "0.10 m", 0.25: "0.25 m", 0.5: "0.50 m", 1: "1.00 m", 2: "2.00 m", 5: "5.00 m" }, String(S.project.gridStep || 0.5))}<p class="subtle">Measurements snap to object corners and edges first, then to the selected grid interval.</p><div class="section-title">Presentation</div><label class="switch-row">Reduced cinematic motion<input id="settingMotion" type="checkbox" ${C.readPref("sami.reducedMotion") === "on" ? "checked" : ""}></label><label class="switch-row">Function name bubbles<input id="settingTips" type="checkbox" ${ui.tooltips ? "checked" : ""}></label><div class="section-title">Location integration</div>${C.field("settingW3wKey", "what3words API key", C.readPref("sami.w3w.key") || window.SAMI_CONFIG?.what3wordsApiKey || "", "password", 'placeholder="Built-in key or local override"')}<p class="subtle">what3words lookup is configured for this build. This field is only for a local override if the configured key changes.</p><div class="section-title">Image recognition</div>${C.field("settingImageMatcher", "Visual image matcher HTTPS endpoint", C.readPref("sami.imageMatch.url") || window.SAMI_CONFIG?.siteImageMatchEndpoint || "", "url", 'placeholder="https://…/match-site-image"')}<p class="subtle">GPS metadata is used first. A connected matcher can identify image-only screenshots; without one, SAMI opens the image on the current map for manual registration instead of failing.</p><div class="section-title">Connected tools</div>${B("Voice & connected services", "open:voice")}${B("Save project file", "backup")}${B("Previous saved versions", "history")}`;
+    return `<div class="section-title">Drawing assistance</div><label class="switch-row">Snap to geometry<input id="settingSnap" type="checkbox" ${base.ui.snap ? "checked" : ""}></label><label class="switch-row">Measurement grid snap<input id="settingGridSnap" type="checkbox" ${S.project.gridSnap !== false ? "checked" : ""}></label>${C.choice("settingGridStep", "Measurement grid", { 0.1: "0.10 m", 0.25: "0.25 m", 0.5: "0.50 m", 1: "1.00 m", 2: "2.00 m", 5: "5.00 m" }, String(S.project.gridStep || 0.5))}<p class="subtle">Measurements snap to object corners and edges first, then to the selected grid interval.</p><div class="section-title">Presentation</div><label class="switch-row">Prestige mode <small class="subtle">— shine &amp; motion on buttons and the intro</small><input id="settingPrestige" type="checkbox" ${C.readPref("sami.reducedMotion") === "on" ? "" : "checked"}></label><p class="subtle">Off = Simple mode: flat, instant, minimal motion — best for glare, older devices or battery life. Your device's own reduced-motion setting is always respected either way.</p><label class="switch-row">Function name bubbles<input id="settingTips" type="checkbox" ${ui.tooltips ? "checked" : ""}></label><div class="section-title">Location integration</div>${C.field("settingW3wKey", "what3words API key", C.readPref("sami.w3w.key") || "", "password", 'placeholder="Add your own key — leave blank to use the demo key"')}<p class="subtle">${C.readPref("sami.w3w.key") ? "Using your own what3words account." : window.SAMI_CONFIG?.what3wordsApiKey ? "Currently using the built-in demo what3words key. Add your own key above to use your account and quota instead." : "No what3words key configured yet. Coordinates and normal addresses still work without one."} <a href="https://what3words.com/select-plan" target="_blank" rel="noopener">Get your own what3words API key ↗</a></p><div class="section-title">Image recognition</div>${C.field("settingImageMatcher", "Visual image matcher HTTPS endpoint", C.readPref("sami.imageMatch.url") || window.SAMI_CONFIG?.siteImageMatchEndpoint || "", "url", 'placeholder="https://…/match-site-image"')}<p class="subtle">GPS metadata is used first. A connected matcher can identify image-only screenshots; without one, SAMI opens the image on the current map for manual registration instead of failing.</p><div class="section-title">Connected tools</div>${B("Voice & connected services", "open:voice")}${B("Save project file", "backup")}${B("Previous saved versions", "history")}`;
   }
   function helpHTML() {
     return `<h2>From site to drawing</h2><ol class="help-steps"><li>Complete <b>Project</b> details.</li><li>In <b>Explore</b>, find your site and define the area.</li><li>Open <b>Site Plan</b>. Choose an asset to begin drawing immediately.</li><li>Use <b>Finish</b> to commit a line or area. Tap an item to edit.</li><li>Add a route, review the project, then issue your PDF.</li></ol>${details("Touch & drawing", "<p>Use two fingers to pan or zoom while drawing. Rotation starts locked; tap the N compass to unlock it, reset North or set a bearing. Drag a selected object or its centre handle to move; use ↻ to rotate. Adjustable assets have resize handles. Fixed Trakway panels retain their dimensions.</p><p>Freehand commits automatically when you lift your finger; freehand areas close back to their starting point. Point mode remains editable until you choose Finish, and Undo point removes the last point.</p>", "help-touch")}${details("Keyboard", "<p>V Select · P Place · L Line · A Area · F Freehand · S Snap · Ctrl/⌘ Z Undo · Ctrl/⌘ S Save · Escape Cancel</p>")}${details("Field evidence & services", "<p>Explore notes and photos are project evidence. Enable “Show on issued drawing” only for items you want in the PDF.</p><p>" + CAVEAT + "</p>")}${B("Guided first project", "tutorial")}${B("Why ask SAMI?", "sales")}`;
@@ -1592,13 +1592,17 @@ window.SAMIWorkspaceController = function (C, O) {
     if (k === "settings") {
       for (const [id, key] of [
         ["settingSnap", "snap"],
-        ["settingMotion", "motion"],
+        ["settingPrestige", "prestige"],
         ["settingTips", "tips"],
       ])
         $("#" + id).onchange = (e) => {
           if (key === "snap") setSnap(e.target.checked);
-          if (key === "motion")
-            C.setPref("sami.reducedMotion", e.target.checked ? "on" : "off");
+          if (key === "prestige") {
+            C.setPref("sami.reducedMotion", e.target.checked ? "off" : "on");
+            document.documentElement.dataset.reducedMotion = e.target.checked
+              ? "off"
+              : "on";
+          }
           if (key === "tips") ui.tooltips = e.target.checked;
         };
       $("#settingGridSnap")?.addEventListener("change", (e) => {
@@ -3532,6 +3536,9 @@ window.SAMIWorkspaceController = function (C, O) {
             B("Public utility references", "refreshPublicUtilities") +
             B("OHL snapshot", "refreshOhl") +
             B("England planning constraints", "refreshPlanningConstraints") +
+            B("Scotland protected sites", "refreshScotlandConstraints") +
+            B("Wales protected sites (NRW)", "refreshWalesConstraints") +
+            B("Northern Ireland ASSI sites", "refreshNIConstraints") +
             B("Source archives", "archives") +
             "<p>" +
             CAVEAT +
