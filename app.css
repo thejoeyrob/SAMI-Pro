@@ -680,9 +680,9 @@ p {
   font-size: 8px;
 }
 .selection-bar button {
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   padding: 0;
   border-color: transparent;
   background: transparent;
@@ -5149,6 +5149,68 @@ html[data-theme="arcticLight"] {
 html[data-reduced-motion="on"] .brand-button::after {
   animation: none;
   opacity: 0.28;
+}
+
+/* Prestige mode: a subtle travelling shine on primary actions, matching the
+   brand's electrical-pulse motif. Fully inert in Simple mode / reduced motion. */
+button.primary,
+.wide-btn.primary {
+  position: relative;
+  overflow: hidden;
+}
+button.primary::before,
+.wide-btn.primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 40%,
+    color-mix(in srgb, white 35%, transparent) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-position: 140% 0;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease);
+}
+button.primary:hover::before,
+.wide-btn.primary:hover::before {
+  opacity: 1;
+  animation: sami-btn-shine 1.1s var(--ease);
+}
+button.primary:active,
+.wide-btn.primary:active {
+  transform: scale(0.985);
+}
+@keyframes sami-btn-shine {
+  from {
+    background-position: 140% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.primary::before,
+  .wide-btn.primary::before {
+    display: none;
+  }
+  button.primary:active,
+  .wide-btn.primary:active {
+    transform: none;
+  }
+}
+html[data-reduced-motion="on"] button.primary::before,
+html[data-reduced-motion="on"] .wide-btn.primary::before {
+  display: none;
+}
+html[data-reduced-motion="on"] button.primary:active,
+html[data-reduced-motion="on"] .wide-btn.primary:active {
+  transform: none;
 }
 
 .backup-status {
