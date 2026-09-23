@@ -1,5 +1,5 @@
 {
-  "version": "2.7.18",
+  "version": "2.7.19",
   "shell": [
     "./app.css",
     "./bearing.js",
@@ -69,9 +69,9 @@
   "development": [
     "VERSION.json",
     "build.mjs",
-    "recovery-tests.mjs",
     "sw-template.txt",
-    "ASSET_MANIFEST.json"
+    "ASSET_MANIFEST.json",
+    "recovery-tests.mjs"
   ],
   "runtimeGenerated": [
     "sw.js"
@@ -86,6 +86,7 @@
     "STABLE_RESTORE_QA.json"
   ],
   "documentation": [
+    ".nojekyll",
     "AUDIT_REPORT.md",
     "CHANGELOG.md",
     "FEATURE_INVENTORY.md",
