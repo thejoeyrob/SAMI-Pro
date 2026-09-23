@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="en-GB" data-sami-version="2.7.18">
+<html lang="en-GB" data-sami-version="2.7.19">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -47,24 +47,24 @@
         background: #020405 !important;
       }
     </style>
-    <link href="manifest.webmanifest?v=2.7.18" rel="manifest" />
+    <link href="manifest.webmanifest?v=2.7.19" rel="manifest" />
     <title>SAMI · Spatial Analysis Mapping Intelligence</title>
-    <link href="sami-apple-touch-icon.png?v=2.7.18" rel="apple-touch-icon" />
-    <link href="sami-app-icon-192.png?v=2.7.18" rel="icon" />
-    <link href="leaflet.css?v=2.7.18" rel="stylesheet" />
-    <link href="app.css?v=2.7.18" rel="stylesheet" />
-    <link href="creator.css?v=2.7.18" rel="stylesheet" />
-    <link href="cinema.css?v=2.7.18" rel="stylesheet" />
+    <link href="sami-apple-touch-icon.png?v=2.7.19" rel="apple-touch-icon" />
+    <link href="sami-app-icon-192.png?v=2.7.19" rel="icon" />
+    <link href="leaflet.css?v=2.7.19" rel="stylesheet" />
+    <link href="app.css?v=2.7.19" rel="stylesheet" />
+    <link href="creator.css?v=2.7.19" rel="stylesheet" />
+    <link href="cinema.css?v=2.7.19" rel="stylesheet" />
   </head>
   <body>
     <div aria-label="Install SAMI" id="mobileInstallGate">
       <div class="install-gate-card">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.7.19" />
         <div>
-          <h1>Welcome to SAMI</h1>
+          <h1>Install SAMI to continue</h1>
           <p>
-            Install SAMI for a full-screen workspace on phones and tablets,
-            or continue in your browser below.
+            SAMI is designed to run as an installed workspace on phones and
+            tablets. The browser page is for installation only.
           </p>
         </div>
         <div class="install-gate-copy" id="gateInstallInstructions"></div>
@@ -128,7 +128,7 @@
       <div aria-live="polite" class="cinema-sentence" id="pitchLine"></div>
       <section aria-label="SAMI" class="cinema-brand" id="brandResolve">
         <div id="wordmarkStage">
-          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.7.18" /><svg
+          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.7.19" /><svg
             aria-hidden="true"
             class="logo-edge-pass"
             viewbox="0 0 1116 339"
@@ -157,7 +157,7 @@
         </div>
       </section>
       <div class="cinema-closed" hidden="" id="cinemaClosed">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.7.19" />
         <p>SAMI closed</p>
         <small>Your project is saved on this device.</small
         ><button id="reopenSami" type="button">Open SAMI</button>
@@ -167,13 +167,13 @@
         id="salesAudio"
         preload="none"
         playsinline
-        src="why-sami-promo-v272.mp3?v=2.7.18"
+        src="why-sami-promo-v272.mp3?v=2.7.19"
       ></audio>
     </section>
     <div aria-hidden="true" class="app-shell" id="app" inert="">
       <header class="topbar">
         <button aria-label="Open project" class="brand-button" id="homeBtn">
-          <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" />
+          <img alt="SAMI" src="sami-wordmark.png?v=2.7.19" />
         </button>
         <div class="project-title-wrap">
           <input
@@ -185,7 +185,7 @@
           />
           <div class="project-meta">
             <span id="saveState">Saved on this device</span> ·
-            <span data-version>v2.7.18</span>
+            <span data-version>v2.7.19</span>
           </div>
         </div>
         <div class="top-actions">
@@ -325,7 +325,7 @@
           <div class="cad-sheet-border"></div>
           <div class="cad-titleblock">
             <div class="cad-brand">
-              <img alt="" src="sami-wordmark.png?v=2.7.18" /><span
+              <img alt="" src="sami-wordmark.png?v=2.7.19" /><span
                 >CREATED USING SAMI</span
               >
             </div>
@@ -345,42 +345,6 @@
           </div>
         </div>
         <div class="canvas-toolbar">
-          <div class="history-controls" id="mapHistory" role="group" aria-label="Drawing history">
-            <button disabled="" id="undoBtn" aria-label="Undo" title="Undo (Ctrl or Cmd Z)">
-              <svg
-                class="i"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M7 7L3 11l4 4" />
-                <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
-              </svg></button
-            ><button
-              disabled=""
-              id="redoBtn"
-              aria-label="Redo"
-              title="Redo (Ctrl or Cmd Shift Z)"
-            >
-              <svg
-                class="i"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M17 7l4 4-4 4" />
-                <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
-              </svg>
-            </button>
-          </div>
           <div aria-label="Map background" class="base-switch">
             <button aria-pressed="false" data-base="street">Map</button
             ><button aria-pressed="true" class="active" data-base="satellite">
@@ -408,6 +372,41 @@
               <path d="M5 9l7 7 7-7" />
             </svg>
           </button>
+          <div class="history-controls" id="canvasHistory">
+            <button disabled="" id="undoBtn" title="Undo (Ctrl or Cmd Z)">
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M7 7L3 11l4 4" />
+                <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
+              </svg></button
+            ><button
+              disabled=""
+              id="redoBtn"
+              title="Redo (Ctrl or Cmd Shift Z)"
+            >
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 7l4 4-4 4" />
+                <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="area-chip">
           <button id="areaChip">＋ Define site area</button
@@ -630,7 +629,7 @@
         </section>
         <section aria-live="polite" class="sami-panel" id="samiPanel">
           <div class="sami-panel-head">
-            <img alt="" src="sami-mark.png?v=2.7.18" />
+            <img alt="" src="sami-mark.png?v=2.7.19" />
             <div>
               <strong>Ask SAMI</strong
               ><small>Control your site workspace</small>
@@ -679,7 +678,7 @@
               class="send-btn"
               id="sendBtn"
             >
-              <img alt="" src="sami-mark.png?v=2.7.18" /><span id="askButtonLabel"
+              <img alt="" src="sami-mark.png?v=2.7.19" /><span id="askButtonLabel"
                 >Ask SAMI</span
               >
             </button>
@@ -814,7 +813,7 @@
           </div>
           <div class="print-titleblock">
             <div class="print-brand">
-              <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" /><strong
+              <img alt="SAMI" src="sami-wordmark.png?v=2.7.19" /><strong
                 >CREATED USING SAMI</strong
               >
             </div>
@@ -861,23 +860,23 @@
       id="toast"
       role="status"
     ></div>
-    <script defer="" src="version.js?v=2.7.18"></script>
-    <script defer="" src="leaflet.js?v=2.7.18"></script>
-    <script defer="" src="config.js?v=2.7.18"></script>
-    <script defer="" src="polygon-clipping.js?v=2.7.18"></script>
-    <script defer="" src="geometry.js?v=2.7.18"></script>
-    <script defer="" src="qrcode.js?v=2.7.18"></script>
-    <script defer="" src="documents.js?v=2.7.18"></script>
-    <script defer="" src="intelligence.js?v=2.7.18"></script>
-    <script defer="" src="symbols.js?v=2.7.18"></script>
-    <script defer="" src="builtin-assets.js?v=2.7.18"></script>
-    <script defer="" src="shape-import.js?v=2.7.18"></script>
-    <script defer="" src="studio.js?v=2.7.18"></script>
-    <script defer="" src="project-store.js?v=2.7.18"></script>
-    <script defer="" src="bearing.js?v=2.7.18"></script>
-    <script defer="" src="workspace.js?v=2.7.18"></script>
-    <script defer="" src="engine.js?v=2.7.18"></script>
-    <script defer="" src="pwa.js?v=2.7.18"></script>
-    <script defer="" src="cinema.js?v=2.7.18"></script>
+    <script defer="" src="version.js?v=2.7.19"></script>
+    <script defer="" src="leaflet.js?v=2.7.19"></script>
+    <script defer="" src="config.js?v=2.7.19"></script>
+    <script defer="" src="polygon-clipping.js?v=2.7.19"></script>
+    <script defer="" src="geometry.js?v=2.7.19"></script>
+    <script defer="" src="qrcode.js?v=2.7.19"></script>
+    <script defer="" src="documents.js?v=2.7.19"></script>
+    <script defer="" src="intelligence.js?v=2.7.19"></script>
+    <script defer="" src="symbols.js?v=2.7.19"></script>
+    <script defer="" src="builtin-assets.js?v=2.7.19"></script>
+    <script defer="" src="shape-import.js?v=2.7.19"></script>
+    <script defer="" src="studio.js?v=2.7.19"></script>
+    <script defer="" src="project-store.js?v=2.7.19"></script>
+    <script defer="" src="bearing.js?v=2.7.19"></script>
+    <script defer="" src="workspace.js?v=2.7.19"></script>
+    <script defer="" src="engine.js?v=2.7.19"></script>
+    <script defer="" src="pwa.js?v=2.7.19"></script>
+    <script defer="" src="cinema.js?v=2.7.19"></script>
   </body>
 </html>
