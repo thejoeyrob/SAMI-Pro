@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="en-GB" data-sami-version="2.7.17">
+<html lang="en-GB" data-sami-version="2.7.18">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -47,19 +47,19 @@
         background: #020405 !important;
       }
     </style>
-    <link href="manifest.webmanifest?v=2.7.17" rel="manifest" />
+    <link href="manifest.webmanifest?v=2.7.18" rel="manifest" />
     <title>SAMI · Spatial Analysis Mapping Intelligence</title>
-    <link href="sami-apple-touch-icon.png?v=2.7.17" rel="apple-touch-icon" />
-    <link href="sami-app-icon-192.png?v=2.7.17" rel="icon" />
-    <link href="leaflet.css?v=2.7.17" rel="stylesheet" />
-    <link href="app.css?v=2.7.17" rel="stylesheet" />
-    <link href="creator.css?v=2.7.17" rel="stylesheet" />
-    <link href="cinema.css?v=2.7.17" rel="stylesheet" />
+    <link href="sami-apple-touch-icon.png?v=2.7.18" rel="apple-touch-icon" />
+    <link href="sami-app-icon-192.png?v=2.7.18" rel="icon" />
+    <link href="leaflet.css?v=2.7.18" rel="stylesheet" />
+    <link href="app.css?v=2.7.18" rel="stylesheet" />
+    <link href="creator.css?v=2.7.18" rel="stylesheet" />
+    <link href="cinema.css?v=2.7.18" rel="stylesheet" />
   </head>
   <body>
     <div aria-label="Install SAMI" id="mobileInstallGate">
       <div class="install-gate-card">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.17" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" />
         <div>
           <h1>Install SAMI to continue</h1>
           <p>
@@ -88,6 +88,9 @@
           </p>
         </div>
         <button class="quiet" id="gateWhySami" type="button">Why SAMI?</button>
+        <button class="text-btn" id="gateContinueBrowser" type="button">
+          Continue in browser
+        </button>
         <p class="install-gate-foot">
           JW EDS · SPATIAL ANALYSIS &amp; MAPPING INTELLIGENCE
         </p>
@@ -125,7 +128,7 @@
       <div aria-live="polite" class="cinema-sentence" id="pitchLine"></div>
       <section aria-label="SAMI" class="cinema-brand" id="brandResolve">
         <div id="wordmarkStage">
-          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.7.17" /><svg
+          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.7.18" /><svg
             aria-hidden="true"
             class="logo-edge-pass"
             viewbox="0 0 1116 339"
@@ -154,7 +157,7 @@
         </div>
       </section>
       <div class="cinema-closed" hidden="" id="cinemaClosed">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.17" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" />
         <p>SAMI closed</p>
         <small>Your project is saved on this device.</small
         ><button id="reopenSami" type="button">Open SAMI</button>
@@ -164,13 +167,13 @@
         id="salesAudio"
         preload="none"
         playsinline
-        src="why-sami-promo-v272.mp3?v=2.7.17"
+        src="why-sami-promo-v272.mp3?v=2.7.18"
       ></audio>
     </section>
     <div aria-hidden="true" class="app-shell" id="app" inert="">
       <header class="topbar">
         <button aria-label="Open project" class="brand-button" id="homeBtn">
-          <img alt="SAMI" src="sami-wordmark.png?v=2.7.17" />
+          <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" />
         </button>
         <div class="project-title-wrap">
           <input
@@ -182,10 +185,45 @@
           />
           <div class="project-meta">
             <span id="saveState">Saved on this device</span> ·
-            <span data-version>v2.7.17</span>
+            <span data-version>v2.7.18</span>
           </div>
         </div>
         <div class="top-actions">
+          <div class="history-controls" id="topbarHistory">
+            <button disabled="" id="undoBtn" title="Undo (Ctrl or Cmd Z)">
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M7 7L3 11l4 4" />
+                <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
+              </svg></button
+            ><button
+              disabled=""
+              id="redoBtn"
+              title="Redo (Ctrl or Cmd Shift Z)"
+            >
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 7l4 4-4 4" />
+                <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
+              </svg>
+            </button>
+          </div>
           <button class="legacy-hook" hidden="" id="projectBtn">Project</button
           ><button class="legacy-hook" hidden="" id="searchBtn">Search</button
           ><button class="legacy-hook" hidden="" id="quickHelp">?</button
@@ -322,7 +360,7 @@
           <div class="cad-sheet-border"></div>
           <div class="cad-titleblock">
             <div class="cad-brand">
-              <img alt="" src="sami-wordmark.png?v=2.7.17" /><span
+              <img alt="" src="sami-wordmark.png?v=2.7.18" /><span
                 >CREATED USING SAMI</span
               >
             </div>
@@ -369,43 +407,6 @@
               <path d="M5 9l7 7 7-7" />
             </svg>
           </button>
-          <div class="history-controls">
-            <button disabled="" id="undoBtn" title="Undo (Ctrl or Cmd Z)">
-              <svg
-                class="i"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M7 7L3 11l4 4" />
-                <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
-              </svg>
-              <span>Undo</span></button
-            ><button
-              disabled=""
-              id="redoBtn"
-              title="Redo (Ctrl or Cmd Shift Z)"
-            >
-              <svg
-                class="i"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M17 7l4 4-4 4" />
-                <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
-              </svg>
-              <span>Redo</span>
-            </button>
-          </div>
         </div>
         <div class="area-chip">
           <button id="areaChip">＋ Define site area</button
@@ -628,7 +629,7 @@
         </section>
         <section aria-live="polite" class="sami-panel" id="samiPanel">
           <div class="sami-panel-head">
-            <img alt="" src="sami-mark.png?v=2.7.17" />
+            <img alt="" src="sami-mark.png?v=2.7.18" />
             <div>
               <strong>Ask SAMI</strong
               ><small>Control your site workspace</small>
@@ -677,7 +678,7 @@
               class="send-btn"
               id="sendBtn"
             >
-              <img alt="" src="sami-mark.png?v=2.7.17" /><span id="askButtonLabel"
+              <img alt="" src="sami-mark.png?v=2.7.18" /><span id="askButtonLabel"
                 >Ask SAMI</span
               >
             </button>
@@ -812,7 +813,7 @@
           </div>
           <div class="print-titleblock">
             <div class="print-brand">
-              <img alt="SAMI" src="sami-wordmark.png?v=2.7.17" /><strong
+              <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" /><strong
                 >CREATED USING SAMI</strong
               >
             </div>
@@ -859,23 +860,23 @@
       id="toast"
       role="status"
     ></div>
-    <script defer="" src="version.js?v=2.7.17"></script>
-    <script defer="" src="leaflet.js?v=2.7.17"></script>
-    <script defer="" src="config.js?v=2.7.17"></script>
-    <script defer="" src="polygon-clipping.js?v=2.7.17"></script>
-    <script defer="" src="geometry.js?v=2.7.17"></script>
-    <script defer="" src="qrcode.js?v=2.7.17"></script>
-    <script defer="" src="documents.js?v=2.7.17"></script>
-    <script defer="" src="intelligence.js?v=2.7.17"></script>
-    <script defer="" src="symbols.js?v=2.7.17"></script>
-    <script defer="" src="builtin-assets.js?v=2.7.17"></script>
-    <script defer="" src="shape-import.js?v=2.7.17"></script>
-    <script defer="" src="studio.js?v=2.7.17"></script>
-    <script defer="" src="project-store.js?v=2.7.17"></script>
-    <script defer="" src="bearing.js?v=2.7.17"></script>
-    <script defer="" src="workspace.js?v=2.7.17"></script>
-    <script defer="" src="engine.js?v=2.7.17"></script>
-    <script defer="" src="pwa.js?v=2.7.17"></script>
-    <script defer="" src="cinema.js?v=2.7.17"></script>
+    <script defer="" src="version.js?v=2.7.18"></script>
+    <script defer="" src="leaflet.js?v=2.7.18"></script>
+    <script defer="" src="config.js?v=2.7.18"></script>
+    <script defer="" src="polygon-clipping.js?v=2.7.18"></script>
+    <script defer="" src="geometry.js?v=2.7.18"></script>
+    <script defer="" src="qrcode.js?v=2.7.18"></script>
+    <script defer="" src="documents.js?v=2.7.18"></script>
+    <script defer="" src="intelligence.js?v=2.7.18"></script>
+    <script defer="" src="symbols.js?v=2.7.18"></script>
+    <script defer="" src="builtin-assets.js?v=2.7.18"></script>
+    <script defer="" src="shape-import.js?v=2.7.18"></script>
+    <script defer="" src="studio.js?v=2.7.18"></script>
+    <script defer="" src="project-store.js?v=2.7.18"></script>
+    <script defer="" src="bearing.js?v=2.7.18"></script>
+    <script defer="" src="workspace.js?v=2.7.18"></script>
+    <script defer="" src="engine.js?v=2.7.18"></script>
+    <script defer="" src="pwa.js?v=2.7.18"></script>
+    <script defer="" src="cinema.js?v=2.7.18"></script>
   </body>
 </html>
