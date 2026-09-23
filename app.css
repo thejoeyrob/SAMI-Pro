@@ -4184,9 +4184,8 @@ body:not(.inspector-collapsed) #restoreInspector {
   display: block;
   overflow: visible;
 }
-.asset-map-icon svg {
-  /* SVG's default xMidYMid meet keeps artwork proportional within the footprint. */
-  pointer-events: none;
+.asset-map-icon.vehicle svg {
+  preserveaspectratio: xMidYMid meet;
 }
 .route-vehicle-marker {
   width: 26px;
@@ -5416,62 +5415,26 @@ html[data-reduced-motion="on"] .wide-btn.primary:active {
   background: var(--accent-soft) !important;
 }
 
-/* Drawing history has its own map group, clear of the header/menu and map controls. */
-.canvas-toolbar {
-  top: 70px;
-  right: calc(76px + env(safe-area-inset-right));
-  flex-direction: column;
-  align-items: flex-end;
-}
-#mapHistory {
-  position: static !important;
-  inset: auto !important;
-  display: flex !important;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 2px;
-  padding: 0;
-  border: 0;
-  background: var(--mapui, var(--panel));
-  border: 1px solid var(--line2);
-  border-radius: 9px;
-  box-shadow: 0 4px 14px #0002;
-}
-#mapHistory button {
-  width: 44px !important;
-  min-width: 44px !important;
-  height: 44px !important;
-  min-height: 44px !important;
-}
-.topbar {
-  min-height: calc(58px + env(safe-area-inset-top));
-  padding-top: calc(6px + env(safe-area-inset-top));
-  padding-bottom: 6px;
-}
-.topbar .top-actions { flex: 0 0 auto; }
-.topbar .top-actions button {
-  width: 44px !important;
-  min-width: 44px !important;
-  height: 44px !important;
-  min-height: 44px !important;
-}
-#gateContinueBrowser {
-  display: block;
-  margin: 8px auto 0;
-  min-height: 44px;
-  padding: 6px 12px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  color: inherit;
+/* v2.7.19 — Undo/Redo now dock in the canvas toolbar (top-right, next to
+   map style/zoom) instead of the top bar or a disconnected floating spot.
+   .canvas-toolbar .history-controls already resets position to static
+   (see the v2.7.13 note above) and .history-controls button already
+   shares the 48px map-control touch sizing, so no new override is needed
+   here — #canvasHistory just inherits the existing, already-correct rules. */
+
+/* v2.7.18 — quiet, text-only fallback to continue in the browser without
+   installing, sitting under the Why SAMI? button on the install gate. */
+.install-gate-card #gateContinueBrowser {
+  margin-top: 10px;
+  padding: 4px 6px;
+  border: 0 !important;
+  background: transparent !important;
+  color: #8fa79c;
+  font-size: 11px;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 2px;
+  min-height: 32px;
 }
-.asset-illustration-marker { pointer-events: none; }
-.asset-map-icon { transform-origin: 50% 50%; }
-@media (max-width: 480px) {
-  .topbar { gap: 4px; padding-left: calc(6px + env(safe-area-inset-left)); padding-right: calc(6px + env(safe-area-inset-right)); }
-  .topbar .brand-button { width: 82px !important; min-width: 82px !important; padding-right: 4px !important; }
-  .topbar .brand-button img { width: 74px !important; max-width: 74px !important; }
-  .topbar .project-meta { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.install-gate-card #gateContinueBrowser:hover {
+  color: #b8c9c0;
 }
