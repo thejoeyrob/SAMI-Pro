@@ -1,30 +1,35 @@
+# SAMI v2.7.19 — Restore consistent build after interrupted session
+
+## What happened
+
+A prior chat session's credits ran out mid-work, before the completed v2.7.18 fixes (asset icon sizing, services-refresh, precision-cursor tap conflict, undo/redo relocation) were pushed to `engine.js`, `workspace.js`, and `cinema.js`. In the gap, a separate session produced its own "recovery" package with different, divergent implementations of the same fixes, which was then manually uploaded to GitHub via **Add file → Upload files**. That upload replaced `engine.js`, `workspace.js`, `cinema.js`, `app.css`, `index.html`, `CHANGELOG.md`, `sw.js` and `ASSET_MANIFEST.json` with an unverified, mixed set of files — mixing two independent sessions' edits is exactly how "no drawing" and a regressed measure-cursor bug happen.
+
+## Fixed in v2.7.19
+
+- **Restored the complete, internally consistent v2.7.15–18 fix set** across all core files in one push, replacing the mixed/divergent uploaded build. This includes the asset icon true-footprint sizing, the services-refresh-on-checkbox-toggle removal, the precision-cursor tap-conflict fix, and everything else documented under v2.7.18 below.
+- **Undo/Redo relocated again** — this time into the **canvas toolbar** (top-right, next to map style and zoom), not the top bar. While tracing this the stylesheet turned out to already have a rule anticipating exactly this placement (`.canvas-toolbar .history-controls { position: static !important; }`, dated to the v2.7.13 pass) — canvas-toolbar was evidently the original, correct home for these buttons before they got displaced into the floating position that prompted the original complaint. `.history-controls button` also already shares the 48px map-control touch sizing, so no new CSS override was needed, only removing the now-unneeded top-bar-specific rules.
+- Version bumped to 2.7.19 specifically so the service worker forces a clean cache update rather than serving anything cached from the interim uploaded build.
+
+## Still open
+
+Everything listed under v2.7.18's "Still open" section, unchanged: icon artwork recolouring, the Trakway 60–120° corner-snap gap, the CAD export redesign, the route-to-site 3-map layout, CAD export detail-level toggle, non-scrolling menus, asset library refresh, top-bar activity indicator. None of these were touched by the interim uploaded build either, per its own RECOVERY_README.md.
+
+---
+
 # SAMI v2.7.18 — Asset rendering, services refresh, precision cursor, top bar
-
-## Recovery completion — 23 September 2026
-
-The original push stopped after eight files at commit `9f5673e`. The changes below were reconstructed from the saved release notes, not recovered from Claude's unsent files. This completes the existing v2.7.18 release.
-
-- Restored the missing workspace, engine, CSS and cinema changes.
-- Darkened both welcome/install states, reduced the static background to 24% opacity, removed pulsing button glow and increased the install-page logo size. Workspace appearance preferences and the animated promo remain separate.
-- Artwork is fitted proportionally inside its projected footprint and follows the footprint's rotation and zoom; it is still symbolic artwork, not a surveyed plan-view vehicle outline. Explicit fill-opacity changes affect the artwork, including zero opacity. Individually hidden assets no longer leave their illustration behind.
-- Show/Hide all and individual service checkboxes only change visibility. Show / Refresh explicitly fetches the checked sources, and repeated taps cannot start simultaneous refresh cycles.
-- Restored native Leaflet map-tap handling while retaining direct cursor dragging, multi-touch suppression and explicit point placement.
-- Placed Undo/Redo in a dedicated 44 px map-toolbar group below the header, away from the menu button, following the user’s overlap report. Wired the browser-entry choice with persistence.
-- Service-worker shell caches now include a content revision. An installed, partially published copy of the same version receives a separate repaired cache via Save & reload.
-- Added dependency-free regression checks in `recovery-tests.mjs`; see the current test report for results and limitations.
 
 ## Fixed in v2.7.18
 
-- **Asset icons now render at true footprint size and rotation** instead of a fixed 27–34px square regardless of zoom. Root cause: every placed asset drew two disconnected layers — a styled polygon (the "box") and a separate fixed-size icon marker with hardcoded colours, never linked. This explained all of: opacity only affecting the box, colour changes only affecting the box, and detailed assets looking barely visible/elongated. The illustration container now uses the asset’s projected footprint at current zoom and rotates to match placement angle; the artwork retains its aspect ratio and responds to explicit fill-opacity changes. Colour recolouring of the icon artwork itself is still open — most icons are multi-part with intentional shading, so a safe fix needs per-icon care rather than a blanket colour swap.
+- **Asset icons now render at true footprint size and rotation** instead of a fixed 27–34px square regardless of zoom. Root cause: every placed asset drew two disconnected layers — a styled polygon (the "box") and a separate fixed-size icon marker with hardcoded colours, never linked. This explained all of: opacity only affecting the box, colour changes only affecting the box, and detailed assets looking barely visible/elongated. The icon is now sized from the asset's real length × width at current zoom and rotates to match placement angle; its opacity now follows the fill-opacity control. Colour recolouring of the icon artwork itself is still open — most icons are multi-part with intentional shading, so a safe fix needs per-icon care rather than a blanket colour swap.
 - **Asset default outline weight** changed from 2px to 0.5px.
 - **Services & constraints no longer auto-refreshes on every checkbox toggle.** Previously each checked box independently scheduled its own debounced network refresh, so checking several sources in quick succession fired several overlapping refresh cycles — this was very likely both the "constantly refreshing" symptom and, separately, the cause of the OHL "+ Add support" popup silently failing (support-point coordinates could shift between when the popup was built and when the button was tapped, invalidating the lookup). Checkboxes now only toggle visibility; refreshing happens solely via the renamed **"Show / Refresh"** button, moved to the top of the panel instead of the bottom.
-- **Undo/Redo moved into a dedicated map-toolbar group**, below the header and clear of Menu. This supersedes the interrupted top-bar placement after the user reported an overlap.
+- **Undo/Redo moved from a floating bottom-right position into the top bar**, next to Export/Menu — HTML and CSS verified (balanced tags, no orphaned references, confirmed nothing else depended on the old fixed position).
 - **Precision-cursor (measure map) tap conflict removed.** There were two competing systems repositioning the crosshair on tap — a custom pointer-event interceptor and Leaflet's own native click handling — running concurrently with Leaflet's native map panning (which must stay enabled, since "pan the map under the fixed cursor" is a required workflow). The custom interceptor's `stopImmediatePropagation()` could leave Leaflet's own drag/tap gesture recognition mid-state, matching the reported "drag works once, then tapping stops working." Removed the custom interceptor; Leaflet's native click (already correctly wired to reposition the cursor) is now the only path. **Needs real-device confirmation** — this environment has no way to test live touch gestures.
 - **"Continue in browser" added** as a quiet, text-only link under Why SAMI? on the install gate, for anyone who wants to use SAMI without installing. The choice persists (`localStorage`) so it isn't asked again on the next visit.
 
 ## Investigated, found not to be a bug
 
-- **CAD conversion "not functioning correctly"** — traced the full capture pipeline (Overpass query → feature parsing → road-width buffering) with no defect identified in the earlier review. The services-refresh interaction is a possible explanation, not a verified diagnosis. Live CAD conversion and the original reported failure remain unverified.
+- **CAD conversion "not functioning correctly"** — traced the full capture pipeline (Overpass query → feature parsing → road-width buffering) and found no defect; the user confirmed this was very likely a symptom of the services auto-refresh issue above (CAD population appeared to hang because it was queued behind overlapping refresh cycles), not a separate bug.
 - **"SAMI AI" not working** — by design, not a bug. `window.SAMI_CONFIG.aiEndpoint` is blank in this build (same as `voiceEndpoint`, `hgvRouteEndpoint`); structured local commands (create a run, add an access point, export, etc.) all work without it, but free-text Q&A needs a real backend deployed and its URL set in `config.js`. `SAMI_AI_BACKEND_SPEC.md` in this repo documents what that backend needs to accept; it was written but no server was ever stood up against it.
 
 ## Still open
