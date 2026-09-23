@@ -500,7 +500,7 @@ window.SAMIWorkspaceController = function (C, O) {
       dash = q.dash || (k === "ohl" ? "solid" : "dashed"),
       opacity = Math.round((q.opacity ?? 1) * 100),
       fillOpacity = Math.round((q.fillOpacity ?? 0.15) * 100);
-    return `<div class="service-style-card"><div class="service-style-head"><i style="background:${baseColor}"></i><div><small>EDIT SERVICE APPEARANCE</small><strong>${esc(v.name)}</strong><span>${count} project ${count === 1 ? "record" : "records"} · changes apply to every ${esc(v.name)} item</span></div></div><div class="property-grid"><label>Line colour<input id="serviceStyleColor" type="color" value="${baseColor}"></label><label>Line width<input id="serviceStyleWeight" type="number" min="0.5" max="12" step="0.5" value="${weight}"></label></div>${C.choice("serviceStyleDash", "Line style", { solid: "Solid", dashed: "Dashed", dotted: "Dotted" }, dash)}<label class="field-label" for="serviceStyleOpacity">Line opacity <o>${opacity}%</o></label><input id="serviceStyleOpacity" type="range" min="5" max="100" value="${opacity}">${v.area ? `<div class="property-grid"><label>Fill colour<input id="serviceStyleFill" type="color" value="${baseFill}"></label><label>Fill opacity<input id="serviceStyleFillOpacity" type="range" min="0" max="80" value="${fillOpacity}"></label></div>` : ""}<div class="button-pair">${B("Reset", "resetServiceStyle:" + k)}${B("Apply to all", "applyServiceStyle:" + k, true)}</div></div>`;
+    return `<div class="service-style-card"><div class="service-style-head"><i style="background:${baseColor}"></i><div><small>EDIT SERVICE APPEARANCE</small><strong>${esc(v.name)}</strong><span>${count} project ${count === 1 ? "record" : "records"} · changes apply to every ${esc(v.name)} item</span></div></div><div class="property-grid"><label>Line colour<input id="serviceStyleColor" type="color" value="${baseColor}"></label><label>Line width<input id="serviceStyleWeight" type="number" min="0.5" max="12" step="0.5" value="${weight}"></label></div>${C.choice("serviceStyleDash", "Line style", { solid: "Solid", dashed: "Dashed", dotted: "Dotted" }, dash)}<label class="field-label" for="serviceStyleOpacity">Line opacity <output>${opacity}%</output></label><input id="serviceStyleOpacity" type="range" min="5" max="100" value="${opacity}">${v.area ? `<div class="property-grid"><label>Fill colour<input id="serviceStyleFill" type="color" value="${baseFill}"></label><label>Fill opacity<input id="serviceStyleFillOpacity" type="range" min="0" max="80" value="${fillOpacity}"></label></div>` : ""}<div class="button-pair">${B("Reset", "resetServiceStyle:" + k)}${B("Apply to all", "applyServiceStyle:" + k, true)}</div></div>`;
   }
   function servicesHTML() {
     const counts = {};
@@ -526,7 +526,7 @@ window.SAMIWorkspaceController = function (C, O) {
         v = C.SERVICES[selected];
       return `${tabs}<p class="subtle">Choose a service or constraint, then set one appearance for every item in that category. Tapping an item on the map opens its information instead of its styling controls.</p><div class="service-edit-list">${ordered.map(([k, x]) => `<button class="service-row service-edit-row ${selected === k ? "active" : ""}" data-action="serviceStyle:${k}"><i style="background:${S.project.serviceStyles?.[k]?.color || x.color}"></i><span>${esc(x.name)}<small>${counts[k] || 0} project records</small></span><b>›</b></button>`).join("")}</div>${serviceStyleHTML(selected, v, counts[selected] || 0)}<p class="service-guidance">${CAVEAT}</p>`;
     }
-    return `${tabs}${ui.serviceMode === "show" ? `${B("Show / Refresh", "showServiceMapping", true)}<p class="subtle">Choose layers, then tap Show / Refresh to fetch current records. Checkboxes only change visibility.</p><div class="button-pair">${B("Show all", "servicesShowAll")}${B("Hide all", "servicesHideAll")}</div>` : ""}${ordered.map(([k, v]) => (ui.serviceMode === "add" ? `<button class="service-row" data-action="addService:${k}"><i style="background:${v.color}"></i><span>${esc(v.name)}<small>Manual ${v.area ? "area" : "line"}</small></span><b>＋</b></button>` : `<label class="service-row"><input type="checkbox" data-service="${k}" ${S.project.serviceVisibility[k] ? "checked" : ""}><i style="background:${S.project.serviceStyles?.[k]?.color || v.color}"></i><span>${esc(v.name)}<small>${counts[k] ? counts[k] + " project records" : reference.has(k) ? (k === "ohl" ? "Mapped OHL intelligence · site + 0.5 mile" : "Public reference search · coverage varies") : "Constraint source · coverage varies"}</small></span></label>`)).join("")}${details("Data sources & import", B("Source catalogue", "servicesCatalogue") + B("Import survey / utility data", "dataPack"))}<p class="service-guidance">${CAVEAT}</p>`;
+    return `${tabs}${ui.serviceMode === "show" ? B("Show / Refresh", "showServiceMapping", true) + `<div class="button-pair">${B("Show all", "servicesShowAll")}${B("Hide all", "servicesHideAll")}</div>` : ""}${ordered.map(([k, v]) => (ui.serviceMode === "add" ? `<button class="service-row" data-action="addService:${k}"><i style="background:${v.color}"></i><span>${esc(v.name)}<small>Manual ${v.area ? "area" : "line"}</small></span><b>＋</b></button>` : `<label class="service-row"><input type="checkbox" data-service="${k}" ${S.project.serviceVisibility[k] ? "checked" : ""}><i style="background:${S.project.serviceStyles?.[k]?.color || v.color}"></i><span>${esc(v.name)}<small>${counts[k] ? counts[k] + " project records" : reference.has(k) ? (k === "ohl" ? "Mapped OHL intelligence · site + 0.5 mile" : "Public reference search · coverage varies") : "Constraint source · coverage varies"}</small></span></label>`)).join("")}${details("Data sources & import", B("Source catalogue", "servicesCatalogue") + B("Import survey / utility data", "dataPack"))}<p class="service-guidance">${CAVEAT}</p>`;
   }
   function vehicleSVG(k) {
     const artic = k === "artic40",
@@ -756,7 +756,7 @@ window.SAMIWorkspaceController = function (C, O) {
         ? `<img class="reference-preview" src="${esc(r.dataUrl)}" alt="Reference map image"><label class="field-label">Is the site in the UK?<select class="field" id="referenceCountry"><option value="GB" ${r.country === "GB" ? "selected" : ""}>Yes · United Kingdom</option><option value="" ${!r.country ? "selected" : ""}>No / unknown</option></select></label><label class="field-label">Nearest known place (optional)<input class="field" id="referenceHint" value="${esc(r.hint || "")}" placeholder="Town, road, postcode, landmark"></label>
       <div class="reference-status">${r.gps ? `Embedded location found: ${r.gps[1].toFixed(6)}, ${r.gps[0].toFixed(6)}` : "No embedded GPS location found."}</div>
       <button data-action="matchReferenceImage" class="primary">Find this site</button>
-      <div class="reference-controls"><label>Image rotation <output id="referenceRotationOut">${r.rotation || 0}°</o><input id="referenceRotation" type="range" min="0" max="359" value="${r.rotation || 0}"></label><label>Overlay opacity <output id="referenceOpacityOut">${Math.round((r.opacity ?? 0.55) * 100)}%</o><input id="referenceOpacity" type="range" min="10" max="100" value="${Math.round((r.opacity ?? 0.55) * 100)}"></label><label>Overlay scale <output id="referenceScaleOut">${Math.round((r.scale ?? 1) * 100)}%</o><input id="referenceScale" type="range" min="50" max="180" value="${Math.round((r.scale ?? 1) * 100)}"></label></div>
+      <div class="reference-controls"><label>Image rotation <output id="referenceRotationOut">${r.rotation || 0}°</output><input id="referenceRotation" type="range" min="0" max="359" value="${r.rotation || 0}"></label><label>Overlay opacity <output id="referenceOpacityOut">${Math.round((r.opacity ?? 0.55) * 100)}%</output><input id="referenceOpacity" type="range" min="10" max="100" value="${Math.round((r.opacity ?? 0.55) * 100)}"></label><label>Overlay scale <output id="referenceScaleOut">${Math.round((r.scale ?? 1) * 100)}%</output><input id="referenceScale" type="range" min="50" max="180" value="${Math.round((r.scale ?? 1) * 100)}"></label></div>
       <div class="row equal"><button data-action="overlayCurrentView">Fit overlay to current view</button><button data-action="removeReferenceOverlay">Hide overlay</button></div>
       <p class="subtle">Pan/zoom the live map, adjust rotation and opacity, then use “Fit overlay to current view” to re-register the reference image.</p>`
         : ""
@@ -2565,7 +2565,16 @@ window.SAMIWorkspaceController = function (C, O) {
         }
       });
       const surface = precisionMapEl();
-      // Leaflet owns map taps and panning. Only the cursor itself captures a drag.
+      // v2.7.18: removed the custom pointerdown/pointermove/pointerup tap
+      // interceptor that duplicated Leaflet's own native "click" handling
+      // (already wired through onMapClick → positionPrecisionCursor above).
+      // Running both in parallel — and this one calling
+      // stopImmediatePropagation() on pointerup — could leave Leaflet's own
+      // drag/tap gesture state mid-way through recognising a gesture,
+      // matching the reported "first tap/drag works, next tap doesn't"
+      // symptom. Leaflet's native click is the single path now; map panning
+      // (move-the-map-under-the-cursor) is unaffected since dragging was
+      // never disabled for this path.
       surface.addEventListener(
         "pointerdown",
         (e) => {
@@ -3244,6 +3253,13 @@ window.SAMIWorkspaceController = function (C, O) {
         S.project.serviceVisibilityConfigured = true;
         C.commit();
         renderDrawer("services");
+        if (visible) {
+          clearTimeout(ui.serviceRefreshTimer);
+          ui.serviceRefreshTimer = setTimeout(
+            () => C.runAction("showServiceMapping"),
+            180,
+          );
+        }
         return;
       }
       if (action === "fieldNote" || action === "fieldPhoto") {
