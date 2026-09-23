@@ -1,3 +1,32 @@
+# SAMI v2.7.18 — Asset rendering, services refresh, precision cursor, top bar
+
+## Fixed in v2.7.18
+
+- **Asset icons now render at true footprint size and rotation** instead of a fixed 27–34px square regardless of zoom. Root cause: every placed asset drew two disconnected layers — a styled polygon (the "box") and a separate fixed-size icon marker with hardcoded colours, never linked. This explained all of: opacity only affecting the box, colour changes only affecting the box, and detailed assets looking barely visible/elongated. The icon is now sized from the asset's real length × width at current zoom and rotates to match placement angle; its opacity now follows the fill-opacity control. Colour recolouring of the icon artwork itself is still open — most icons are multi-part with intentional shading, so a safe fix needs per-icon care rather than a blanket colour swap.
+- **Asset default outline weight** changed from 2px to 0.5px.
+- **Services & constraints no longer auto-refreshes on every checkbox toggle.** Previously each checked box independently scheduled its own debounced network refresh, so checking several sources in quick succession fired several overlapping refresh cycles — this was very likely both the "constantly refreshing" symptom and, separately, the cause of the OHL "+ Add support" popup silently failing (support-point coordinates could shift between when the popup was built and when the button was tapped, invalidating the lookup). Checkboxes now only toggle visibility; refreshing happens solely via the renamed **"Show / Refresh"** button, moved to the top of the panel instead of the bottom.
+- **Undo/Redo moved from a floating bottom-right position into the top bar**, next to Export/Menu — HTML and CSS verified (balanced tags, no orphaned references, confirmed nothing else depended on the old fixed position).
+- **Precision-cursor (measure map) tap conflict removed.** There were two competing systems repositioning the crosshair on tap — a custom pointer-event interceptor and Leaflet's own native click handling — running concurrently with Leaflet's native map panning (which must stay enabled, since "pan the map under the fixed cursor" is a required workflow). The custom interceptor's `stopImmediatePropagation()` could leave Leaflet's own drag/tap gesture recognition mid-state, matching the reported "drag works once, then tapping stops working." Removed the custom interceptor; Leaflet's native click (already correctly wired to reposition the cursor) is now the only path. **Needs real-device confirmation** — this environment has no way to test live touch gestures.
+- **"Continue in browser" added** as a quiet, text-only link under Why SAMI? on the install gate, for anyone who wants to use SAMI without installing. The choice persists (`localStorage`) so it isn't asked again on the next visit.
+
+## Investigated, found not to be a bug
+
+- **CAD conversion "not functioning correctly"** — traced the full capture pipeline (Overpass query → feature parsing → road-width buffering) and found no defect; the user confirmed this was very likely a symptom of the services auto-refresh issue above (CAD population appeared to hang because it was queued behind overlapping refresh cycles), not a separate bug.
+- **"SAMI AI" not working** — by design, not a bug. `window.SAMI_CONFIG.aiEndpoint` is blank in this build (same as `voiceEndpoint`, `hgvRouteEndpoint`); structured local commands (create a run, add an access point, export, etc.) all work without it, but free-text Q&A needs a real backend deployed and its URL set in `config.js`. `SAMI_AI_BACKEND_SPEC.md` in this repo documents what that backend needs to accept; it was written but no server was ever stood up against it.
+
+## Still open
+
+- Icon artwork recolouring (see above)
+- Trakway 60–120° corner-snap gap (explicitly flagged as high-risk, needs isolated treatment)
+- CAD export redesign: logo flattening, user-logo background removal, 2-column key with shapes/signs/numbered markers, condensed detail boxes, inline OHL line labels, auto-varied line colours/dash
+- Route-to-site 3-map layout (labelled overview → last-main-road-to-site → final turns), condensed to one page
+- CAD export detail-level toggle (simple/high)
+- Non-scrolling menus
+- Asset library refresh for quality/reliability
+- Top-bar background-activity indicator
+
+---
+
 # SAMI v2.7.17 — Touch-target pass 1
 
 ## Fixed in v2.7.17
