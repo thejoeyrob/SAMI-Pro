@@ -21,11 +21,14 @@
     matchMedia?.("(display-mode: window-controls-overlay)")?.matches ||
     matchMedia?.("(display-mode: minimal-ui)")?.matches ||
     navigator.windowControlsOverlay?.visible === true;
-  const browserAllowed = () => {
-    try { return localStorage.getItem("sami.browser.allowed") === "yes"; }
-    catch { return false; }
-  };
-  if (!isInstalled() && !browserAllowed())
+  const continuedInBrowser = (() => {
+    try {
+      return localStorage.getItem("sami.browser.continue") === "yes";
+    } catch {
+      return false;
+    }
+  })();
+  if (!isInstalled() && !continuedInBrowser)
     document.documentElement.classList.add("install-required");
   const PROCESS = [
     "SITE VISITS",
@@ -1965,12 +1968,6 @@
         }
       };
     }
-    const continueBrowser = $("#gateContinueBrowser");
-    if (continueBrowser) continueBrowser.onclick = () => {
-      try { localStorage.setItem("sami.browser.allowed", "yes"); } catch {}
-      document.documentElement.classList.remove("install-required", "browser-gated", "intro-running");
-      enter();
-    };
     const why = $("#gateWhySami");
     if (why)
       why.onclick = () => {
@@ -1978,6 +1975,19 @@
         root.hidden = false;
         sound = true;
         play("sales");
+      };
+    const continueBrowser = $("#gateContinueBrowser");
+    if (continueBrowser)
+      continueBrowser.onclick = () => {
+        // Deliberate opt-out of the install requirement: the person chose to
+        // stay in the browser. Persist the choice so they aren't sent back
+        // to this gate on their next visit, then hand off to the normal
+        // entry path exactly as an installed launch would.
+        document.documentElement.classList.remove("install-required");
+        try {
+          localStorage.setItem("sami.browser.continue", "yes");
+        } catch {}
+        enter();
       };
   }
   $("#startSound").onclick = startWithSound;
@@ -2077,7 +2087,7 @@
   setupBrowserGate();
   sound = false;
   const resumeInstalled =
-    (isInstalled() || browserAllowed()) && localStorage.getItem("sami.launch.seen") === "yes";
+    isInstalled() && localStorage.getItem("sami.launch.seen") === "yes";
   if (resumeInstalled) {
     document.documentElement.classList.remove("intro-running");
     root.hidden = true;
