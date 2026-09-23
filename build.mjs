@@ -1,6 +1,7 @@
 /* Dev-time only; no package installation or build step is needed to run SAMI. */
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version, descriptor } = JSON.parse(
@@ -70,7 +71,12 @@ const optional = names
   )
   .sort()
   .map((f) => "./" + f);
+// A resumed same-version release must not reuse an incomplete installed shell.
+const shellHash = createHash("sha256");
+for (const file of shell) shellHash.update(file).update(fs.readFileSync(path.join(root, file)));
+const revision = shellHash.digest("hex").slice(0, 12);
 const sw = read("sw-template.txt")
+  .replace("__SHELL_REVISION__", JSON.stringify(revision))
   .replace("__VERSION__", JSON.stringify(version))
   .replace("__SHELL__", JSON.stringify(shell))
   .replace("__OPTIONAL__", JSON.stringify(optional));
@@ -86,6 +92,7 @@ write(
       development: [
         "VERSION.json",
         "build.mjs",
+        "recovery-tests.mjs",
         "sw-template.txt",
         "ASSET_MANIFEST.json",
       ],

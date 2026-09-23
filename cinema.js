@@ -21,7 +21,11 @@
     matchMedia?.("(display-mode: window-controls-overlay)")?.matches ||
     matchMedia?.("(display-mode: minimal-ui)")?.matches ||
     navigator.windowControlsOverlay?.visible === true;
-  if (!isInstalled())
+  const browserAllowed = () => {
+    try { return localStorage.getItem("sami.browser.allowed") === "yes"; }
+    catch { return false; }
+  };
+  if (!isInstalled() && !browserAllowed())
     document.documentElement.classList.add("install-required");
   const PROCESS = [
     "SITE VISITS",
@@ -1961,6 +1965,12 @@
         }
       };
     }
+    const continueBrowser = $("#gateContinueBrowser");
+    if (continueBrowser) continueBrowser.onclick = () => {
+      try { localStorage.setItem("sami.browser.allowed", "yes"); } catch {}
+      document.documentElement.classList.remove("install-required", "browser-gated", "intro-running");
+      enter();
+    };
     const why = $("#gateWhySami");
     if (why)
       why.onclick = () => {
@@ -2067,7 +2077,7 @@
   setupBrowserGate();
   sound = false;
   const resumeInstalled =
-    isInstalled() && localStorage.getItem("sami.launch.seen") === "yes";
+    (isInstalled() || browserAllowed()) && localStorage.getItem("sami.launch.seen") === "yes";
   if (resumeInstalled) {
     document.documentElement.classList.remove("intro-running");
     root.hidden = true;

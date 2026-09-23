@@ -819,6 +819,7 @@
       .scale({ position: "bottomright", imperial: false, maxWidth: 100 })
       .addTo(state.map);
     state.map.on("click", onMapClick);
+    state.map.on("zoomend", updateAssetIllustrationSizes);
     state.map.on("mousemove", (e) => {
       $("#coordReadout").textContent =
         e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
@@ -1678,7 +1679,7 @@
     if (t === "asset")
       style = {
         color: "#324c69",
-        weight: 2,
+        weight: 0.5,
         fillColor: "#d6e2e4",
         fillOpacity: 0.22,
       };
@@ -6607,7 +6608,12 @@
       else console.warn(e);
     }
   }
+  let serviceMappingInFlight = false;
   async function showSelectedServiceMapping() {
+    if (serviceMappingInFlight) {
+      toast("Service mapping is already refreshing.");
+      return;
+    }
     if (!state.project.area) {
       openDrawer("area");
       return;
@@ -6638,6 +6644,7 @@
           "conservation",
         ].includes(k),
       );
+    serviceMappingInFlight = true;
     toast("Showing selected mapping…");
     try {
       if (needOhl) await refreshOhlSnapshot();
@@ -6657,6 +6664,8 @@
       );
     } catch (e) {
       toast(e.message);
+    } finally {
+      serviceMappingInFlight = false;
     }
   }
   async function refreshOhlSnapshot() {
@@ -8935,37 +8944,47 @@
     const b = G.boundsOf(f.geometry);
     return b ? [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2] : null;
   }
+  function assetIllustrationIcon(f) {
+    // Use the actual unrotated map projection; the map pane applies its bearing.
+    // A rectangle's first edge is its length and second edge is its width.
+    const ring = f.geometry?.coordinates?.[0];
+    if (f.geometry?.type !== "Polygon" || !ring || ring.length < 4) return null;
+    const points = ring.slice(0, 3).map((c) => state.map.project(latlng(c))),
+      length = points[0].distanceTo(points[1]),
+      width = points[1].distanceTo(points[2]);
+    if (![length, width].every((n) => Number.isFinite(n) && n > 0)) return null;
+    const angle = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x) * 180 / Math.PI,
+      opacity = f.properties.styleFillOpacity == null
+        ? 1 : Math.max(0, Math.min(1, +f.properties.styleFillOpacity || 0));
+    return L.divIcon({
+      className: "asset-illustration-marker",
+      html: '<div class="asset-map-icon" style="transform:rotate(' + angle +
+        'deg);opacity:' + opacity + '">' +
+        assetIconSVG(f.properties.kind, f.properties) + '</div>',
+      iconSize: [length, width],
+      iconAnchor: [length / 2, width / 2],
+    });
+  }
+  function updateAssetIllustrationSizes() {
+    state.group?.eachLayer((layer) => {
+      if (!layer.samiAssetFeature) return;
+      const icon = assetIllustrationIcon(layer.samiAssetFeature);
+      if (icon) layer.setIcon(icon);
+    });
+  }
   function renderAssetIllustrations() {
     for (const f of state.project.features) {
-      if (
-        f.properties.type !== "asset" ||
-        state.project.hiddenTypes.includes("asset")
-      )
-        continue;
-      const c = assetCenter(f);
-      if (!c) continue;
-      const isVehicle =
-        f.properties.category === "Vehicles" ||
-        /truck|lorry|car|van|excavator|crane|cement|artic/i.test(
-          String(f.properties.kind || ""),
-        );
-      const size = isVehicle ? 27 : 34,
-        html =
-          '<div class="asset-map-icon ' +
-          (isVehicle ? "vehicle" : "") +
-          '">' +
-          assetIconSVG(f.properties.kind, f.properties) +
-          "</div>";
-      L.marker(latlng(c), {
+      if (f.properties.type !== "asset" || f.properties.hidden || !visibleFeature(f)) continue;
+      const c = assetCenter(f), icon = assetIllustrationIcon(f);
+      if (!c || !icon) continue;
+      const marker = L.marker(latlng(c), {
         interactive: false,
+        keyboard: false,
         zIndexOffset: 250,
-        icon: L.divIcon({
-          className: "",
-          html,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-        }),
-      }).addTo(state.group);
+        icon,
+      });
+      marker.samiAssetFeature = f;
+      marker.addTo(state.group);
     }
   }
   function controlIcon(cls, txt) {

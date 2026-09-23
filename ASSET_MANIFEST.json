@@ -69,6 +69,7 @@
   "development": [
     "VERSION.json",
     "build.mjs",
+    "recovery-tests.mjs",
     "sw-template.txt",
     "ASSET_MANIFEST.json"
   ],
@@ -85,7 +86,6 @@
     "STABLE_RESTORE_QA.json"
   ],
   "documentation": [
-    ".nojekyll",
     "AUDIT_REPORT.md",
     "CHANGELOG.md",
     "FEATURE_INVENTORY.md",
@@ -96,6 +96,7 @@
     "PHASE_1_AUDIT.md",
     "POLYGON-CLIPPING-LICENSE.md",
     "QR-CODE-LICENSE.txt",
+    "RECOVERY_README.md",
     "ROADMAP.md",
     "SAMI_AI_BACKEND_SPEC.md",
     "SAMI_v2_7_10_MEASUREMENT_RELEASE_NOTES.md",

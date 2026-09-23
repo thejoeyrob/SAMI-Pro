@@ -61,10 +61,10 @@
       <div class="install-gate-card">
         <img alt="SAMI" src="sami-wordmark.png?v=2.7.18" />
         <div>
-          <h1>Install SAMI to continue</h1>
+          <h1>Welcome to SAMI</h1>
           <p>
-            SAMI is designed to run as an installed workspace on phones and
-            tablets. The browser page is for installation only.
+            Install SAMI for a full-screen workspace on phones and tablets,
+            or continue in your browser below.
           </p>
         </div>
         <div class="install-gate-copy" id="gateInstallInstructions"></div>
@@ -189,41 +189,6 @@
           </div>
         </div>
         <div class="top-actions">
-          <div class="history-controls" id="topbarHistory">
-            <button disabled="" id="undoBtn" title="Undo (Ctrl or Cmd Z)">
-              <svg
-                class="i"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M7 7L3 11l4 4" />
-                <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
-              </svg></button
-            ><button
-              disabled=""
-              id="redoBtn"
-              title="Redo (Ctrl or Cmd Shift Z)"
-            >
-              <svg
-                class="i"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M17 7l4 4-4 4" />
-                <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
-              </svg>
-            </button>
-          </div>
           <button class="legacy-hook" hidden="" id="projectBtn">Project</button
           ><button class="legacy-hook" hidden="" id="searchBtn">Search</button
           ><button class="legacy-hook" hidden="" id="quickHelp">?</button
@@ -380,6 +345,42 @@
           </div>
         </div>
         <div class="canvas-toolbar">
+          <div class="history-controls" id="mapHistory" role="group" aria-label="Drawing history">
+            <button disabled="" id="undoBtn" aria-label="Undo" title="Undo (Ctrl or Cmd Z)">
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M7 7L3 11l4 4" />
+                <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
+              </svg></button
+            ><button
+              disabled=""
+              id="redoBtn"
+              aria-label="Redo"
+              title="Redo (Ctrl or Cmd Shift Z)"
+            >
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 7l4 4-4 4" />
+                <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
+              </svg>
+            </button>
+          </div>
           <div aria-label="Map background" class="base-switch">
             <button aria-pressed="false" data-base="street">Map</button
             ><button aria-pressed="true" class="active" data-base="satellite">

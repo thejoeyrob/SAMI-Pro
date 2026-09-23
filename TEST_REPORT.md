@@ -1,3 +1,20 @@
+# SAMI v2.7.18 — interrupted-release recovery
+
+23 September 2026. Restored from GitHub commit `9f5673e` and its saved changelog.
+
+Story: open the workspace → place/measure/edit assets → control service visibility and explicitly refresh → save and receive the complete installed-app update.
+
+- **PASS:** all 23 shipped JavaScript files pass `node --check`.
+- **PASS:** `node --test recovery-tests.mjs` — eight focused regression checks: Undo/Redo outside the header; asset projection/zoom/rotation/zero opacity; repeated native map taps; visibility-only service toggles; concurrent refresh prevention; browser-entry persistence/storage denial; generated shell checksum; same-version worker installation/offline cache/activation behaviour.
+- **PASS:** dependency-free build regeneration and critical-shell manifest validation.
+- **Limited:** the test browser cannot navigate to the local preview (`ERR_BLOCKED_BY_CLIENT`). These automated checks do not certify physical touch gestures or visual layout on iPhone/iPad.
+- **Not claimed:** live CAD/Overpass response accuracy, UK constraints provider availability, complete export redesign or AI backend operation. AI/voice/HGV backend endpoints remain unconfigured. Existing saved projects and the recorded voice pack are retained.
+
+- **Publication blocked:** GitHub Git Trees API rejected the prepared atomic update with HTTP 403, “Resource not accessible by integration”. The hosted app has not received these changes. ChatGPT’s GitHub app action setting is already “Allow all actions”; the rejection is from GitHub.
+- **Welcome readability:** dark welcome/install styling is scoped separately from workspace themes; the static backdrop is dimmed without dimming the logo. A rendered check of the repaired build is not claimed.
+
+## Earlier release reports
+
 # SAMI v2.7.14 — Test report
 
 Tested 22 September 2026. A pass below means the check was run against the final release tree; limitations are stated explicitly.

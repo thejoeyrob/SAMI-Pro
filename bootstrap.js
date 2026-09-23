@@ -26,7 +26,8 @@
     matchMedia("(display-mode: window-controls-overlay)").matches ||
     matchMedia("(display-mode: minimal-ui)").matches ||
     navigator.windowControlsOverlay?.visible === true;
-  if (!installed) document.documentElement.classList.add("install-required");
+  if (!installed && localStorageSafe("sami.browser.allowed") !== "yes")
+    document.documentElement.classList.add("install-required");
   else if (localStorageSafe("sami.launch.seen") !== "yes")
     document.documentElement.classList.add("intro-running");
   document.documentElement.dataset.reducedMotion =
