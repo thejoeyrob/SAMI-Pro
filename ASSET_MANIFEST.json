@@ -1,5 +1,5 @@
 {
-  "version": "2.7.20",
+  "version": "2.7.21",
   "shell": [
     "./app.css",
     "./bearing.js",
@@ -24,7 +24,7 @@
     "./project-store.js",
     "./pwa.js",
     "./qrcode.js",
-    "./sami-icon-mark.png",
+    "./sami-badge.png",
     "./sami-wordmark.png",
     "./shape-import.js",
     "./studio.js",

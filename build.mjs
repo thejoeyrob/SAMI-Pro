@@ -95,7 +95,7 @@ const shellNames = new Set([
   "index.html",
   ...referenced.filter((name) => /\.(?:js|css)$/.test(name)),
   "sami-wordmark.png",
-  "sami-icon-mark.png",
+  "sami-badge.png",
   "marker-icon.png",
   "marker-icon-2x.png",
   "marker-shadow.png",

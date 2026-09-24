@@ -1,3 +1,14 @@
+# SAMI v2.7.21 — Brand mark consistency, higher-quality sources
+
+## Changed in v2.7.21
+
+- **No more pin-only fragments anywhere in the UI.** The v2.7.20 fix still put an isolated pin crop in the "Ask SAMI" panel header and send button - the user correctly flagged that a standalone pin was never asked for and was itself a leftover of the earlier crop mistake. Both spots now show the full "SAMI" wordmark (`sami-badge.png`), consistent with "everywhere should be the full SAMI brand logo."
+- **Rebuilt from a genuinely clean source.** `sami-wordmark.png`, an existing high-resolution (1116x339) asset with real per-pixel alpha transparency, was sitting unused in the repo - far higher quality than extracting content via luminance-threshold guessing from a compressed icon. `sami-badge.png` (for the two small in-UI brand marks) is now cropped directly from it with a real alpha channel, no extraction artifacts.
+- **Home screen icon (black variant) rebuilt from a clean reference the user supplied directly** (SAMI wordmark + pin, no tagline/byline text), precisely centered on its true content bounding box rather than approximated. Replaces the v2.7.20 icon, which the user flagged as unclear/off-centre with gamma-compromised colour from the old extraction method.
+- `sami-icon-mark.png` is retired (again) in favour of `sami-badge.png`; `build.mjs`'s critical-file list and the service worker shell updated accordingly.
+
+---
+
 # SAMI v2.7.20 — Icon mark recreated, dual icon variants
 
 ## Changed in v2.7.20

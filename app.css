@@ -1337,10 +1337,11 @@ p {
   gap: 5px;
   background: var(--accent-soft);
 }
-.send-btn img {
-  width: 18px;
-  height: 22px;
+.send-btn .sami-brand-mark {
+  width: 30px;
+  height: 8px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 .send-btn span,
 .voice-hint {
@@ -1371,9 +1372,10 @@ p {
   padding: 11px;
   border-bottom: 1px solid var(--line);
 }
-.sami-panel-head img {
-  width: 21px;
-  height: 28px;
+.sami-panel-head .sami-brand-mark {
+  width: 72px;
+  height: 18px;
+  object-fit: contain;
 }
 .sami-panel-head > div {
   flex: 1;
