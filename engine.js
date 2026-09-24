@@ -812,6 +812,7 @@
     state.planBaseGroup = L.featureGroup().addTo(state.map);
     state.routeGroup = L.featureGroup().addTo(state.map);
     state.group = L.featureGroup().addTo(state.map);
+    state.assetIconGroup = L.featureGroup().addTo(state.map);
     state.ohlSupportGroup = L.featureGroup().addTo(state.map);
     state.draftGroup = L.featureGroup().addTo(state.map);
     state.editGroup = L.featureGroup().addTo(state.map);
@@ -833,6 +834,7 @@
         saveSoon();
       }
     });
+    state.map.on("zoomend", renderAssetIllustrations);
     for (const b of Object.values(state.bases)) {
       let warned = false;
       b.on("tileerror", () => {
@@ -1678,7 +1680,7 @@
     if (t === "asset")
       style = {
         color: "#324c69",
-        weight: 2,
+        weight: 0.5,
         fillColor: "#d6e2e4",
         fillOpacity: 0.22,
       };
@@ -8938,7 +8940,38 @@
     const b = G.boundsOf(f.geometry);
     return b ? [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2] : null;
   }
+  function assetFootprintPx(f, c) {
+    const m = f.properties,
+      l = Math.max(0.2, +m.length || 1),
+      w = Math.max(0.1, +m.width || 1),
+      angle = Number.isFinite(Number(m.angle))
+        ? Number(m.angle)
+        : derivedRectAngle(f),
+      a = (angle * Math.PI) / 180,
+      u = [Math.sin(a), Math.cos(a)],
+      v = [Math.cos(a), -Math.sin(a)];
+    try {
+      const centerPt = state.map.latLngToContainerPoint(latlng(c)),
+        lenPt = state.map.latLngToContainerPoint(
+          latlng(pointFromLocal(c, (u[0] * l) / 2, (u[1] * l) / 2)),
+        ),
+        widPt = state.map.latLngToContainerPoint(
+          latlng(pointFromLocal(c, (v[0] * w) / 2, (v[1] * w) / 2)),
+        ),
+        lengthPx = Math.hypot(lenPt.x - centerPt.x, lenPt.y - centerPt.y) * 2,
+        widthPx = Math.hypot(widPt.x - centerPt.x, widPt.y - centerPt.y) * 2;
+      return {
+        lengthPx: Math.max(12, Math.min(320, lengthPx || 0)),
+        widthPx: Math.max(12, Math.min(320, widthPx || 0)),
+        angle,
+      };
+    } catch {
+      return { lengthPx: 34, widthPx: 34, angle };
+    }
+  }
   function renderAssetIllustrations() {
+    if (!state.assetIconGroup) return;
+    state.assetIconGroup.clearLayers();
     for (const f of state.project.features) {
       if (
         f.properties.type !== "asset" ||
@@ -8952,11 +8985,18 @@
         /truck|lorry|car|van|excavator|crane|cement|artic/i.test(
           String(f.properties.kind || ""),
         );
-      const size = isVehicle ? 27 : 34,
+      const { lengthPx, widthPx, angle } = assetFootprintPx(f, c),
+        opacity = Number.isFinite(+f.properties.styleFillOpacity)
+          ? Math.max(0, Math.min(1, +f.properties.styleFillOpacity))
+          : 1,
         html =
           '<div class="asset-map-icon ' +
           (isVehicle ? "vehicle" : "") +
-          '">' +
+          '" style="width:100%;height:100%;opacity:' +
+          opacity +
+          ";transform:rotate(" +
+          angle +
+          'deg)">' +
           assetIconSVG(f.properties.kind, f.properties) +
           "</div>";
       L.marker(latlng(c), {
@@ -8965,10 +9005,10 @@
         icon: L.divIcon({
           className: "",
           html,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
+          iconSize: [widthPx, lengthPx],
+          iconAnchor: [widthPx / 2, lengthPx / 2],
         }),
-      }).addTo(state.group);
+      }).addTo(state.assetIconGroup);
     }
   }
   function controlIcon(cls, txt) {
