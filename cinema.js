@@ -21,7 +21,15 @@
     matchMedia?.("(display-mode: window-controls-overlay)")?.matches ||
     matchMedia?.("(display-mode: minimal-ui)")?.matches ||
     navigator.windowControlsOverlay?.visible === true;
-  if (!isInstalled())
+  const BROWSER_CONTINUE_KEY = "sami.browser.continue",
+    browserContinueChosen = () => {
+      try {
+        return localStorage.getItem(BROWSER_CONTINUE_KEY) === "yes";
+      } catch {
+        return false;
+      }
+    };
+  if (!isInstalled() && !browserContinueChosen())
     document.documentElement.classList.add("install-required");
   const PROCESS = [
     "SITE VISITS",
@@ -1968,6 +1976,15 @@
         root.hidden = false;
         sound = true;
         play("sales");
+      };
+    const continueBrowser = $("#gateContinueBrowser");
+    if (continueBrowser)
+      continueBrowser.onclick = () => {
+        try {
+          localStorage.setItem(BROWSER_CONTINUE_KEY, "yes");
+        } catch {}
+        document.documentElement.classList.remove("install-required");
+        enter();
       };
   }
   $("#startSound").onclick = startWithSound;
