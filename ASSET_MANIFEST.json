@@ -1,5 +1,5 @@
 {
-  "version": "2.7.17",
+  "version": "2.7.18",
   "shell": [
     "./app.css",
     "./bearing.js",
@@ -85,7 +85,6 @@
     "STABLE_RESTORE_QA.json"
   ],
   "documentation": [
-    ".nojekyll",
     "AUDIT_REPORT.md",
     "CHANGELOG.md",
     "FEATURE_INVENTORY.md",

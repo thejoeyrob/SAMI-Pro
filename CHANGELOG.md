@@ -1,3 +1,15 @@
+# SAMI v2.7.18 — Asset icon fidelity, precision cursor, services panel, install gate
+
+## Fixed in v2.7.18
+
+- **Asset map icons now scale, rotate and fade with the asset they represent.** Previously every placed asset icon rendered at a fixed 27px/34px square regardless of the item's real length × width, its rotation, or the zoom level, and never updated after the map zoomed. Icons are now sized from the asset's true footprint (projected to screen pixels via the map's own container-point projection at the current zoom), rotated to match `properties.angle` (falling back to the angle derived from the placed polygon's own edge when unset), and their opacity now follows `properties.styleFillOpacity` instead of ignoring it. Icons are kept in their own map layer group and refreshed on `zoomend` as well as on every normal re-render, so panning and zooming keep them in sync with the underlying geometry.
+- **Asset outlines are thinner by default.** `type === "asset"` features now use a `0.5` stroke weight instead of `2`, matching the intended light outline for placed equipment/furniture rather than the heavier line used for drawn areas.
+- **Precision cursor tap-to-place no longer breaks after the first map drag.** The precision/measure cursor had a low-level `pointerdown`/`pointermove`/`pointerup` interceptor running on the map surface alongside Leaflet's own tap/drag handling, calling `stopImmediatePropagation()` on `pointerup` to reposition the crosshair. That left Leaflet's internal drag/tap gesture recognizer stuck mid-gesture after the first pan, so a subsequent tap silently did nothing. The interceptor is removed; repositioning the crosshair on tap now goes exclusively through the existing native Leaflet `click` handler, which already had a working precision-cursor branch. Multi-touch (pinch) tracking, which doesn't touch event propagation, is unchanged. Map panning/dragging is unaffected throughout.
+- **Services & constraints panel no longer fires overlapping network refreshes while checking boxes.** Checkboxes (and "Show all") used to each schedule their own debounced background refresh, so ticking several sources in quick succession queued up multiple overlapping fetch cycles. Checkboxes now only toggle visibility of sources already loaded into the project; fetching current data happens only via the explicit "Refresh checked sources" button, which has been moved to the top of the panel (above the source list) so it's immediately reachable instead of buried under it.
+- **Added a "Continue in browser" escape hatch to the install gate.** The install-prompt gate shown to non-installed users previously had no way out other than installing. A quiet, text-only "Continue in browser" link now sits under the existing "Why SAMI?" link on the gate card; choosing it stores the choice in `localStorage` (`sami.browser.continue`) and enters the workspace directly, and the gate is skipped entirely on later visits once that choice has been made.
+
+---
+
 # SAMI v2.7.17 — Touch-target pass 1
 
 ## Fixed in v2.7.17
