@@ -1,3 +1,15 @@
+# SAMI v2.7.20 — Icon mark recreated, dual icon variants
+
+## Changed in v2.7.20
+
+- **`sami-mark.png` retired and replaced with `sami-icon-mark.png`.** The old file was a rough crop of the wordmark's "A" + pin motif. Recreated cleanly from the source logo artwork as a deliberate, tightly-composed crop of that same motif (transparent background, native resolution, no neighbouring letters bleeding in), used in the "Ask SAMI" panel header and send button.
+- **Home screen icon recreated on a black background**, as an alternative to the v2.7.19 nebula-background icon — full "SAMI" wordmark with the pin mark, extracted cleanly from the source logo artwork rather than cropped/rough.
+- **Two permanent icon variants now live side by side**: `sami-app-icon-{192,512}-nebula.png` / `-black.png`, `sami-apple-touch-icon-{nebula,black}.png`, `sami-maskable-512-{nebula,black}.png`. `build.mjs` copies the selected variant over the canonical filenames referenced by `index.html`/`manifest.webmanifest`.
+- **Icon variant is switchable by command**: `node build.mjs --icon=black` or `node build.mjs --icon=nebula` sets and persists the choice (`VERSION.json.iconVariant`). With no flag, the variant **auto-alternates** every time the version number actually changes — a simple visual signal on the home screen that a real update has landed, distinct from just re-running the build without a version bump.
+- This release ships with **`iconVariant: "black"`**.
+
+---
+
 # SAMI v2.7.19 — Home screen icon
 
 ## Changed in v2.7.19

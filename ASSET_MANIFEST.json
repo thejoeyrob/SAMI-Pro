@@ -1,5 +1,5 @@
 {
-  "version": "2.7.19",
+  "version": "2.7.20",
   "shell": [
     "./app.css",
     "./bearing.js",
@@ -24,7 +24,7 @@
     "./project-store.js",
     "./pwa.js",
     "./qrcode.js",
-    "./sami-mark.png",
+    "./sami-icon-mark.png",
     "./sami-wordmark.png",
     "./shape-import.js",
     "./studio.js",
@@ -34,9 +34,17 @@
   ],
   "optional": [
     "./manifest.webmanifest",
+    "./sami-app-icon-192-black.png",
+    "./sami-app-icon-192-nebula.png",
     "./sami-app-icon-192.png",
+    "./sami-app-icon-512-black.png",
+    "./sami-app-icon-512-nebula.png",
     "./sami-app-icon-512.png",
+    "./sami-apple-touch-icon-black.png",
+    "./sami-apple-touch-icon-nebula.png",
     "./sami-apple-touch-icon.png",
+    "./sami-maskable-512-black.png",
+    "./sami-maskable-512-nebula.png",
     "./sami-maskable-512.png",
     "./screenshot-phone.png",
     "./screenshot-wide.png"
