@@ -2007,26 +2007,34 @@
       return;
     const cs = g.coordinates,
       total = Number.isFinite(+m.distance) ? +m.distance : G.length(cs);
+    function getPerpOffset(a, b) {
+      const dx = b[0] - a[0],
+        dy = b[1] - a[1],
+        len = Math.sqrt(dx * dx + dy * dy);
+      return len > 0 ? [-dy / len * 2.5, dx / len * 2.5] : [0, -3];
+    }
     for (let i = 1; i < cs.length && i <= 24; i++) {
       const a = cs[i - 1],
         b = cs[i],
         seg = G.distance(a, b);
       if (seg <= 0.15) continue;
-      const mid = tr.point([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]);
+      const mid = tr.point([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]),
+        offset = getPerpOffset(a, b);
       page.text(
         seg.toFixed(2) + " m",
-        mid[0] + 1,
-        mid[1] - 1,
+        mid[0] + offset[0],
+        mid[1] + offset[1],
         4.8,
         false,
         "#263238",
       );
     }
-    const p = tr.point(cs[Math.floor(cs.length / 2)]);
+    const p = tr.point(cs[Math.floor(cs.length / 2)]),
+      offset = getPerpOffset(cs[0], cs[cs.length - 1]);
     page.text(
-      "TOTAL " + total.toFixed(2) + " m",
-      p[0] + 2,
-      p[1] - 4,
+      "Total: " + total.toFixed(2) + " m",
+      p[0] + offset[0] * 1.5,
+      p[1] + offset[1] * 1.5,
       6.5,
       true,
       "#17211f",

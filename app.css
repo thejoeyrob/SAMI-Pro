@@ -1225,6 +1225,7 @@ p {
 }
 .modal-body {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 20px;
   max-height: calc(100vh - 140px);
