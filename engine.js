@@ -5356,6 +5356,8 @@
       ) +
       section("Drawing style") +
       '<div class="radio-cards"><label><input type="radio" name="docStyle" value="cad" checked><span><strong>CAD</strong><small>Simplified bounded vector plan</small></span></label><label><input type="radio" name="docStyle" value="map"><span><strong>Map</strong><small>Map context + SAMI vectors</small></span></label><label><input type="radio" name="docStyle" value="satellite"><span><strong>Satellite</strong><small>Imagery context + SAMI vectors</small></span></label></div>' +
+      section("Detail level") +
+      '<div class="radio-cards compact"><label><input type="radio" name="docDetail" value="high" checked><span><strong>High detail</strong><small>Full annotations, coordinates, key + notes</small></span></label><label><input type="radio" name="docDetail" value="simple"><span><strong>Simple</strong><small>Condensed - fewer annotations, faster to read</small></span></label></div>' +
       section("Paper") +
       '<div class="radio-cards compact"><label><input type="radio" name="docPaper" value="a3" checked><span><strong>A3 Landscape</strong><small>Default issue sheet</small></span></label><label><input type="radio" name="docPaper" value="a4"><span><strong>A4 Landscape</strong><small>Scaled alternative</small></span></label></div>' +
       section("Layers to include") +
@@ -5456,6 +5458,7 @@
         route: $("#docPageRoute")?.checked !== false,
       },
       style: $('input[name="docStyle"]:checked')?.value || "cad",
+      detailLevel: $('input[name="docDetail"]:checked')?.value || "high",
       paper: $('input[name="docPaper"]:checked')?.value || "a3",
       layers,
       essentialLabels: $("#docEssentialLabels")?.checked !== false,
