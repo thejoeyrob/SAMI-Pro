@@ -123,6 +123,21 @@
       this.images.push(id);
       return id;
     }
+    // Same as addImageJPEG but attaches a raw 8-bit DeviceGray soft mask
+    // (an /SMask) so the embedded JPEG can render with per-pixel
+    // transparency, e.g. an uploaded logo whose background was removed.
+    addImageJPEGWithMask(bytes, width, height, maskBytes) {
+      if (!maskBytes || maskBytes.length !== width * height)
+        return this.addImageJPEG(bytes, width, height);
+      const maskHead = `<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Length ${maskBytes.length} >>\nstream\n`;
+      const maskData = concat([u8(maskHead), maskBytes, u8("\nendstream")]);
+      const maskId = this.obj(maskData);
+      const head = `<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /SMask ${maskId} 0 R /Length ${bytes.length} >>\nstream\n`;
+      const data = concat([u8(head), bytes, u8("\nendstream")]);
+      const id = this.obj(data);
+      this.images.push(id);
+      return id;
+    }
     addPage(content, imageIds = []) {
       this.pages.push({ content, imageIds });
     }
@@ -227,6 +242,15 @@
     text(text, x, y, size = 8, bold = false, color = "#111", opts = {}) {
       const [r, g, b] = hex(color),
         font = bold ? "F2" : "F1";
+      if (opts && opts.angle) {
+        const rad = (opts.angle * Math.PI) / 180,
+          cos = Math.cos(rad),
+          sin = Math.sin(rad);
+        this.c.push(
+          `BT /${font} ${fmt(size)} Tf ${fmt(r)} ${fmt(g)} ${fmt(b)} rg ${fmt(cos)} ${fmt(sin)} ${fmt(-sin)} ${fmt(cos)} ${fmt(mm(x))} ${fmt(this.y(y))} Tm (${escPdf(text)}) Tj ET`,
+        );
+        return;
+      }
       this.c.push(
         `BT /${font} ${fmt(size)} Tf ${fmt(r)} ${fmt(g)} ${fmt(b)} rg ${fmt(mm(x))} ${fmt(this.y(y))} Td (${escPdf(text)}) Tj ET`,
       );
@@ -261,7 +285,14 @@
       );
     }
     image(jpeg, x, y, w, h) {
-      const id = this.pdf.addImageJPEG(jpeg.bytes, jpeg.width, jpeg.height);
+      const id = jpeg.mask
+        ? this.pdf.addImageJPEGWithMask(
+            jpeg.bytes,
+            jpeg.width,
+            jpeg.height,
+            jpeg.mask.bytes,
+          )
+        : this.pdf.addImageJPEG(jpeg.bytes, jpeg.width, jpeg.height);
       this.imageIds.push(id);
       const idx = this.imageIds.length;
       this.c.push(
@@ -1051,6 +1082,24 @@
       600,
     );
   }
+  // Bounds for the part of the route within `radiusM` metres (great-circle,
+  // via SamiGeometry) of the destination - used to frame the "last main
+  // road to site" and "final turns" condensed maps at increasingly tight
+  // zoom without needing a road-classification lookup.
+  function routeNearEndBounds(route, radiusM, padM) {
+    if (!route?.end) return null;
+    const near = (route.geometry || []).filter(
+      (c) => G.distance(c, route.end) <= radiusM,
+    );
+    const b = mergeBounds([
+      near.length > 1 ? boundsOfGeom({ coordinates: near }) : null,
+      [route.end[0], route.end[1], route.end[0], route.end[1]],
+    ]);
+    return expandBounds(
+      b || [route.end[0], route.end[1], route.end[0], route.end[1]],
+      padM,
+    );
+  }
   function qrMatrix(text) {
     if (!window.SAMI_QRCode) return null;
     try {
@@ -1729,13 +1778,75 @@
       p = r.slice(0, 4).map(tr.point),
       u = [p[1][0] - p[0][0], p[1][1] - p[0][1]],
       v = [p[3][0] - p[0][0], p[3][1] - p[0][1]],
-      id = page.pdf.addImageJPEG(jpeg.bytes, jpeg.width, jpeg.height);
+      id = jpeg.mask
+        ? page.pdf.addImageJPEGWithMask(
+            jpeg.bytes,
+            jpeg.width,
+            jpeg.height,
+            jpeg.mask.bytes,
+          )
+        : page.pdf.addImageJPEG(jpeg.bytes, jpeg.width, jpeg.height);
     page.imageIds.push(id);
     page.c.push(
       `q ${fmt(mm(u[0]))} ${fmt(-mm(u[1]))} ${fmt(-mm(v[0]))} ${fmt(mm(v[1]))} ${fmt(mm(p[3][0]))} ${fmt(page.y(p[3][1]))} cm /Im${page.imageIds.length} Do Q`,
     );
   }
-  async function preparedImage(data, darkWordmark = false) {
+  // Distance between an RGB pixel at byte offset `i` in `data` and a
+  // reference colour, used by the corner-sampled chroma-key below.
+  function pixelDist(data, i, r, g, b) {
+    const dr = data[i] - r,
+      dg = data[i + 1] - g,
+      db = data[i + 2] - b;
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+  }
+  // Corner-sampled chroma-key: if the four corners of the image agree on a
+  // near-solid colour (the common "logo on a white/flat rectangle" export),
+  // flood-fill outward from those corners and drop the matching background
+  // to fully transparent, so it embeds without an opaque box around it.
+  // Only touches pixels reachable from a corner, so interior white shapes
+  // (letters, highlights, etc.) inside the logo artwork are left alone.
+  function chromaKeyBackground(imageData, tol = 26) {
+    const { data, width: w, height: h } = imageData;
+    if (w < 3 || h < 3) return false;
+    const idx = (x, y) => (y * w + x) * 4,
+      corners = [
+        [0, 0],
+        [w - 1, 0],
+        [0, h - 1],
+        [w - 1, h - 1],
+      ],
+      baseI = idx(corners[0][0], corners[0][1]),
+      br = data[baseI],
+      bg = data[baseI + 1],
+      bb = data[baseI + 2],
+      ba = data[baseI + 3];
+    if (ba < 200) return false;
+    for (const [cx, cy] of corners)
+      if (pixelDist(data, idx(cx, cy), br, bg, bb) > tol + 12) return false;
+    const total = w * h,
+      visited = new Uint8Array(total),
+      stack = corners.map(([x, y]) => y * w + x);
+    let removed = 0;
+    while (stack.length) {
+      const p = stack.pop();
+      if (visited[p]) continue;
+      visited[p] = 1;
+      const i = p * 4;
+      if (data[i + 3] > 0 && pixelDist(data, i, br, bg, bb, tol) > tol)
+        continue;
+      if (data[i + 3] === 0) continue;
+      data[i + 3] = 0;
+      removed++;
+      const x = p % w,
+        y = (p / w) | 0;
+      if (x > 0) stack.push(p - 1);
+      if (x < w - 1) stack.push(p + 1);
+      if (y > 0) stack.push(p - w);
+      if (y < h - 1) stack.push(p + w);
+    }
+    return removed > 0;
+  }
+  async function preparedImage(data, darkWordmark = false, opts = {}) {
     try {
       const blob = String(data).startsWith("data:")
           ? new Blob([dataUrlBytes(data)], {
@@ -1744,13 +1855,19 @@
                 "image/png",
             })
           : await (await fetch(data)).blob(),
-        im = await imageFromBlob(blob),
+        im = await imageFromBlob(blob);
+      // Flatten to a single flat raster layer (drops any embedded
+      // multi-layer/transparency artefacts from the source file) at a
+      // sane processing resolution before any pixel work.
+      const maxDim = 1200,
+        scale = Math.min(1, maxDim / Math.max(im.width, im.height)),
         c = document.createElement("canvas"),
         output = document.createElement("canvas");
-      c.width = im.width;
-      c.height = im.height;
+      c.width = Math.max(1, Math.round(im.width * scale));
+      c.height = Math.max(1, Math.round(im.height * scale));
       const ctx = c.getContext("2d");
-      ctx.drawImage(im, 0, 0);
+      ctx.drawImage(im, 0, 0, c.width, c.height);
+      let maskBytes = null;
       if (darkWordmark) {
         const pixels = ctx.getImageData(0, 0, c.width, c.height),
           values = pixels.data;
@@ -1767,6 +1884,22 @@
           }
         }
         ctx.putImageData(pixels, 0, 0);
+      } else if (opts.removeBackground !== false) {
+        const pixels = ctx.getImageData(0, 0, c.width, c.height);
+        chromaKeyBackground(pixels);
+        ctx.putImageData(pixels, 0, 0);
+        const values = pixels.data;
+        let hasAlpha = false;
+        for (let index = 3; index < values.length; index += 4)
+          if (values[index] < 250) {
+            hasAlpha = true;
+            break;
+          }
+        if (hasAlpha) {
+          maskBytes = new Uint8Array(c.width * c.height);
+          for (let p = 0, index = 3; p < maskBytes.length; p++, index += 4)
+            maskBytes[p] = values[index];
+        }
       }
       output.width = c.width;
       output.height = c.height;
@@ -1774,11 +1907,13 @@
       outputContext.fillStyle = "#fff";
       outputContext.fillRect(0, 0, output.width, output.height);
       outputContext.drawImage(c, 0, 0);
-      return {
+      const result = {
         bytes: dataUrlBytes(output.toDataURL("image/jpeg", 0.94)),
         width: output.width,
         height: output.height,
       };
+      if (maskBytes) result.mask = { bytes: maskBytes };
+      return result;
     } catch {
       return null;
     }
@@ -1897,13 +2032,134 @@
       "#17211f",
     );
   }
+  // --- auto-varied line styling for repeated same-type service runs ---
+  function hexToHsl(h) {
+    const [r, g, b] = hex(h),
+      max = Math.max(r, g, b),
+      min = Math.min(r, g, b);
+    let hh = 0,
+      s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) hh = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) hh = (b - r) / d + 2;
+      else hh = (r - g) / d + 4;
+      hh /= 6;
+    }
+    return [hh, s, l];
+  }
+  function hslToHex(h, s, l) {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    let r, g, b;
+    if (s === 0) r = g = b = l;
+    else {
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s,
+        p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+    const toHex = (v) =>
+      Math.round(Math.max(0, Math.min(1, v)) * 255)
+        .toString(16)
+        .padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+  function shiftHue(color, deg) {
+    try {
+      const [h, s, l] = hexToHsl(color);
+      return hslToHex(((h * 360 + deg + 360) % 360) / 360, s, l);
+    } catch {
+      return color;
+    }
+  }
+  const LINE_VARIANT_DASHES = [null, [3, 2], [1, 1.2], [4, 1, 1, 1], [2, 3]];
+  const LINE_VARIANT_HUES = [0, 45, -45, 90, -90, 135];
+  // idx 0 keeps the feature's normal style; idx>0 nudges colour/dash so
+  // repeated runs of the same service type stay visually distinguishable.
+  function lineVariant(st, idx) {
+    if (!idx) return st;
+    return {
+      ...st,
+      stroke: shiftHue(st.stroke, LINE_VARIANT_HUES[idx % LINE_VARIANT_HUES.length]),
+      dash: LINE_VARIANT_DASHES[idx % LINE_VARIANT_DASHES.length] || st.dash,
+    };
+  }
+  function normalizeAngle(a) {
+    let x = ((a % 360) + 360) % 360;
+    if (x > 180) x -= 360;
+    if (x > 90) x -= 180;
+    else if (x < -90) x += 180;
+    return x;
+  }
+  // Draws `label` along the path formed by `pts` (device/page-space
+  // coordinates), following the direction of the segment nearest the
+  // midpoint - a road-label-on-a-map style inline annotation.
+  function drawLabelAlongPath(page, pts, label, color, size = 5) {
+    if (!label || !pts || pts.length < 2) return;
+    let lengths = [0];
+    for (let i = 1; i < pts.length; i++)
+      lengths.push(
+        lengths[i - 1] +
+          Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]),
+      );
+    const total = lengths[lengths.length - 1];
+    if (!total) return;
+    const target = total / 2;
+    let seg = 1;
+    while (seg < lengths.length - 1 && lengths[seg] < target) seg++;
+    const a = pts[seg - 1],
+      b = pts[seg],
+      mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2],
+      dx = mm(b[0] - a[0]),
+      dy = page.y(b[1]) - page.y(a[1]),
+      angle = normalizeAngle((Math.atan2(dy, dx) * 180) / Math.PI);
+    page.text(label, mid[0] - 4, mid[1] - 1, size, true, color, { angle });
+  }
   drawProjectFeatures = function (page, project, tr, box, opt, legend) {
     const seenSupports = new Set();
+    const serviceRunTotals = new Map(),
+      serviceRunSeen = new Map();
     for (const f of project.features || []) {
       if (!activeFeature(f, project, opt)) continue;
-      const m = f.properties || {},
-        st = featureStyle(f);
+      const m = f.properties || {};
+      if (
+        m.type === "service" &&
+        (f.geometry?.type === "LineString" ||
+          f.geometry?.type === "MultiLineString")
+      )
+        serviceRunTotals.set(
+          m.serviceType,
+          (serviceRunTotals.get(m.serviceType) || 0) + 1,
+        );
+    }
+    for (const f of project.features || []) {
+      if (!activeFeature(f, project, opt)) continue;
+      const m = f.properties || {};
+      let st = featureStyle(f);
       if (!G.clipGeometry(f.geometry, tr.bounds)) continue;
+      let runIdx = 0,
+        runSuffix = "";
+      if (
+        m.type === "service" &&
+        (f.geometry.type === "LineString" ||
+          f.geometry.type === "MultiLineString") &&
+        (serviceRunTotals.get(m.serviceType) || 0) > 1
+      ) {
+        runIdx = serviceRunSeen.get(m.serviceType) || 0;
+        serviceRunSeen.set(m.serviceType, runIdx + 1);
+        st = lineVariant(st, runIdx);
+        runSuffix = ` (run ${runIdx + 1})`;
+      }
       if (
         (m.type === "asset" || m.type === "logo") &&
         f.geometry.type === "Polygon"
@@ -1950,6 +2206,20 @@
           m.type === "panel" ? 0.12 : st.width,
           st.dash,
         );
+        // OHL services get their label set inline along the run itself
+        // (road-label-on-a-map style) instead of only in the legend.
+        if (
+          m.serviceType === "ohl" &&
+          opt.layers?.labels !== false &&
+          opt.detailLevel !== "simple"
+        )
+          drawLabelAlongPath(
+            page,
+            pts,
+            (m.lineRef || m.label || legendName(m)) + runSuffix,
+            st.stroke,
+            4.6,
+          );
       }
       if (
         f.geometry.type === "Point" &&
@@ -2050,7 +2320,7 @@
         }
       }
       if (m.includeLegend !== false)
-        legend.set(legendName(m), { color: st.stroke, type: m.type });
+        legend.set(legendName(m) + runSuffix, { color: st.stroke, type: m.type });
     }
   };
   function headerStudio(page, title, pageNo, total, opt = {}) {
@@ -2123,6 +2393,75 @@
       "#567568",
     );
   }
+  // Best-effort legend categorisation: the project data model only records
+  // a feature's `type` (service / asset / panel / access / egress /
+  // hazard / route / ...), it has no explicit "signage" or "numbered
+  // marker" concept, so this buckets the closest-fitting types into three
+  // groups for the two-column key: site assets/icons ("markers"), the
+  // access/egress/hazard line-signage types ("signage"), and everything
+  // else - services, constraints, routes, areas - as "shapes".
+  function legendCategory(type) {
+    if (type === "asset" || type === "logo") return "markers";
+    if (["access", "egress", "hazard"].includes(type)) return "signage";
+    return "shapes";
+  }
+  function drawLegendTwoColumn(page, legend, x, y, w, maxY) {
+    if (!legend.size) return y;
+    const groups = { shapes: [], signage: [], markers: [] };
+    for (const [name, st] of legend) groups[legendCategory(st.type)].push([name, st]);
+    const order = [
+      ["SHAPES", groups.shapes],
+      ["SIGNAGE", groups.signage],
+      ["MARKERS", groups.markers],
+    ].filter(([, arr]) => arr.length);
+    const gap = 5,
+      colW = (w - gap) / 2,
+      colXs = [x, x + colW + gap],
+      colYs = [y, y];
+    let col = 0;
+    const nextCol = () => {
+      if (col === 0) {
+        col = 1;
+        return true;
+      }
+      return false;
+    };
+    for (const [label, entries] of order) {
+      if (colYs[col] + 5.5 > maxY && !nextCol()) break;
+      page.text(label, colXs[col], colYs[col], 5, true, "#5a7568");
+      colYs[col] += 4.4;
+      for (const [name, st] of entries) {
+        if (colYs[col] + 5 > maxY) {
+          if (!nextCol()) break;
+          page.text(label, colXs[col], colYs[col], 5, true, "#5a7568");
+          colYs[col] += 4.4;
+        }
+        page.line(
+          colXs[col],
+          colYs[col] - 1,
+          colXs[col] + 5.5,
+          colYs[col] - 1,
+          st.color || "#333",
+          0.6,
+          st.type === "service" ? [1.2, 0.8] : null,
+        );
+        colYs[col] =
+          page.wrapped(
+            name,
+            colXs[col] + 7.5,
+            colYs[col],
+            colW - 7.5,
+            5.4,
+            false,
+            "#36523f",
+            2.9,
+            2,
+          ) + 2.2;
+      }
+      colYs[col] += 1.6;
+    }
+    return Math.max(colYs[0], colYs[1]);
+  }
   function infoBlock(page, title, rows, x, y, w) {
     const present = rows.filter(
       ([, v]) => v !== undefined && v !== null && String(v).trim() !== "",
@@ -2168,7 +2507,7 @@
       ].map(tr.point);
     p.poly(ring, "#39604a", null, 0.3, [2, 1]);
     clipEnd(p);
-    drawCoordinateBorder(p, tr.bounds, mapBox);
+    if (opt.detailLevel !== "simple") drawCoordinateBorder(p, tr.bounds, mapBox);
     drawNorth(p, mapBox.x + mapBox.w - 9, mapBox.y + 8);
     p.rect(
       mapBox.x + 5,
@@ -2208,28 +2547,22 @@
     if (legend.size) {
       p.text("DRAWING KEY", side.x, y + 3, 7.4, true, "#204d3a");
       y += 11;
-      for (const [name, st] of legend) {
-        if (y > 166) break;
-        p.line(side.x, y - 1, side.x + 7, y - 1, st.color, 0.5);
-        y =
-          p.wrapped(
-            name,
-            side.x + 10,
-            y,
-            side.w - 10,
-            6.2,
-            false,
-            "#36523f",
-            3.5,
-            2,
-          ) + 3;
-      }
+      y = drawLegendTwoColumn(
+        p,
+        legend,
+        side.x,
+        y,
+        side.w,
+        opt.detailLevel === "simple" ? 140 : 166,
+      );
     }
     const gates = project.features.filter(
       (f) =>
         f.properties.type === "accessPoint" && activeFeature(f, project, opt),
     );
-    for (const f of gates) {
+    const gatesToShow =
+      opt.detailLevel === "simple" ? gates.slice(0, 1) : gates;
+    for (const f of gatesToShow) {
       if (y > 205) break;
       y = infoBlock(
         p,
@@ -2261,17 +2594,18 @@
         Math.max(1, Math.floor((220 - y - 10) / 3.5)),
       );
     }
-    p.wrapped(
-      "Reference data: OpenStreetMap contributors; Planning Data (c) Crown copyright and database right 2026, OGL v3.0. Imagery when shown: (c) Esri and contributors.",
-      side.x,
-      228,
-      side.w,
-      4.2,
-      false,
-      "#5e7567",
-      2.5,
-      6,
-    );
+    if (opt.detailLevel !== "simple")
+      p.wrapped(
+        "Reference data: OpenStreetMap contributors; Planning Data (c) Crown copyright and database right 2026, OGL v3.0. Imagery when shown: (c) Esri and contributors.",
+        side.x,
+        228,
+        side.w,
+        4.2,
+        false,
+        "#5e7567",
+        2.5,
+        6,
+      );
     if (opt.hasDetails)
       p.text(
         "Full key / notes continue on project details sheet.",
@@ -2308,11 +2642,15 @@
       total,
       opt,
     );
+    // Three condensed maps on one sheet: (1) a labelled low-detail overview
+    // of the whole route, (2) the last main-road-to-site segment at medium
+    // zoom, (3) the final turn(s) into the site at high zoom.
     const overviewBox = { x: 8, y: 24, w: 280, h: 132 },
-      approachBox = { x: 8, y: 162, w: 166, h: 89 },
+      approachBox = { x: 8, y: 162, w: 80, h: 89 },
+      turnBox = { x: 92, y: 162, w: 82, h: 89 },
       rb = expandBounds(routeBounds(r), Math.max(100, (r.distanceKm || 1) * 8)),
       tr = makeTransform(rb, overviewBox);
-    const drawRoute = async (box, bounds, full) => {
+    const drawRoute = async (box, bounds, title, labelW) => {
       const t = makeTransform(bounds, box);
       p.rect(box.x, box.y, box.w, box.h, "#769280", "#f7f9f6", 0.25);
       clipStart(p, box);
@@ -2338,52 +2676,49 @@
         p.circle(pt[0], pt[1], 2.4, col, "#fff", 0.7);
         p.wrapped(
           label,
-          Math.min(box.x + box.w - 30, pt[0] + 3),
+          Math.min(box.x + box.w - 24, pt[0] + 3),
           Math.max(box.y + 10, pt[1] - 3),
-          27,
-          6.7,
+          22,
+          6.2,
           true,
           col,
-          3.4,
+          3.2,
           2,
         );
       }
       clipEnd(p);
-      p.rect(box.x + 3, box.y + 3, full ? 42 : 38, 7, "#fff", "#fff", 0);
-      p.text(
-        full ? "ROUTE OVERVIEW" : "FINAL APPROACH",
-        box.x + 5,
-        box.y + 8,
-        6.5,
-        true,
-        "#294a37",
-      );
+      drawNorth(p, box.x + box.w - 6, box.y + 5);
+      if (opt.detailLevel !== "simple")
+        drawScaleBar(p, box.x + 4, box.y + box.h - 9, t.scale, box.w * 0.3);
+      p.rect(box.x + 3, box.y + 3, labelW, 7, "#fff", "#fff", 0);
+      p.text(title, box.x + 5, box.y + 8, 6.2, true, "#294a37");
       if (raster)
         p.text(
-          "Map data: OpenStreetMap contributors" +
-            (raster.partial ? " (partial imagery)" : ""),
+          "Map data: OSM" + (raster.partial ? " (partial)" : ""),
           box.x + 4,
           box.y + box.h - 3,
-          4.4,
+          4,
           false,
           "#4e6a56",
         );
       else
         p.text(
-          "Map image unavailable - route geometry only",
+          "Map image unavailable",
           box.x + 4,
           box.y + box.h - 3,
-          5.5,
+          5,
           false,
           "#924249",
         );
     };
-    await drawRoute(overviewBox, rb, true);
+    await drawRoute(overviewBox, rb, "ROUTE OVERVIEW", 42);
     await drawRoute(
       approachBox,
-      expandBounds([...r.end, ...r.end], 400),
-      false,
+      routeNearEndBounds(r, 1500, 250),
+      "APPROACH",
+      32,
     );
+    await drawRoute(turnBox, routeNearEndBounds(r, 180, 35), "FINAL TURNS", 32);
     let y = infoBlock(
       p,
       "DESTINATION",
@@ -2447,7 +2782,7 @@
     const constraints = (r.constraints || [])
       .map((x) => (typeof x === "string" ? x : x.label || x.type))
       .filter(Boolean);
-    if (constraints.length && ny < 207)
+    if (constraints.length && ny < 207 && opt.detailLevel !== "simple")
       infoBlock(
         p,
         "RETURNED CONSTRAINTS",
@@ -2456,8 +2791,10 @@
         ny + 3,
         105,
       );
-    p.text("ROUTE SOURCE", 181, 231, 5.1, true, "#708274");
-    p.wrapped(r.provider || "", 181, 236, 105, 5.8, false, "#4f6656", 3, 2);
+    if (opt.detailLevel !== "simple") {
+      p.text("ROUTE SOURCE", 181, 231, 5.1, true, "#708274");
+      p.wrapped(r.provider || "", 181, 236, 105, 5.8, false, "#4f6656", 3, 2);
+    }
     if (r.status === "preview")
       p.wrapped(
         "Mapped truck route preview. Confirm restrictions and final access before travel.",
@@ -2792,7 +3129,7 @@
         { text: "", title: false },
       ];
       for (const line of chunks) {
-        if (count >= 43) {
+        if (count >= 55) {
           pages.push([]);
           count = 0;
         }
@@ -2802,29 +3139,37 @@
     }
     return pages.filter((p) => p.length);
   }
+  // Condensed detail boxes: tighter row spacing/padding than the previous
+  // layout so more per-feature/support-schedule information fits on each
+  // details sheet without losing any of it.
   async function renderDetailsPage(pdf, project, opt, n, total, lines) {
     const p = new Page(pdf);
     headerStudio(p, "PROJECT DETAILS", n, total, opt);
-    let y = 33;
+    let y = 31;
     for (let index = 0; index < lines.length; index++) {
       const row = lines[index];
       if (row.title && row.text.startsWith("OHL SUPPORT SCHEDULE")) {
         let end = index + 1;
         while (end < lines.length && lines[end].text) end++;
-        const height = Math.max(13, (end - index) * 4.7 + 5.5);
-        p.rect(13, y - 5.2, p.w - 26, height, "#9caf9f", "#f7f9f6", 0.28);
-        p.text("LINE / SUPPORT DETAILS", 16, y - 1.2, 4.5, true, "#708274");
-        y += 2.2;
+        const height = Math.max(10, (end - index) * 3.9 + 4);
+        p.rect(13, y - 3.4, p.w - 26, height, "#9caf9f", "#f7f9f6", 0.22);
+        p.text("LINE / SUPPORT DETAILS", 16, y - 0.4, 4, true, "#708274");
+        y += 1.8;
       }
-      p.text(row.text, 16, y, row.title ? 8.6 : 9, row.title, "#264b38");
-      y += 4.7;
+      p.text(row.text, 16, y, row.title ? 7.8 : 7.4, row.title, "#264b38");
+      y += 3.9;
     }
     await footerStudio(p, project, opt, n, total);
     p.done();
   }
   generate = async function (project, opt = {}) {
     if (!project) throw Error("No project supplied.");
-    const options = { ...opt, _images: new Map(), _samiBrand: null },
+    const options = {
+        ...opt,
+        detailLevel: opt.detailLevel === "simple" ? "simple" : "high",
+        _images: new Map(),
+        _samiBrand: null,
+      },
       data = new Set([
         ...(project.logos || [])
           .filter((l) => l.export !== false)
