@@ -1,15 +1,60 @@
 /* Dev-time only; no package installation or build step is needed to run SAMI. */
 import fs from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
-const { version, descriptor } = JSON.parse(
+const versionInfo = JSON.parse(
   fs.readFileSync(path.join(root, "VERSION.json"), "utf8"),
 );
+const { version, descriptor } = versionInfo;
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error("Invalid semantic version");
 const read = (f) => fs.readFileSync(path.join(root, f), "utf8"),
   write = (f, s) => fs.writeFileSync(path.join(root, f), s);
+
+/* Home screen icon variant. Two source sets are kept permanently in the repo
+   (sami-*-nebula.png and sami-*-black.png); this copies the selected one
+   over the canonical filenames index.html/manifest.webmanifest reference.
+   Pick explicitly with `node build.mjs --icon=black` / `--icon=nebula`
+   (persists as the new baseline). With no flag, the variant auto-alternates
+   every time the version number actually changes from what's currently
+   stamped in version.js - a simple, visible "this update landed" signal on
+   the home screen after a real release, while re-running build.mjs without
+   a version bump leaves it alone. */
+const ICON_VARIANTS = ["nebula", "black"];
+const iconFlag = process.argv
+  .find((a) => a.startsWith("--icon="))
+  ?.slice("--icon=".length);
+if (iconFlag && !ICON_VARIANTS.includes(iconFlag))
+  throw Error(`--icon must be one of: ${ICON_VARIANTS.join(", ")}`);
+let previousStampedVersion = null;
+try {
+  const m = read("version.js").match(/version:"([^"]+)"/);
+  if (m) previousStampedVersion = m[1];
+} catch {}
+let iconVariant = ICON_VARIANTS.includes(versionInfo.iconVariant)
+  ? versionInfo.iconVariant
+  : "nebula";
+if (iconFlag) {
+  iconVariant = iconFlag;
+} else if (previousStampedVersion && previousStampedVersion !== version) {
+  iconVariant = ICON_VARIANTS[(ICON_VARIANTS.indexOf(iconVariant) + 1) % ICON_VARIANTS.length];
+}
+if (versionInfo.iconVariant !== iconVariant) {
+  versionInfo.iconVariant = iconVariant;
+  write("VERSION.json", JSON.stringify(versionInfo, null, 2) + "\n");
+}
+for (const base of [
+  "sami-app-icon-512",
+  "sami-app-icon-192",
+  "sami-apple-touch-icon",
+  "sami-maskable-512",
+])
+  fs.copyFileSync(
+    path.join(root, `${base}-${iconVariant}.png`),
+    path.join(root, `${base}.png`),
+  );
+console.log(`Icon variant: ${iconVariant}`);
+
 write(
   "version.js",
   `/* Generated from VERSION.json by build.mjs. */\nwindow.SAMI_VERSION=Object.freeze({version:${JSON.stringify(version)},descriptor:${JSON.stringify(descriptor)},asset:name=>name.split('?')[0]+'?v=${version}'});\n`,
@@ -50,7 +95,7 @@ const shellNames = new Set([
   "index.html",
   ...referenced.filter((name) => /\.(?:js|css)$/.test(name)),
   "sami-wordmark.png",
-  "sami-mark.png",
+  "sami-badge.png",
   "marker-icon.png",
   "marker-icon-2x.png",
   "marker-shadow.png",
@@ -71,12 +116,7 @@ const optional = names
   )
   .sort()
   .map((f) => "./" + f);
-// A resumed same-version release must not reuse an incomplete installed shell.
-const shellHash = createHash("sha256");
-for (const file of shell) shellHash.update(file).update(fs.readFileSync(path.join(root, file)));
-const revision = shellHash.digest("hex").slice(0, 12);
 const sw = read("sw-template.txt")
-  .replace("__SHELL_REVISION__", JSON.stringify(revision))
   .replace("__VERSION__", JSON.stringify(version))
   .replace("__SHELL__", JSON.stringify(shell))
   .replace("__OPTIONAL__", JSON.stringify(optional));
@@ -92,7 +132,6 @@ write(
       development: [
         "VERSION.json",
         "build.mjs",
-        "recovery-tests.mjs",
         "sw-template.txt",
         "ASSET_MANIFEST.json",
       ],

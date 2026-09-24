@@ -1,5 +1,5 @@
 {
-  "version": "2.7.19",
+  "version": "2.7.21",
   "shell": [
     "./app.css",
     "./bearing.js",
@@ -24,7 +24,7 @@
     "./project-store.js",
     "./pwa.js",
     "./qrcode.js",
-    "./sami-mark.png",
+    "./sami-badge.png",
     "./sami-wordmark.png",
     "./shape-import.js",
     "./studio.js",
@@ -34,9 +34,17 @@
   ],
   "optional": [
     "./manifest.webmanifest",
+    "./sami-app-icon-192-black.png",
+    "./sami-app-icon-192-nebula.png",
     "./sami-app-icon-192.png",
+    "./sami-app-icon-512-black.png",
+    "./sami-app-icon-512-nebula.png",
     "./sami-app-icon-512.png",
+    "./sami-apple-touch-icon-black.png",
+    "./sami-apple-touch-icon-nebula.png",
     "./sami-apple-touch-icon.png",
+    "./sami-maskable-512-black.png",
+    "./sami-maskable-512-nebula.png",
     "./sami-maskable-512.png",
     "./screenshot-phone.png",
     "./screenshot-wide.png"
@@ -70,8 +78,7 @@
     "VERSION.json",
     "build.mjs",
     "sw-template.txt",
-    "ASSET_MANIFEST.json",
-    "recovery-tests.mjs"
+    "ASSET_MANIFEST.json"
   ],
   "runtimeGenerated": [
     "sw.js"
@@ -86,7 +93,6 @@
     "STABLE_RESTORE_QA.json"
   ],
   "documentation": [
-    ".nojekyll",
     "AUDIT_REPORT.md",
     "CHANGELOG.md",
     "FEATURE_INVENTORY.md",
@@ -97,7 +103,6 @@
     "PHASE_1_AUDIT.md",
     "POLYGON-CLIPPING-LICENSE.md",
     "QR-CODE-LICENSE.txt",
-    "RECOVERY_README.md",
     "ROADMAP.md",
     "SAMI_AI_BACKEND_SPEC.md",
     "SAMI_v2_7_10_MEASUREMENT_RELEASE_NOTES.md",

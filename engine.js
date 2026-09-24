@@ -812,6 +812,7 @@
     state.planBaseGroup = L.featureGroup().addTo(state.map);
     state.routeGroup = L.featureGroup().addTo(state.map);
     state.group = L.featureGroup().addTo(state.map);
+    state.assetIconGroup = L.featureGroup().addTo(state.map);
     state.ohlSupportGroup = L.featureGroup().addTo(state.map);
     state.draftGroup = L.featureGroup().addTo(state.map);
     state.editGroup = L.featureGroup().addTo(state.map);
@@ -819,7 +820,6 @@
       .scale({ position: "bottomright", imperial: false, maxWidth: 100 })
       .addTo(state.map);
     state.map.on("click", onMapClick);
-    state.map.on("zoomend", updateAssetIllustrationSizes);
     state.map.on("mousemove", (e) => {
       $("#coordReadout").textContent =
         e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
@@ -834,6 +834,7 @@
         saveSoon();
       }
     });
+    state.map.on("zoomend", renderAssetIllustrations);
     for (const b of Object.values(state.bases)) {
       let warned = false;
       b.on("tileerror", () => {
@@ -5357,6 +5358,8 @@
       ) +
       section("Drawing style") +
       '<div class="radio-cards"><label><input type="radio" name="docStyle" value="cad" checked><span><strong>CAD</strong><small>Simplified bounded vector plan</small></span></label><label><input type="radio" name="docStyle" value="map"><span><strong>Map</strong><small>Map context + SAMI vectors</small></span></label><label><input type="radio" name="docStyle" value="satellite"><span><strong>Satellite</strong><small>Imagery context + SAMI vectors</small></span></label></div>' +
+      section("Detail level") +
+      '<div class="radio-cards compact"><label><input type="radio" name="docDetail" value="high" checked><span><strong>High detail</strong><small>Full annotations, coordinates, key + notes</small></span></label><label><input type="radio" name="docDetail" value="simple"><span><strong>Simple</strong><small>Condensed - fewer annotations, faster to read</small></span></label></div>' +
       section("Paper") +
       '<div class="radio-cards compact"><label><input type="radio" name="docPaper" value="a3" checked><span><strong>A3 Landscape</strong><small>Default issue sheet</small></span></label><label><input type="radio" name="docPaper" value="a4"><span><strong>A4 Landscape</strong><small>Scaled alternative</small></span></label></div>' +
       section("Layers to include") +
@@ -5457,6 +5460,7 @@
         route: $("#docPageRoute")?.checked !== false,
       },
       style: $('input[name="docStyle"]:checked')?.value || "cad",
+      detailLevel: $('input[name="docDetail"]:checked')?.value || "high",
       paper: $('input[name="docPaper"]:checked')?.value || "a3",
       layers,
       essentialLabels: $("#docEssentialLabels")?.checked !== false,
@@ -6608,12 +6612,7 @@
       else console.warn(e);
     }
   }
-  let serviceMappingInFlight = false;
   async function showSelectedServiceMapping() {
-    if (serviceMappingInFlight) {
-      toast("Service mapping is already refreshing.");
-      return;
-    }
     if (!state.project.area) {
       openDrawer("area");
       return;
@@ -6644,7 +6643,6 @@
           "conservation",
         ].includes(k),
       );
-    serviceMappingInFlight = true;
     toast("Showing selected mapping…");
     try {
       if (needOhl) await refreshOhlSnapshot();
@@ -6664,8 +6662,6 @@
       );
     } catch (e) {
       toast(e.message);
-    } finally {
-      serviceMappingInFlight = false;
     }
   }
   async function refreshOhlSnapshot() {
@@ -8944,47 +8940,75 @@
     const b = G.boundsOf(f.geometry);
     return b ? [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2] : null;
   }
-  function assetIllustrationIcon(f) {
-    // Use the actual unrotated map projection; the map pane applies its bearing.
-    // A rectangle's first edge is its length and second edge is its width.
-    const ring = f.geometry?.coordinates?.[0];
-    if (f.geometry?.type !== "Polygon" || !ring || ring.length < 4) return null;
-    const points = ring.slice(0, 3).map((c) => state.map.project(latlng(c))),
-      length = points[0].distanceTo(points[1]),
-      width = points[1].distanceTo(points[2]);
-    if (![length, width].every((n) => Number.isFinite(n) && n > 0)) return null;
-    const angle = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x) * 180 / Math.PI,
-      opacity = f.properties.styleFillOpacity == null
-        ? 1 : Math.max(0, Math.min(1, +f.properties.styleFillOpacity || 0));
-    return L.divIcon({
-      className: "asset-illustration-marker",
-      html: '<div class="asset-map-icon" style="transform:rotate(' + angle +
-        'deg);opacity:' + opacity + '">' +
-        assetIconSVG(f.properties.kind, f.properties) + '</div>',
-      iconSize: [length, width],
-      iconAnchor: [length / 2, width / 2],
-    });
-  }
-  function updateAssetIllustrationSizes() {
-    state.group?.eachLayer((layer) => {
-      if (!layer.samiAssetFeature) return;
-      const icon = assetIllustrationIcon(layer.samiAssetFeature);
-      if (icon) layer.setIcon(icon);
-    });
+  function assetFootprintPx(f, c) {
+    const m = f.properties,
+      l = Math.max(0.2, +m.length || 1),
+      w = Math.max(0.1, +m.width || 1),
+      angle = Number.isFinite(Number(m.angle))
+        ? Number(m.angle)
+        : derivedRectAngle(f),
+      a = (angle * Math.PI) / 180,
+      u = [Math.sin(a), Math.cos(a)],
+      v = [Math.cos(a), -Math.sin(a)];
+    try {
+      const centerPt = state.map.latLngToContainerPoint(latlng(c)),
+        lenPt = state.map.latLngToContainerPoint(
+          latlng(pointFromLocal(c, (u[0] * l) / 2, (u[1] * l) / 2)),
+        ),
+        widPt = state.map.latLngToContainerPoint(
+          latlng(pointFromLocal(c, (v[0] * w) / 2, (v[1] * w) / 2)),
+        ),
+        lengthPx = Math.hypot(lenPt.x - centerPt.x, lenPt.y - centerPt.y) * 2,
+        widthPx = Math.hypot(widPt.x - centerPt.x, widPt.y - centerPt.y) * 2;
+      return {
+        lengthPx: Math.max(12, Math.min(320, lengthPx || 0)),
+        widthPx: Math.max(12, Math.min(320, widthPx || 0)),
+        angle,
+      };
+    } catch {
+      return { lengthPx: 34, widthPx: 34, angle };
+    }
   }
   function renderAssetIllustrations() {
+    if (!state.assetIconGroup) return;
+    state.assetIconGroup.clearLayers();
     for (const f of state.project.features) {
-      if (f.properties.type !== "asset" || f.properties.hidden || !visibleFeature(f)) continue;
-      const c = assetCenter(f), icon = assetIllustrationIcon(f);
-      if (!c || !icon) continue;
-      const marker = L.marker(latlng(c), {
+      if (
+        f.properties.type !== "asset" ||
+        state.project.hiddenTypes.includes("asset")
+      )
+        continue;
+      const c = assetCenter(f);
+      if (!c) continue;
+      const isVehicle =
+        f.properties.category === "Vehicles" ||
+        /truck|lorry|car|van|excavator|crane|cement|artic/i.test(
+          String(f.properties.kind || ""),
+        );
+      const { lengthPx, widthPx, angle } = assetFootprintPx(f, c),
+        opacity = Number.isFinite(+f.properties.styleFillOpacity)
+          ? Math.max(0, Math.min(1, +f.properties.styleFillOpacity))
+          : 1,
+        html =
+          '<div class="asset-map-icon ' +
+          (isVehicle ? "vehicle" : "") +
+          '" style="width:100%;height:100%;opacity:' +
+          opacity +
+          ";transform:rotate(" +
+          angle +
+          'deg)">' +
+          assetIconSVG(f.properties.kind, f.properties) +
+          "</div>";
+      L.marker(latlng(c), {
         interactive: false,
-        keyboard: false,
         zIndexOffset: 250,
-        icon,
-      });
-      marker.samiAssetFeature = f;
-      marker.addTo(state.group);
+        icon: L.divIcon({
+          className: "",
+          html,
+          iconSize: [widthPx, lengthPx],
+          iconAnchor: [widthPx / 2, lengthPx / 2],
+        }),
+      }).addTo(state.assetIconGroup);
     }
   }
   function controlIcon(cls, txt) {

@@ -1337,10 +1337,11 @@ p {
   gap: 5px;
   background: var(--accent-soft);
 }
-.send-btn img {
-  width: 18px;
-  height: 22px;
+.send-btn .sami-brand-mark {
+  width: 30px;
+  height: 8px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 .send-btn span,
 .voice-hint {
@@ -1371,9 +1372,10 @@ p {
   padding: 11px;
   border-bottom: 1px solid var(--line);
 }
-.sami-panel-head img {
-  width: 21px;
-  height: 28px;
+.sami-panel-head .sami-brand-mark {
+  width: 72px;
+  height: 18px;
+  object-fit: contain;
 }
 .sami-panel-head > div {
   flex: 1;
@@ -5413,28 +5415,4 @@ html[data-reduced-motion="on"] .wide-btn.primary:active {
 :is(html[data-theme="studioLight"], html[data-theme="paper"], html[data-theme="arcticLight"]) .precision-panel-compact .precision-modes button.active {
   color: var(--ink) !important;
   background: var(--accent-soft) !important;
-}
-
-/* v2.7.19 — Undo/Redo now dock in the canvas toolbar (top-right, next to
-   map style/zoom) instead of the top bar or a disconnected floating spot.
-   .canvas-toolbar .history-controls already resets position to static
-   (see the v2.7.13 note above) and .history-controls button already
-   shares the 48px map-control touch sizing, so no new override is needed
-   here — #canvasHistory just inherits the existing, already-correct rules. */
-
-/* v2.7.18 — quiet, text-only fallback to continue in the browser without
-   installing, sitting under the Why SAMI? button on the install gate. */
-.install-gate-card #gateContinueBrowser {
-  margin-top: 10px;
-  padding: 4px 6px;
-  border: 0 !important;
-  background: transparent !important;
-  color: #8fa79c;
-  font-size: 11px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  min-height: 32px;
-}
-.install-gate-card #gateContinueBrowser:hover {
-  color: #b8c9c0;
 }

@@ -1,47 +1,43 @@
-# SAMI v2.7.19 — Restore consistent build after interrupted session
+# SAMI v2.7.21 — Brand mark consistency, higher-quality sources
 
-## What happened
+## Changed in v2.7.21
 
-A prior chat session's credits ran out mid-work, before the completed v2.7.18 fixes (asset icon sizing, services-refresh, precision-cursor tap conflict, undo/redo relocation) were pushed to `engine.js`, `workspace.js`, and `cinema.js`. In the gap, a separate session produced its own "recovery" package with different, divergent implementations of the same fixes, which was then manually uploaded to GitHub via **Add file → Upload files**. That upload replaced `engine.js`, `workspace.js`, `cinema.js`, `app.css`, `index.html`, `CHANGELOG.md`, `sw.js` and `ASSET_MANIFEST.json` with an unverified, mixed set of files — mixing two independent sessions' edits is exactly how "no drawing" and a regressed measure-cursor bug happen.
-
-## Fixed in v2.7.19
-
-- **Restored the complete, internally consistent v2.7.15–18 fix set** across all core files in one push, replacing the mixed/divergent uploaded build. This includes the asset icon true-footprint sizing, the services-refresh-on-checkbox-toggle removal, the precision-cursor tap-conflict fix, and everything else documented under v2.7.18 below.
-- **Undo/Redo relocated again** — this time into the **canvas toolbar** (top-right, next to map style and zoom), not the top bar. While tracing this the stylesheet turned out to already have a rule anticipating exactly this placement (`.canvas-toolbar .history-controls { position: static !important; }`, dated to the v2.7.13 pass) — canvas-toolbar was evidently the original, correct home for these buttons before they got displaced into the floating position that prompted the original complaint. `.history-controls button` also already shares the 48px map-control touch sizing, so no new CSS override was needed, only removing the now-unneeded top-bar-specific rules.
-- Version bumped to 2.7.19 specifically so the service worker forces a clean cache update rather than serving anything cached from the interim uploaded build.
-
-## Still open
-
-Everything listed under v2.7.18's "Still open" section, unchanged: icon artwork recolouring, the Trakway 60–120° corner-snap gap, the CAD export redesign, the route-to-site 3-map layout, CAD export detail-level toggle, non-scrolling menus, asset library refresh, top-bar activity indicator. None of these were touched by the interim uploaded build either, per its own RECOVERY_README.md.
+- **No more pin-only fragments anywhere in the UI.** The v2.7.20 fix still put an isolated pin crop in the "Ask SAMI" panel header and send button - the user correctly flagged that a standalone pin was never asked for and was itself a leftover of the earlier crop mistake. Both spots now show the full "SAMI" wordmark (`sami-badge.png`), consistent with "everywhere should be the full SAMI brand logo."
+- **Rebuilt from a genuinely clean source.** `sami-wordmark.png`, an existing high-resolution (1116x339) asset with real per-pixel alpha transparency, was sitting unused in the repo - far higher quality than extracting content via luminance-threshold guessing from a compressed icon. `sami-badge.png` (for the two small in-UI brand marks) is now cropped directly from it with a real alpha channel, no extraction artifacts.
+- **Home screen icon (black variant) rebuilt from a clean reference the user supplied directly** (SAMI wordmark + pin, no tagline/byline text), precisely centered on its true content bounding box rather than approximated. Replaces the v2.7.20 icon, which the user flagged as unclear/off-centre with gamma-compromised colour from the old extraction method.
+- `sami-icon-mark.png` is retired (again) in favour of `sami-badge.png`; `build.mjs`'s critical-file list and the service worker shell updated accordingly.
 
 ---
 
-# SAMI v2.7.18 — Asset rendering, services refresh, precision cursor, top bar
+# SAMI v2.7.20 — Icon mark recreated, dual icon variants
+
+## Changed in v2.7.20
+
+- **`sami-mark.png` retired and replaced with `sami-icon-mark.png`.** The old file was a rough crop of the wordmark's "A" + pin motif. Recreated cleanly from the source logo artwork as a deliberate, tightly-composed crop of that same motif (transparent background, native resolution, no neighbouring letters bleeding in), used in the "Ask SAMI" panel header and send button.
+- **Home screen icon recreated on a black background**, as an alternative to the v2.7.19 nebula-background icon — full "SAMI" wordmark with the pin mark, extracted cleanly from the source logo artwork rather than cropped/rough.
+- **Two permanent icon variants now live side by side**: `sami-app-icon-{192,512}-nebula.png` / `-black.png`, `sami-apple-touch-icon-{nebula,black}.png`, `sami-maskable-512-{nebula,black}.png`. `build.mjs` copies the selected variant over the canonical filenames referenced by `index.html`/`manifest.webmanifest`.
+- **Icon variant is switchable by command**: `node build.mjs --icon=black` or `node build.mjs --icon=nebula` sets and persists the choice (`VERSION.json.iconVariant`). With no flag, the variant **auto-alternates** every time the version number actually changes — a simple visual signal on the home screen that a real update has landed, distinct from just re-running the build without a version bump.
+- This release ships with **`iconVariant: "black"`**.
+
+---
+
+# SAMI v2.7.19 — Home screen icon
+
+## Changed in v2.7.19
+
+- **Home screen / install icon replaced** with the SAMI wordmark on a dark green nebula background, across all icon variants: `sami-app-icon-192.png`, `sami-app-icon-512.png`, `sami-apple-touch-icon.png` (full-bleed artwork, matching the previous icons' treatment), and `sami-maskable-512.png` (artwork scaled to 80% and centered on the artwork's own dark corner tone, keeping the wordmark inside the safe-zone circle so it isn't clipped by circular/squircle OS masking).
+
+---
+
+# SAMI v2.7.18 — Asset icon fidelity, precision cursor, services panel, install gate
 
 ## Fixed in v2.7.18
 
-- **Asset icons now render at true footprint size and rotation** instead of a fixed 27–34px square regardless of zoom. Root cause: every placed asset drew two disconnected layers — a styled polygon (the "box") and a separate fixed-size icon marker with hardcoded colours, never linked. This explained all of: opacity only affecting the box, colour changes only affecting the box, and detailed assets looking barely visible/elongated. The icon is now sized from the asset's real length × width at current zoom and rotates to match placement angle; its opacity now follows the fill-opacity control. Colour recolouring of the icon artwork itself is still open — most icons are multi-part with intentional shading, so a safe fix needs per-icon care rather than a blanket colour swap.
-- **Asset default outline weight** changed from 2px to 0.5px.
-- **Services & constraints no longer auto-refreshes on every checkbox toggle.** Previously each checked box independently scheduled its own debounced network refresh, so checking several sources in quick succession fired several overlapping refresh cycles — this was very likely both the "constantly refreshing" symptom and, separately, the cause of the OHL "+ Add support" popup silently failing (support-point coordinates could shift between when the popup was built and when the button was tapped, invalidating the lookup). Checkboxes now only toggle visibility; refreshing happens solely via the renamed **"Show / Refresh"** button, moved to the top of the panel instead of the bottom.
-- **Undo/Redo moved from a floating bottom-right position into the top bar**, next to Export/Menu — HTML and CSS verified (balanced tags, no orphaned references, confirmed nothing else depended on the old fixed position).
-- **Precision-cursor (measure map) tap conflict removed.** There were two competing systems repositioning the crosshair on tap — a custom pointer-event interceptor and Leaflet's own native click handling — running concurrently with Leaflet's native map panning (which must stay enabled, since "pan the map under the fixed cursor" is a required workflow). The custom interceptor's `stopImmediatePropagation()` could leave Leaflet's own drag/tap gesture recognition mid-state, matching the reported "drag works once, then tapping stops working." Removed the custom interceptor; Leaflet's native click (already correctly wired to reposition the cursor) is now the only path. **Needs real-device confirmation** — this environment has no way to test live touch gestures.
-- **"Continue in browser" added** as a quiet, text-only link under Why SAMI? on the install gate, for anyone who wants to use SAMI without installing. The choice persists (`localStorage`) so it isn't asked again on the next visit.
-
-## Investigated, found not to be a bug
-
-- **CAD conversion "not functioning correctly"** — traced the full capture pipeline (Overpass query → feature parsing → road-width buffering) and found no defect; the user confirmed this was very likely a symptom of the services auto-refresh issue above (CAD population appeared to hang because it was queued behind overlapping refresh cycles), not a separate bug.
-- **"SAMI AI" not working** — by design, not a bug. `window.SAMI_CONFIG.aiEndpoint` is blank in this build (same as `voiceEndpoint`, `hgvRouteEndpoint`); structured local commands (create a run, add an access point, export, etc.) all work without it, but free-text Q&A needs a real backend deployed and its URL set in `config.js`. `SAMI_AI_BACKEND_SPEC.md` in this repo documents what that backend needs to accept; it was written but no server was ever stood up against it.
-
-## Still open
-
-- Icon artwork recolouring (see above)
-- Trakway 60–120° corner-snap gap (explicitly flagged as high-risk, needs isolated treatment)
-- CAD export redesign: logo flattening, user-logo background removal, 2-column key with shapes/signs/numbered markers, condensed detail boxes, inline OHL line labels, auto-varied line colours/dash
-- Route-to-site 3-map layout (labelled overview → last-main-road-to-site → final turns), condensed to one page
-- CAD export detail-level toggle (simple/high)
-- Non-scrolling menus
-- Asset library refresh for quality/reliability
-- Top-bar background-activity indicator
+- **Asset map icons now scale, rotate and fade with the asset they represent.** Previously every placed asset icon rendered at a fixed 27px/34px square regardless of the item's real length × width, its rotation, or the zoom level, and never updated after the map zoomed. Icons are now sized from the asset's true footprint (projected to screen pixels via the map's own container-point projection at the current zoom), rotated to match `properties.angle` (falling back to the angle derived from the placed polygon's own edge when unset), and their opacity now follows `properties.styleFillOpacity` instead of ignoring it. Icons are kept in their own map layer group and refreshed on `zoomend` as well as on every normal re-render, so panning and zooming keep them in sync with the underlying geometry.
+- **Asset outlines are thinner by default.** `type === "asset"` features now use a `0.5` stroke weight instead of `2`, matching the intended light outline for placed equipment/furniture rather than the heavier line used for drawn areas.
+- **Precision cursor tap-to-place no longer breaks after the first map drag.** The precision/measure cursor had a low-level `pointerdown`/`pointermove`/`pointerup` interceptor running on the map surface alongside Leaflet's own tap/drag handling, calling `stopImmediatePropagation()` on `pointerup` to reposition the crosshair. That left Leaflet's internal drag/tap gesture recognizer stuck mid-gesture after the first pan, so a subsequent tap silently did nothing. The interceptor is removed; repositioning the crosshair on tap now goes exclusively through the existing native Leaflet `click` handler, which already had a working precision-cursor branch. Multi-touch (pinch) tracking, which doesn't touch event propagation, is unchanged. Map panning/dragging is unaffected throughout.
+- **Services & constraints panel no longer fires overlapping network refreshes while checking boxes.** Checkboxes (and "Show all") used to each schedule their own debounced background refresh, so ticking several sources in quick succession queued up multiple overlapping fetch cycles. Checkboxes now only toggle visibility of sources already loaded into the project; fetching current data happens only via the explicit "Refresh checked sources" button, which has been moved to the top of the panel (above the source list) so it's immediately reachable instead of buried under it.
+- **Added a "Continue in browser" escape hatch to the install gate.** The install-prompt gate shown to non-installed users previously had no way out other than installing. A quiet, text-only "Continue in browser" link now sits under the existing "Why SAMI?" link on the gate card; choosing it stores the choice in `localStorage` (`sami.browser.continue`) and enters the workspace directly, and the gate is skipped entirely on later visits once that choice has been made.
 
 ---
 
