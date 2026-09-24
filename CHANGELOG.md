@@ -1,3 +1,11 @@
+# SAMI v2.7.19 — Home screen icon
+
+## Changed in v2.7.19
+
+- **Home screen / install icon replaced** with the SAMI wordmark on a dark green nebula background, across all icon variants: `sami-app-icon-192.png`, `sami-app-icon-512.png`, `sami-apple-touch-icon.png` (full-bleed artwork, matching the previous icons' treatment), and `sami-maskable-512.png` (artwork scaled to 80% and centered on the artwork's own dark corner tone, keeping the wordmark inside the safe-zone circle so it isn't clipped by circular/squircle OS masking).
+
+---
+
 # SAMI v2.7.18 — Asset icon fidelity, precision cursor, services panel, install gate
 
 ## Fixed in v2.7.18
