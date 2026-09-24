@@ -5316,7 +5316,7 @@
       let g = f.geometry;
       if (state.project.area) {
         try {
-          g = G.clipGeometry(g, planBounds());
+          g = G.clipGeometry(g, serviceBounds());
         } catch {}
       }
       if (!g) continue;

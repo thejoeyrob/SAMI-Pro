@@ -1889,7 +1889,7 @@
     }
     const p = tr.point(cs[Math.floor(cs.length / 2)]);
     page.text(
-      "TOTAL " + total.toFixed(2) + " m",
+      "Total: " + total.toFixed(2) + " m",
       p[0] + 2,
       p[1] - 4,
       6.5,
