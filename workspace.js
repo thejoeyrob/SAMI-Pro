@@ -526,7 +526,7 @@ window.SAMIWorkspaceController = function (C, O) {
         v = C.SERVICES[selected];
       return `${tabs}<p class="subtle">Choose a service or constraint, then set one appearance for every item in that category. Tapping an item on the map opens its information instead of its styling controls.</p><div class="service-edit-list">${ordered.map(([k, x]) => `<button class="service-row service-edit-row ${selected === k ? "active" : ""}" data-action="serviceStyle:${k}"><i style="background:${S.project.serviceStyles?.[k]?.color || x.color}"></i><span>${esc(x.name)}<small>${counts[k] || 0} project records</small></span><b>›</b></button>`).join("")}</div>${serviceStyleHTML(selected, v, counts[selected] || 0)}<p class="service-guidance">${CAVEAT}</p>`;
     }
-    return `${tabs}${ui.serviceMode === "show" ? `<div class="button-pair">${B("Show all", "servicesShowAll")}${B("Hide all", "servicesHideAll")}</div>` : ""}${ordered.map(([k, v]) => (ui.serviceMode === "add" ? `<button class="service-row" data-action="addService:${k}"><i style="background:${v.color}"></i><span>${esc(v.name)}<small>Manual ${v.area ? "area" : "line"}</small></span><b>＋</b></button>` : `<label class="service-row"><input type="checkbox" data-service="${k}" ${S.project.serviceVisibility[k] ? "checked" : ""}><i style="background:${S.project.serviceStyles?.[k]?.color || v.color}"></i><span>${esc(v.name)}<small>${counts[k] ? counts[k] + " project records" : reference.has(k) ? (k === "ohl" ? "Mapped OHL intelligence · site + 0.5 mile" : "Public reference search · coverage varies") : "Constraint source · coverage varies"}</small></span></label>`)).join("")}${ui.serviceMode === "show" ? B("Refresh checked sources", "showServiceMapping", true) : ""}${details("Data sources & import", B("Source catalogue", "servicesCatalogue") + B("Import survey / utility data", "dataPack"))}<p class="service-guidance">${CAVEAT}</p>`;
+    return `${tabs}${ui.serviceMode === "show" ? `${B("↻ Refresh checked sources", "showServiceMapping", true)}<div class="button-pair">${B("Show all", "servicesShowAll")}${B("Hide all", "servicesHideAll")}</div><p class="subtle service-refresh-note">Checking a box shows or hides sources already loaded. Use Refresh to fetch the latest data for everything checked.</p>` : ""}${ordered.map(([k, v]) => (ui.serviceMode === "add" ? `<button class="service-row" data-action="addService:${k}"><i style="background:${v.color}"></i><span>${esc(v.name)}<small>Manual ${v.area ? "area" : "line"}</small></span><b>＋</b></button>` : `<label class="service-row"><input type="checkbox" data-service="${k}" ${S.project.serviceVisibility[k] ? "checked" : ""}><i style="background:${S.project.serviceStyles?.[k]?.color || v.color}"></i><span>${esc(v.name)}<small>${counts[k] ? counts[k] + " project records" : reference.has(k) ? (k === "ohl" ? "Mapped OHL intelligence · site + 0.5 mile" : "Public reference search · coverage varies") : "Constraint source · coverage varies"}</small></span></label>`)).join("")}${details("Data sources & import", B("Source catalogue", "servicesCatalogue") + B("Import survey / utility data", "dataPack"))}<p class="service-guidance">${CAVEAT}</p>`;
   }
   function vehicleSVG(k) {
     const artic = k === "artic40",
@@ -1547,19 +1547,16 @@ window.SAMIWorkspaceController = function (C, O) {
         $("#" + id)?.addEventListener("input", applyStyle);
     }
     if (k === "services")
+      // Checkboxes only toggle visibility of sources already loaded into
+      // the project; fetching fresh data happens only when the user taps
+      // "Refresh checked sources" (see servicesHTML), so toggling several
+      // boxes quickly never fires overlapping network refresh cycles.
       $$("[data-service]").forEach(
         (el) =>
           (el.onchange = () => {
             S.project.serviceVisibility[el.dataset.service] = el.checked;
             S.project.serviceVisibilityConfigured = true;
             C.commit();
-            if (el.checked) {
-              clearTimeout(ui.serviceRefreshTimer);
-              ui.serviceRefreshTimer = setTimeout(
-                () => C.runAction("showServiceMapping"),
-                220,
-              );
-            }
           }),
       );
     if (k === "routeToSite") base.bindDrawer(k);
@@ -2572,68 +2569,16 @@ window.SAMIWorkspaceController = function (C, O) {
         }
       });
       const surface = precisionMapEl();
-      let surfaceTap = null;
-      const isMapSurface = (target) =>
-        !target.closest?.(
-          "button,input,select,textarea,a,.leaflet-control,#precisionPanel,#precisionCursor",
-        );
-      surface.addEventListener(
-        "pointerdown",
-        (e) => {
-          if (
-            !ui.precision.active ||
-            e.button > 0 ||
-            e.isPrimary === false ||
-            !isMapSurface(e.target)
-          )
-            return;
-          surfaceTap = {
-            id: e.pointerId,
-            x: e.clientX,
-            y: e.clientY,
-            moved: false,
-          };
-        },
-        { capture: true, passive: true },
-      );
-      surface.addEventListener(
-        "pointermove",
-        (e) => {
-          if (!surfaceTap || surfaceTap.id !== e.pointerId) return;
-          if (Math.hypot(e.clientX - surfaceTap.x, e.clientY - surfaceTap.y) > 7)
-            surfaceTap.moved = true;
-        },
-        { capture: true, passive: true },
-      );
-      surface.addEventListener(
-        "pointerup",
-        (e) => {
-          const tap = surfaceTap;
-          surfaceTap = null;
-          if (
-            !tap ||
-            tap.id !== e.pointerId ||
-            tap.moved ||
-            ui.precision.multi ||
-            !isMapSurface(e.target)
-          )
-            return;
-          const r = precisionMapRect();
-          if (!r) return;
-          positionPrecisionCursor(e.clientX - r.left, e.clientY - r.top, true, r);
-          S.suppressMapClick = performance.now() + 550;
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        },
-        { capture: true, passive: false },
-      );
-      surface.addEventListener(
-        "pointercancel",
-        () => {
-          surfaceTap = null;
-        },
-        { capture: true, passive: true },
-      );
+      // Repositioning the precision cursor on tap is handled by Leaflet's
+      // own native "click" event (see onMapClick's ui.precision.active
+      // branch) so it stays in sync with Leaflet's tap/drag gesture
+      // recognizer. A separate low-level pointerdown/pointermove/pointerup
+      // interceptor used to run here in parallel and call
+      // stopImmediatePropagation() on pointerup to reposition the cursor
+      // itself; that left Leaflet's native drag/tap handling stuck mid
+      // gesture after the first pan, so tapping to place a point stopped
+      // working. Only multi-touch (pinch) tracking remains here, to keep
+      // the crosshair from jumping while the user is pinch-zooming the map.
       surface.addEventListener(
         "pointerdown",
         (e) => {
@@ -3312,13 +3257,6 @@ window.SAMIWorkspaceController = function (C, O) {
         S.project.serviceVisibilityConfigured = true;
         C.commit();
         renderDrawer("services");
-        if (visible) {
-          clearTimeout(ui.serviceRefreshTimer);
-          ui.serviceRefreshTimer = setTimeout(
-            () => C.runAction("showServiceMapping"),
-            180,
-          );
-        }
         return;
       }
       if (action === "fieldNote" || action === "fieldPhoto") {
