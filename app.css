@@ -1224,8 +1224,10 @@ p {
   font-weight: 600;
 }
 .modal-body {
+  flex: 1;
   overflow: auto;
   padding: 20px;
+  max-height: calc(100vh - 140px);
 }
 .close-btn {
   width: 31px;
@@ -1677,9 +1679,18 @@ p {
     padding: calc(10px + env(safe-area-inset-top)) 10px
       calc(10px + env(safe-area-inset-bottom));
   }
-  .modal-head,
+  .modal-head {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+  }
+  .modal-head h3 {
+    font-size: 16px;
+    flex: 1 0 auto;
+  }
   .modal-body {
     padding: 14px;
+    font-size: 12px;
+    max-height: calc(100vh - 120px);
   }
   .radio-cards,
   .export-actions {
