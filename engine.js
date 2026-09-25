@@ -3300,7 +3300,7 @@
       '<details class="compact-section"><summary>Manual / irregular area tools</summary><div class="area-method-grid"><button data-action="defineAreaFreehand"><strong>Freehand extent</strong><small>Sketch an irregular extent</small></button><button data-action="defineAreaPoints"><strong>Point boundary</strong><small>Drop points, then Close shape</small></button><button data-action="defineArea"><strong>Two corners</strong><small>Define a rectangular extent manually</small></button></div></details>' +
       (b
         ? button("Clear defined site area", "clearArea") +
-          section("CAD drawing background") +
+          '<details class="compact-section" open><summary>CAD drawing background</summary>' +
           '<p class="subtle">Site Plan only draws the defined area + bleed - not the wider map. Low detail keeps things fast while drawing; switch up for a detailed preview.</p>' +
           '<div class="radio-cards compact">' +
           [
@@ -3342,7 +3342,8 @@
           ) +
           button("Open CAD drawing background", "cadMode") +
           button("Fit site frame to screen", "fitArea") +
-          button("Services · site + 0.1 mile", "open:services")
+          button("Services · site + 0.1 mile", "open:services") +
+          '</details>'
         : "") +
       '<p class="subtle">Issued A3/A4 drawings use the same √2 landscape ratio.</p>'
     );
