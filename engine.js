@@ -3520,13 +3520,15 @@
       ) +
       field("siteRef", "Site reference", m.siteRef || "") +
       field("clientName", "Client / contractor", m.clientName || "") +
+      '<details class="compact-section"><summary>Drawing / issue metadata</summary>' +
       '<div class="row equal"><div>' +
       field("creator", "Created by", m.creator || "") +
       "</div><div>" +
       field("drawingNo", "Drawing no.", m.drawingNo || "") +
       "</div></div>" +
       field("revision", "Revision", m.revision || "") +
-      section("Driver / delivery issue information") +
+      '</details>' +
+      '<details class="compact-section" open><summary>Driver / delivery information</summary>' +
       '<div class="row equal"><div>' +
       field("siteContact", "Site contact", m.siteContact || "") +
       "</div><div>" +
@@ -3539,13 +3541,14 @@
       esc(m.driverNotes || "") +
       '</textarea><label class="field-label" for="siteNotes">Site / drawing notes</label><textarea class="field" id="siteNotes" rows="3">' +
       esc(m.siteNotes || "") +
-      "</textarea>" +
-      section("Project files") +
+      "</textarea></details>" +
+      '<details class="compact-section"><summary>Project files</summary>' +
       button("Save on this device", "save") +
       button("Export editable backup", "backup") +
       button("Restore a SAMI backup", "restore") +
       button("New project", "new") +
-      section("Location integration") +
+      '</details>' +
+      '<details class="compact-section"><summary>Location integration & voice</summary>' +
       field(
         "w3wApiKey",
         "what3words API key",
@@ -3554,7 +3557,6 @@
         'placeholder="Needed for ///three.word.address lookup"',
       ) +
       '<p class="subtle">what3words requires its API. Coordinates and normal addresses work without this key.</p>' +
-      section("Ask SAMI voice") +
       checkedRow(
         "Talk-back using an available device voice",
         'id="voiceOutput"',
@@ -3563,17 +3565,19 @@
       '<label class="field-label" for="samiVoiceSelect">Spoken voice</label><select class="field" id="samiVoiceSelect"></select>' +
       button("Test SAMI voice", "testVoice") +
       '<p class="subtle">Tap the single Ask SAMI control to capture speech when the text box is empty; typed text uses the same button.</p>' +
-      button("Reset toolbar position", "resetRail")
+      button("Reset toolbar position", "resetRail") +
+      '</details>'
     );
   }
   function searchHTML() {
     return (
       '<p class="subtle">Search by address, postcode, ///what3words or coordinates. A map point can also be selected directly when setting HGV route endpoints.</p><label class="field-label" for="placeQuery">Address · postcode · ///what3words · lat,lng</label><div class="row"><input class="field" id="placeQuery" placeholder="e.g. WV1 1AA · ///filled.count.soap · 52.58,-2.12"><button class="mini-btn" data-action="search">Find</button></div><div id="placeResults"></div>' +
       button("Use my current location", "locate") +
-      section("Coordinates") +
+      '<details class="compact-section"><summary>Coordinates</summary>' +
       field("latInput", "Latitude", "", "number", 'step="any"') +
       field("lngInput", "Longitude", "", "number", 'step="any"') +
-      button("Go to coordinates", "coords")
+      button("Go to coordinates", "coords") +
+      '</details>'
     );
   }
   function helpHTML() {
@@ -5812,6 +5816,40 @@
       last = (state.project.routes || []).at(-1);
     return (
       '<p class="subtle">Plan the journey <strong>to the site</strong>, not a Trakway run. Vehicle dimensions are used by the HGV routing engine. Always confirm the actual vehicle / trailer dimensions before use.</p>' +
+      '<details class="compact-section" open><summary>Route endpoints</summary>' +
+      '<div class="route-endpoint"><div>' +
+      field(
+        "routeStart",
+        "Address · postcode · ///what3words · lat,lng",
+        h.startText || "",
+      ) +
+      '<div class="subtle">' +
+      [
+        h.start ? "Map point: " + coordLabel(h.start) : "",
+        h.startW3w || "",
+        h.startAddress || "",
+      ]
+        .filter(Boolean)
+        .map(esc)
+        .join(" · ") +
+      '</div></div><button class="mini-btn" data-action="pickRoute:start" title="Pick start on map">◎</button></div>' +
+      '<div class="route-endpoint"><div>' +
+      field(
+        "routeEnd",
+        "Address · postcode · ///what3words · lat,lng",
+        h.endText || "",
+      ) +
+      '<div class="subtle">' +
+      [
+        h.end ? "Map point: " + coordLabel(h.end) : "",
+        h.endW3w || "",
+        h.endAddress || "",
+      ]
+        .filter(Boolean)
+        .map(esc)
+        .join(" · ") +
+      '</div></div><button class="mini-btn" data-action="pickRoute:end" title="Pick destination on map">◎</button></div></details>' +
+      '<details class="compact-section"><summary>Vehicle profile & dimensions</summary>' +
       choice("hgvProfile", "Vehicle profile", HGV_PROFILES, h.profile) +
       '<div class="row equal"><div>' +
       field(
@@ -5845,41 +5883,7 @@
         "number",
         'min="2" max="40" step="0.1"',
       ) +
-      "</div></div>" +
-      section("From") +
-      '<div class="route-endpoint"><div>' +
-      field(
-        "routeStart",
-        "Address · postcode · ///what3words · lat,lng",
-        h.startText || "",
-      ) +
-      '<div class="subtle">' +
-      [
-        h.start ? "Map point: " + coordLabel(h.start) : "",
-        h.startW3w || "",
-        h.startAddress || "",
-      ]
-        .filter(Boolean)
-        .map(esc)
-        .join(" · ") +
-      '</div></div><button class="mini-btn" data-action="pickRoute:start" title="Pick start on map">◎</button></div>' +
-      section("To") +
-      '<div class="route-endpoint"><div>' +
-      field(
-        "routeEnd",
-        "Address · postcode · ///what3words · lat,lng",
-        h.endText || "",
-      ) +
-      '<div class="subtle">' +
-      [
-        h.end ? "Map point: " + coordLabel(h.end) : "",
-        h.endW3w || "",
-        h.endAddress || "",
-      ]
-        .filter(Boolean)
-        .map(esc)
-        .join(" · ") +
-      '</div></div><button class="mini-btn" data-action="pickRoute:end" title="Pick destination on map">◎</button></div>' +
+      "</div></div></details>" +
       button(
         last ? "Re-check / refresh HGV route" : "Plan HGV route to site",
         "planHgv",
@@ -5920,8 +5924,8 @@
           button("Delete latest route", "deleteLatestRoute") +
           "</div>"
         : "") +
-      section("Routing data") +
-      '<div class="card warning-card"><strong>Production target: OS Routing & Asset Management Information</strong><p class="data-note">OS RAMI provides turn, time, height, weight and width restrictions and is updated monthly. This flat build uses the configured HGV endpoint when supplied; otherwise it uses an OpenStreetMap/Valhalla truck-route preview and labels it accordingly.</p></div>'
+      '<details class="compact-section"><summary>Routing data & sources</summary>' +
+      '<div class="card warning-card"><strong>Production target: OS Routing & Asset Management Information</strong><p class="data-note">OS RAMI provides turn, time, height, weight and width restrictions and is updated monthly. This flat build uses the configured HGV endpoint when supplied; otherwise it uses an OpenStreetMap/Valhalla truck-route preview and labels it accordingly.</p></div></details>'
     );
   }
   function parseCoordText(text) {
