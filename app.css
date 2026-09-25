@@ -188,6 +188,32 @@ p {
 .wide-btn {
   width: 100%;
 }
+.cad-processing {
+  position: relative;
+  overflow: hidden;
+}
+.cad-processing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(52, 211, 153, 0.55) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: sami-cad-sweep 1.1s linear infinite;
+  pointer-events: none;
+}
+@keyframes sami-cad-sweep {
+  0% {
+    background-position: 140% 0;
+  }
+  100% {
+    background-position: -40% 0;
+  }
+}
 .tag,
 .eyebrow {
   font-size: 9px;
@@ -4346,6 +4372,15 @@ body:not(.inspector-collapsed) #restoreInspector {
 }
 .box-select-active #mapViewport {
   cursor: crosshair;
+}
+#map.drawing-active,
+#map.drawing-active .leaflet-grab,
+#map.drawing-active .leaflet-interactive {
+  cursor: crosshair !important;
+}
+#map.drawing-active.leaflet-dragging,
+#map.drawing-active .leaflet-dragging {
+  cursor: crosshair !important;
 }
 .route-access-priority {
   padding: 10px;

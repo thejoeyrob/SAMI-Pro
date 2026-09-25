@@ -407,11 +407,11 @@
 }
 @media (max-height: 570px) and (min-aspect-ratio: 1/1) {
   #wordmarkStage {
-    width: 320px;
-    top: 34%;
+    width: 280px;
+    top: 30%;
   }
   .welcome-ui {
-    top: calc(34% + 43px);
+    top: calc(30% + 62px);
   }
   .brand-tag {
     margin: 14px 0;

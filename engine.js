@@ -23,7 +23,7 @@
       Date.now().toString(36) +
       "-" +
       Math.random().toString(36).slice(2);
-  const SERVICE_BUFFER_M = 402.336,
+  const SERVICE_BUFFER_M = 160.9344,
     PLAN_BLEED_DEFAULT = 60;
   const SERVICES = {
     electric: { name: "Underground electricity", color: "#df4141" },
@@ -563,6 +563,7 @@
       areaAspectLocked: false,
       areaPaperRatio: 420 / 297,
       planBleed: PLAN_BLEED_DEFAULT,
+      planDetail: "low",
       planBase: [],
       planBaseMeta: null,
       features: [],
@@ -719,6 +720,8 @@
     if (SERVICES[p.serviceType]) n.serviceType = p.serviceType;
     if (Number.isFinite(+p.planBleed))
       n.planBleed = Math.max(0, Math.min(200, +p.planBleed));
+    if (["low", "medium", "high"].includes(p.planDetail))
+      n.planDetail = p.planDetail;
     if (Array.isArray(p.planBase))
       n.planBase = p.planBase
         .filter(G.validateFeature)
@@ -1079,10 +1082,7 @@
       state.project.base = base;
       saveSoon();
     }
-    if (
-      base === "drawing" &&
-      (!state.project.planBase?.length || state.project.planBaseMeta?.stale)
-    )
+    if (base === "drawing" && planBaseNeedsCapture())
       queueMicrotask(() => capturePlanBase(true));
     render();
   }
@@ -1248,6 +1248,15 @@
     }
     state.groupPick = { groupId: gid, originId: f.id, before };
     closeDrawer();
+    const ob = G.boundsOf(f.geometry);
+    if (ob)
+      state.map.fitBounds(
+        [
+          [ob[1], ob[0]],
+          [ob[3], ob[2]],
+        ],
+        { maxZoom: 21, padding: [140, 140] },
+      );
     render();
     toast("Group selection: tap items to add or remove them, then press Done.");
   }
@@ -1600,7 +1609,7 @@
           !G.inside(next, serviceBounds())
         ) {
           f.geometry = old;
-          toast("Keep service points inside the site area + 0.25 mile buffer.");
+          toast("Keep service points inside the site area + 0.1 mile buffer.");
           render();
           return;
         }
@@ -2287,6 +2296,7 @@
     state.tool = tool;
     state.options = copy(options);
     state.points = [];
+    $("#map").classList.add("drawing-active");
     $("#drawStatus").hidden = false;
     const names = {
       planArea: "Site frame · two corners",
@@ -2322,6 +2332,7 @@
     state.tool = null;
     state.points = [];
     state.options = {};
+    $("#map").classList.remove("drawing-active");
     state.freehandActive = false;
     state.vertexEditId = null;
     state.groupPick = null;
@@ -2471,7 +2482,7 @@
       state.project.area &&
       !G.inside(c, serviceBounds())
     ) {
-      toast("Service information is limited to the site area plus 0.25 mile.");
+      toast("Service information is limited to the site area plus 0.1 mile.");
       return;
     }
     if (
@@ -2724,7 +2735,7 @@
         geom = G.clipGeometry(geom, serviceBounds());
         if (!geom)
           throw Error(
-            "No service geometry falls inside the site area + 0.25 mile service buffer.",
+            "No service geometry falls inside the site area + 0.1 mile service buffer.",
           );
       }
       const type =
@@ -3271,7 +3282,8 @@
   function areaHTML() {
     const b = state.project.area,
       bleed = +state.project.planBleed || PLAN_BLEED_DEFAULT,
-      meta = state.project.planBaseMeta;
+      meta = state.project.planBaseMeta,
+      detail = planDetailLevel();
     return (
       '<div class="card"><span class="tag">SITE DRAWING FRAME</span><h3>Define the current view</h3><p class="subtle">Use the visible map as the Site Plan frame. SAMI applies the A3/A4 landscape paper ratio automatically while retaining the current bearing.</p>' +
       button(
@@ -3289,6 +3301,19 @@
       (b
         ? button("Clear defined site area", "clearArea") +
           section("CAD drawing background") +
+          '<p class="subtle">Site Plan only draws the defined area + bleed - not the wider map. Low detail keeps things fast while drawing; switch up for a detailed preview.</p>' +
+          '<div class="radio-cards compact">' +
+          [
+            ["low", "Low", "Fastest · roads & buildings"],
+            ["medium", "Medium", "+ rail, water, landuse, power lines"],
+            ["high", "High", "Full detail · trees, barriers, amenities"],
+          ]
+            .map(
+              ([v, label, small]) =>
+                `<label><input type="radio" name="planDetail" value="${v}"${detail === v ? " checked" : ""}><span><strong>${label}</strong><small>${small}</small></span></label>`,
+            )
+            .join("") +
+          "</div>" +
           field(
             "planBleed",
             "CAD bleed outside boundary (m)",
@@ -3302,7 +3327,9 @@
               esc(new Date(meta.capturedAt).toLocaleString()) +
               " · " +
               (meta.featureCount || 0) +
-              " features" +
+              " features · " +
+              (meta.detail || "low") +
+              " detail" +
               (meta.stale ? " · <strong>refresh required</strong>" : "")
             : "Not captured yet.") +
           "</p></div>" +
@@ -3315,7 +3342,7 @@
           ) +
           button("Open CAD drawing background", "cadMode") +
           button("Fit site frame to screen", "fitArea") +
-          button("Services · site + 0.25 mile", "open:services")
+          button("Services · site + 0.1 mile", "open:services")
         : "") +
       '<p class="subtle">Issued A3/A4 drawings use the same √2 landscape ratio.</p>'
     );
@@ -3332,7 +3359,7 @@
       });
     if (!has)
       return (
-        '<div class="card"><span class="tag">SERVICES & CONSTRAINTS</span><h3>Define the site frame first</h3><p class="subtle">SAMI keeps service searches bounded to the site plus 0.25 mile.</p></div>' +
+        '<div class="card"><span class="tag">SERVICES & CONSTRAINTS</span><h3>Define the site frame first</h3><p class="subtle">SAMI keeps service searches bounded to the site plus 0.1 mile.</p></div>' +
         button("Define site frame", "open:area", true)
       );
     if (state.serviceScreen === "mapping") return serviceMappingHTML(counts);
@@ -3878,6 +3905,15 @@
       queueMicrotask(bindAssetPaletteDrag);
     }
     if (kind === "area") {
+      $$('input[name="planDetail"]').forEach((r) =>
+        r.addEventListener("change", () => {
+          if (!r.checked) return;
+          state.project.planDetail = r.value;
+          commit();
+          renderDrawer("area");
+          if (planBaseNeedsCapture()) capturePlanBase(true);
+        }),
+      );
       $("#planBleed")?.addEventListener("change", () => {
         state.project.planBleed = Math.max(
           0,
@@ -4912,7 +4948,7 @@
       commit();
       state.lastLoad =
         results.length +
-        " records imported into site + 0.25 mile service buffer. " +
+        " records imported into site + 0.1 mile service buffer. " +
         skipped.outside +
         " outside, " +
         skipped.hidden +
@@ -4993,7 +5029,7 @@
       b = serviceBounds(),
       bbox = b.join(","),
       captured = JSON.stringify(selected);
-    state.lastLoad = "Loading records only inside the site + 0.25 mile buffer…";
+    state.lastLoad = "Loading records only inside the site + 0.1 mile buffer…";
     renderDrawer("services");
     const pending = [],
       errors = [];
@@ -5075,7 +5111,7 @@
       commit();
       state.lastLoad =
         pending.reduce((n, b) => n + b.features.length, 0) +
-        " records refreshed in site + 0.25 mile buffer; previous source snapshots archived." +
+        " records refreshed in site + 0.1 mile buffer; previous source snapshots archived." +
         (errors.length ? " " + errors.join(" ") : "");
     } catch (e) {
       state.lastLoad = e.message;
@@ -5253,7 +5289,8 @@
       "application/vnd.google-earth.kml+xml",
     );
   }
-  function exportDXF() {
+  async function exportDXF() {
+    await ensureExportCadDetail();
     const features = projectGeoJSON().features.concat(
         copy(state.project.planBase || []).map((f) => ({
           ...f,
@@ -5438,7 +5475,7 @@
       }
       const k = e.target.closest("[data-action]")?.dataset.action;
       if (!k) return;
-      ({
+      await ({
         backup: exportProjectJSON,
         geojson: exportGeoJSON,
         dxf: exportDXF,
@@ -5500,6 +5537,7 @@
       throw Error(
         "Define the Site Drawing area before issuing the Site Drawing sheet.",
       );
+    if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail();
     saveDocumentIssueMeta(opt);
     return await window.SAMIDocumentEngine.generate(copy(state.project), opt);
   }
@@ -6517,7 +6555,59 @@
         errors.join(" · "),
     );
   }
-  async function capturePlanBase(silent = false) {
+  const PLAN_DETAIL_TAGS = {
+    low: ['way["highway"]', 'way["building"]'],
+    medium: [
+      'way["highway"]',
+      'way["building"]',
+      'way["railway"]',
+      'way["waterway"]',
+      'way["natural"]',
+      'way["landuse"]',
+      'way["power"~"^(line|minor_line)$"]',
+    ],
+    high: [
+      'way["highway"]',
+      'way["building"]',
+      'way["railway"]',
+      'way["waterway"]',
+      'way["natural"]',
+      'node["natural"="tree"]',
+      'way["landuse"]',
+      'way["barrier"]',
+      'way["amenity"]',
+      'way["leisure"]',
+      'way["man_made"]',
+      'way["power"~"^(line|minor_line)$"]',
+    ],
+  };
+  const PLAN_DETAIL_RANK = { low: 1, medium: 2, high: 3 };
+  function planDetailLevel() {
+    return ["low", "medium", "high"].includes(state.project.planDetail)
+      ? state.project.planDetail
+      : "low";
+  }
+  function updateCadProcessingUI(active) {
+    $$('[data-base="drawing"], [data-action="capturePlanBase"]').forEach(
+      (b) => b.classList.toggle("cad-processing", active),
+    );
+  }
+  function planBaseNeedsCapture(requiredDetail) {
+    if (!state.project.area) return false;
+    const meta = state.project.planBaseMeta,
+      need = requiredDetail || planDetailLevel();
+    return (
+      !state.project.planBase?.length ||
+      !meta ||
+      meta.stale ||
+      (PLAN_DETAIL_RANK[meta.detail] || 0) < (PLAN_DETAIL_RANK[need] || 0)
+    );
+  }
+  async function ensureExportCadDetail() {
+    if (!state.project.area) return;
+    if (planBaseNeedsCapture("high")) await capturePlanBase(true, "high");
+  }
+  async function capturePlanBase(silent = false, detailOverride = null) {
     if (!state.project.area) {
       if (!silent) openDrawer("area");
       return;
@@ -6525,7 +6615,8 @@
     const b = planBounds(),
       a = G.area(b),
       captureGeneration = state.areaGeneration,
-      captureProject = state.project;
+      captureProject = state.project,
+      detail = detailOverride || planDetailLevel();
     if (a > 6000000) {
       if (!silent)
         toast(
@@ -6533,38 +6624,21 @@
         );
       return;
     }
+    state.planCapturing = true;
+    updateCadProcessingUI(true);
     if (!silent)
       toast(
-        "Capturing detailed vector geometry for the defined site area + bleed…",
+        "Capturing " +
+          detail +
+          "-detail vector geometry for the defined site area + bleed…",
       );
     try {
       const bbox = [b[1], b[0], b[3], b[2]].join(","),
+        tags = PLAN_DETAIL_TAGS[detail] || PLAN_DETAIL_TAGS.low,
         q =
-          '[out:json][timeout:30];(way["highway"](' +
-          bbox +
-          ');way["building"](' +
-          bbox +
-          ');way["railway"](' +
-          bbox +
-          ');way["waterway"](' +
-          bbox +
-          ');way["natural"](' +
-          bbox +
-          ');node["natural"="tree"](' +
-          bbox +
-          ');way["landuse"](' +
-          bbox +
-          ');way["barrier"](' +
-          bbox +
-          ');way["amenity"](' +
-          bbox +
-          ');way["leisure"](' +
-          bbox +
-          ');way["man_made"](' +
-          bbox +
-          ');way["power"~"^(line|minor_line)$"](' +
-          bbox +
-          "););(._;>;);out body;";
+          "[out:json][timeout:30];(" +
+          tags.map((t) => t + "(" + bbox + ");").join("") +
+          ");(._;>;);out body;";
       const data = await overpassQuery(q);
       if (
         captureProject !== state.project ||
@@ -6595,6 +6669,7 @@
         capturedAt: new Date().toISOString(),
         source: "Stored OpenStreetMap vector snapshot · bounded site capture",
         bleed: +state.project.planBleed || PLAN_BLEED_DEFAULT,
+        detail,
         bbox: boundsText(b),
         featureCount: features.length,
         stale: false,
@@ -6605,11 +6680,16 @@
       if (!silent)
         toast(
           features.length +
-            " detailed map features stored. Roads use metre-width geometry where available / inferred.",
+            " " +
+            detail +
+            "-detail map features stored. Roads use metre-width geometry where available / inferred.",
         );
     } catch (e) {
       if (!silent) toast("Detailed plan capture: " + e.message);
       else console.warn(e);
+    } finally {
+      state.planCapturing = false;
+      updateCadProcessingUI(false);
     }
   }
   async function showSelectedServiceMapping() {
@@ -7087,7 +7167,7 @@
       toast(
         features.length
           ? features.length +
-              " planning constraint records stored for the site + 0.25 mile buffer."
+              " planning constraint records stored for the site + 0.1 mile buffer."
           : "No Planning Data constraint records were returned for this area. Coverage varies, so this is not proof that no constraint exists.",
       );
       if (state.drawer === "services") renderDrawer("services");
