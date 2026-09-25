@@ -3186,6 +3186,15 @@ button svg.i {
     0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
     0 2px 8px #0008;
 }
+.draft-snap-point {
+  width: 14px;
+  height: 14px;
+  margin: 4px;
+  border: 2px solid #ffc107;
+  border-radius: 50%;
+  background: rgba(255, 193, 7, 0.3);
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.15), 0 1px 5px #0005;
+}
 .selection-bar > [data-group-normal] {
   display: contents;
 }

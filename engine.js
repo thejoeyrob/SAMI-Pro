@@ -2430,6 +2430,56 @@
     }
     return null;
   }
+  function snapToCorner(c, prevPoint) {
+    const corners = [];
+    for (const f of state.project.features) {
+      if (f.properties.hidden || f.properties.guideHidden) continue;
+      const g = f.geometry;
+      if (g.type === "Point") {
+        corners.push(g.coordinates);
+      } else if (g.type === "LineString") {
+        g.coordinates.forEach((coord) => corners.push(coord));
+      } else if (g.type === "MultiLineString") {
+        g.coordinates.forEach((line) =>
+          line.forEach((coord) => corners.push(coord))
+        );
+      } else if (g.type === "Polygon") {
+        g.coordinates[0].forEach((coord) => corners.push(coord));
+      } else if (g.type === "MultiPolygon") {
+        g.coordinates.forEach((poly) =>
+          poly[0].forEach((coord) => corners.push(coord))
+        );
+      }
+    }
+    if (!corners.length || !prevPoint) return c;
+    const snapDistances = [5, 4, 3, 2];
+    const pr = G.projection(c);
+    for (const snapDist of snapDistances) {
+      const snapThresholdDeg = (snapDist / 111000) * 1.5;
+      for (const corner of corners) {
+        const dist = G.distance(c, corner);
+        if (dist > snapThresholdDeg) continue;
+        const prevXY = pr.xy(prevPoint);
+        const cornerXY = pr.xy(corner);
+        const currentXY = pr.xy(c);
+        const incomingDx = cornerXY[0] - prevXY[0];
+        const incomingDy = cornerXY[1] - prevXY[1];
+        const outgoingDx = currentXY[0] - cornerXY[0];
+        const outgoingDy = currentXY[1] - cornerXY[1];
+        const dotProduct =
+          incomingDx * outgoingDx + incomingDy * outgoingDy;
+        const mag1 = Math.hypot(incomingDx, incomingDy);
+        const mag2 = Math.hypot(outgoingDx, outgoingDy);
+        if (mag1 > 0 && mag2 > 0) {
+          const cosAngle = dotProduct / (mag1 * mag2);
+          if (cosAngle < -0.5) {
+            return corner;
+          }
+        }
+      }
+    }
+    return c;
+  }
   function onMapClick(e) {
     const raw = coord(e.latlng);
     if (state.routePick) {
@@ -2580,6 +2630,16 @@
           }),
         }).addTo(state.draftGroup),
       );
+    if (state.snapPoint)
+      L.marker(latlng(state.snapPoint), {
+        interactive: false,
+        icon: L.divIcon({
+          className: "",
+          html: '<div class="draft-snap-point"></div>',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        }),
+      }).addTo(state.draftGroup);
     const repeatPlace = ["asset", "singlePanel"].includes(state.tool),
       single = ["note", "photo", "hazard-marker", "textBox"].includes(
         state.tool,
@@ -8767,12 +8827,21 @@
         if (pointer !== e.pointerId || !state.freehandActive) return;
         const d = Math.hypot(e.clientX - lastPx.x, e.clientY - lastPx.y);
         if (d < 5) return;
-        const c = screenToCoord(e);
+        let c = screenToCoord(e);
         if (!freehandPointAllowed(c)) return;
         const prev = state.points.at(-1);
+        state.snapPoint = null;
+        if (prev && state.points.length > 1) {
+          const snapped = snapToCorner(c, state.points[state.points.length - 2]);
+          if (snapped !== c) {
+            state.snapPoint = snapped;
+            c = snapped;
+          }
+        }
         if (!prev || G.distance(prev, c) > 0.18) {
           state.points.push(c);
           lastPx = { x: e.clientX, y: e.clientY };
+          state.snapPoint = null;
           renderDraft();
         }
         e.preventDefault();
