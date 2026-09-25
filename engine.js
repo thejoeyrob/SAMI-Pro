@@ -1689,11 +1689,12 @@
       };
     if (t === "trakway")
       style = {
-        color: "#4a6b5e",
-        weight: m.trakwayKind === "area" ? 2 : 4,
-        fillColor: "#7fb3a0",
-        fillOpacity: m.trakwayKind === "area" ? 0.25 : 0,
+        color: m.trakwayKind === "area" ? "#3a8b77" : "#2a7864",
+        weight: m.trakwayKind === "area" ? 2.5 : 4,
+        fillColor: "#5fb393",
+        fillOpacity: m.trakwayKind === "area" ? 0.35 : 0,
         dashArray: m.trakwayKind === "area" ? null : "8 6",
+        opacity: 0.95,
       };
     if (t === "asset")
       style = {
