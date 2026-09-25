@@ -5472,3 +5472,77 @@ html[data-reduced-motion="on"] .wide-btn.primary:active {
   color: var(--ink) !important;
   background: var(--accent-soft) !important;
 }
+.appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+.appearance-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--line2);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+  font-weight: 500;
+}
+.appearance-btn:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+.appearance-btn.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--accent);
+}
+.appearance-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: var(--surface);
+}
+html[data-theme="graphite"] .appearance-preview[data-theme="graphite"],
+html[data-theme="obsidian"] .appearance-preview[data-theme="obsidian"],
+html[data-theme="carbon"] .appearance-preview[data-theme="carbon"],
+html[data-theme="midnight"] .appearance-preview[data-theme="midnight"],
+html[data-theme="titanium"] .appearance-preview[data-theme="titanium"],
+html[data-theme="blackout"] .appearance-preview[data-theme="blackout"],
+html[data-theme="navy"] .appearance-preview[data-theme="navy"],
+html[data-theme="slate"] .appearance-preview[data-theme="slate"],
+html[data-theme="sandstone"] .appearance-preview[data-theme="sandstone"],
+html[data-theme="arctic"] .appearance-preview[data-theme="arctic"],
+html[data-theme="studioLight"] .appearance-preview[data-theme="studioLight"],
+html[data-theme="paper"] .appearance-preview[data-theme="paper"],
+html[data-theme="arcticLight"] .appearance-preview[data-theme="arcticLight"] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.brand-customization {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+.brand-customization .field-label {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.brand-customization .field {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}

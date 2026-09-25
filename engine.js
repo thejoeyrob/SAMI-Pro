@@ -3161,6 +3161,7 @@
       search: "Find your site",
       help: "Find your tools",
       selection: "Edit item",
+      appearance: "Appearance & brand",
     };
     $("#drawerTitle").textContent = title[kind] || "SAMI";
     const box = $("#drawerContent");
@@ -3178,6 +3179,7 @@
         search: searchHTML,
         help: helpHTML,
         selection: selectionHTML,
+        appearance: appearanceHTML,
       }[kind] || helpHTML
     )();
     box.onclick = (e) => {
@@ -3185,6 +3187,62 @@
       if (b) runAction(b.dataset.action, b);
     };
     bindDrawer(kind);
+  }
+  function appearanceHTML() {
+    const themes = {
+      graphite: "Graphite (dark, default)",
+      obsidian: "Obsidian (darker)",
+      carbon: "Carbon (high contrast)",
+      midnight: "Midnight (cool dark)",
+      titanium: "Titanium (neutral dark)",
+      blackout: "Blackout (pure black)",
+      navy: "Navy (blue dark)",
+      slate: "Slate (gray dark)",
+      sandstone: "Sandstone (warm dark)",
+      arctic: "Arctic (cool light)",
+      studioLight: "Studio light (bright)",
+      paper: "Paper (clean light)",
+      arcticLight: "Arctic light (soft light)",
+    };
+    const current =
+      localStorage.getItem("sami.appearance") || "graphite";
+    return (
+      '<div class="card"><span class="tag">USER INTERFACE</span><h3>Choose your appearance</h3><p class="subtle">Select a color theme for the SAMI interface. Your choice is saved automatically.</p></div>' +
+      '<div class="appearance-grid">' +
+      Object.entries(themes)
+        .map(
+          ([key, label]) =>
+            '<button class="appearance-btn' +
+            (key === current ? " active" : "") +
+            '" data-appearance="' +
+            key +
+            '" title="' +
+            label +
+            '">' +
+            '<span class="appearance-preview" data-theme="' +
+            key +
+            '"></span>' +
+            "<span>" +
+            label +
+            "</span>" +
+            "</button>",
+        )
+        .join("") +
+      "</div>" +
+      '<div class="card"><span class="tag">BRAND CUSTOMIZATION</span><h3>Customize brand colors</h3><p class="subtle">Define custom brand colors for your organization. Colors apply to accents and highlights throughout the interface.</p></div>' +
+      '<div class="brand-customization">' +
+      field("brandPrimary", "Primary accent",
+        localStorage.getItem("sami.brandPrimary") || "#00a885",
+        "color") +
+      field("brandSecondary", "Secondary accent",
+        localStorage.getItem("sami.brandSecondary") || "#00a481",
+        "color") +
+      '</div>' +
+      '<div class="compact-tools">' +
+      button("Apply brand colors", "applyBrandColors") +
+      button("Reset to defaults", "resetBrandColors") +
+      "</div>"
+    );
   }
   function drawHTML() {
     const card = (title, desc, methods) =>
@@ -3962,6 +4020,19 @@
     $("#newNote").focus();
   }
   function bindDrawer(kind) {
+    if (kind === "appearance") {
+      $$("[data-appearance]").forEach((btn) => {
+        btn.onclick = (e) => {
+          const theme = btn.dataset.appearance;
+          document.documentElement.dataset.theme = theme;
+          localStorage.setItem("sami.appearance", theme);
+          $$("[data-appearance]").forEach((b) =>
+            b.classList.toggle("active", b.dataset.appearance === theme)
+          );
+          e.stopPropagation();
+        };
+      });
+    }
     if (kind === "routeToSite") {
       $("#hgvProfile").onchange = () => {
         const k = $("#hgvProfile").value,
@@ -4440,6 +4511,25 @@
       }
       if (action === "archives") {
         openArchiveManager();
+        return;
+      }
+      if (action === "applyBrandColors") {
+        const primary = $("#brandPrimary")?.value;
+        const secondary = $("#brandSecondary")?.value;
+        if (primary) localStorage.setItem("sami.brandPrimary", primary);
+        if (secondary) localStorage.setItem("sami.brandSecondary", secondary);
+        document.documentElement.style.setProperty("--accent", primary);
+        document.documentElement.style.setProperty("--secondary-accent", secondary);
+        toast("Brand colors applied successfully.");
+        return;
+      }
+      if (action === "resetBrandColors") {
+        localStorage.removeItem("sami.brandPrimary");
+        localStorage.removeItem("sami.brandSecondary");
+        document.documentElement.style.removeProperty("--accent");
+        document.documentElement.style.removeProperty("--secondary-accent");
+        renderDrawer("appearance");
+        toast("Brand colors reset to defaults.");
         return;
       }
       if (action === "defineArea") {
