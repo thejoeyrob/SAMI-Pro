@@ -5792,6 +5792,35 @@
     saveDocumentIssueMeta(opt);
     return await window.SAMIDocumentEngine.generate(copy(state.project), opt);
   }
+  function showExportLoading(step = "Initializing…") {
+    const loadingHTML =
+      '<div class="export-loading">' +
+      '<div class="export-loading-content">' +
+      '<div class="export-logo-container">' +
+      '<img alt="" class="export-logo-pulse" src="sami-badge.png?v=2.7.21" />' +
+      "</div>" +
+      '<div class="export-status">' +
+      '<h3>Site Logistics Pack</h3>' +
+      '<p class="export-step" id="exportStep">' +
+      step +
+      "</p>" +
+      '<div class="export-progress">' +
+      '<div class="export-progress-bar"></div>' +
+      "</div>" +
+      "</div>" +
+      "</div>" +
+      "</div>";
+    showModal("EXPORTING", loadingHTML);
+    document.body.classList.add("export-loading-active");
+  }
+  function updateExportStep(step) {
+    const el = $("#exportStep");
+    if (el) el.textContent = step;
+  }
+  function closeExportLoading() {
+    document.body.classList.remove("export-loading-active");
+    closeModal();
+  }
   async function issueSiteLogisticsPack(action) {
     let opt;
     try {
@@ -5800,20 +5829,19 @@
       toast(e.message);
       return;
     }
-    const btn = $(`[data-doc-action="${action}"]`);
-    if (btn) {
-      btn.disabled = true;
-      btn.dataset.oldText = btn.textContent;
-      btn.textContent = "GENERATING…";
-    }
+    closeModal();
+    showExportLoading("Preparing document…");
     try {
+      updateExportStep("Processing site drawing…");
       const blob = await buildSiteLogisticsPDF(opt),
         name =
           safeName() +
           "_Site_Logistics_Pack_" +
           (opt.revision || "Rev0") +
           ".pdf";
+      closeExportLoading();
       if (action === "preview") {
+        updateExportStep("Building PDF preview…");
         const url = URL.createObjectURL(blob),
           w = window.open(url, "_blank", "noopener");
         if (!w) {
@@ -5826,9 +5854,11 @@
         }
         setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
       } else if (action === "share") {
+        updateExportStep("Preparing to share…");
         const ok = await window.SAMIDocumentEngine.share(blob, name).catch(
           () => false,
         );
+        closeExportLoading();
         if (!ok) {
           downloadBlob(name, blob);
           toast(
@@ -5836,17 +5866,15 @@
           );
         }
       } else {
+        updateExportStep("Finalizing…");
         downloadBlob(name, blob);
+        closeExportLoading();
         toast("SAMI Site Logistics Pack exported as PDF.");
       }
     } catch (e) {
       console.error(e);
+      closeExportLoading();
       toast("PDF: " + (e.message || "Document generation failed."));
-    } finally {
-      if (btn && document.body.contains(btn)) {
-        btn.disabled = false;
-        btn.textContent = btn.dataset.oldText || action.toUpperCase();
-      }
     }
   }
   let toastTimer;

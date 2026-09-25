@@ -5546,3 +5546,129 @@ html[data-theme="arcticLight"] .appearance-preview[data-theme="arcticLight"] {
   background: var(--surface);
   color: var(--ink);
 }
+.export-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(2, 4, 5, 0.98) 0%, rgba(9, 11, 13, 0.98) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeInExport 0.3s ease-out;
+}
+@keyframes fadeInExport {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.export-loading-content {
+  text-align: center;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.export-logo-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.export-logo-pulse {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 12px rgba(0, 168, 133, 0.4));
+  animation: logoPulse 2s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 12px rgba(0, 168, 133, 0.4)) drop-shadow(0 0 24px rgba(0, 168, 133, 0.2));
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 24px rgba(0, 168, 133, 0.6)) drop-shadow(0 0 48px rgba(0, 168, 133, 0.3));
+    transform: scale(1.08);
+  }
+}
+.export-status {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+.export-status h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #e0eee5;
+  letter-spacing: 0.5px;
+}
+.export-step {
+  margin: 0;
+  font-size: 14px;
+  color: #a8d1b9;
+  font-weight: 500;
+  min-height: 20px;
+  animation: fadeInStep 0.4s ease-out;
+}
+@keyframes fadeInStep {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.export-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(0, 168, 133, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.export-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #00a885 0%, #238a58 100%);
+  border-radius: 2px;
+  width: 100%;
+  animation: progressFlow 1.5s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(0, 168, 133, 0.6);
+}
+@keyframes progressFlow {
+  0% {
+    width: 10%;
+    opacity: 0.5;
+  }
+  50% {
+    width: 80%;
+    opacity: 1;
+  }
+  100% {
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+body.export-loading-active #modal {
+  background: transparent;
+  box-shadow: none;
+}
+body.export-loading-active .modal-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
