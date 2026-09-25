@@ -1687,6 +1687,14 @@
         fillColor: PRODUCTS[m.product]?.color || "#9fbfa9",
         fillOpacity: 0.6,
       };
+    if (t === "trakway")
+      style = {
+        color: "#4a6b5e",
+        weight: m.trakwayKind === "area" ? 2 : 4,
+        fillColor: "#7fb3a0",
+        fillOpacity: m.trakwayKind === "area" ? 0.25 : 0,
+        dashArray: m.trakwayKind === "area" ? null : "8 6",
+      };
     if (t === "asset")
       style = {
         color: "#324c69",
