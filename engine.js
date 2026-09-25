@@ -502,6 +502,7 @@
     note: "Site note",
     photo: "Site photo",
     panel: "Trakway panel",
+    trakway: "Trakway barrier",
     asset: "Site asset",
     "hazard-marker": "Concern",
     shape: "Drawing shape",
@@ -2305,6 +2306,8 @@
       panelRoute: "Trakway · touch line",
       panelFreehand: "Trakway · freehand run",
       panelAreaFreehand: "Trakway · fill area",
+      trakwayLine: "Trakway line · no grid",
+      trakwayArea: "Trakway area · no grid",
       singlePanel: "Place a panel",
       asset: "Place " + (options.label || "asset"),
       serviceFreehand: "Draw service",
@@ -2660,6 +2663,44 @@
       if (tool === "panelAreaFreehand") {
         if (ps.length < 3) return;
         addPanelFill(ps, opt);
+        return;
+      }
+      if (tool === "trakwayLine") {
+        if (ps.length < 2) return;
+        const clean = simplifyLine(ps, 0.3),
+          geom = { type: "LineString", coordinates: clean },
+          added = feature("trakway", geom, {
+            ...opt,
+            label: opt.label || "Trakway line",
+            trakwayKind: "line",
+            includeLegend: true,
+          });
+        state.project.features.push(added);
+        cancelDraw();
+        state.selected = null;
+        commit();
+        toast("Trakway line created · Select mode.");
+        return;
+      }
+      if (tool === "trakwayArea") {
+        if (ps.length < 3) return;
+        const clean = simplifyLine(ps, 0.45);
+        if (clean.length < 3) throw Error("Sketch a larger trakway area.");
+        const geom = {
+            type: "Polygon",
+            coordinates: [[...clean, clean[0].slice()]],
+          },
+          added = feature("trakway", geom, {
+            ...opt,
+            label: opt.label || "Trakway area",
+            trakwayKind: "area",
+            includeLegend: true,
+          });
+        state.project.features.push(added);
+        cancelDraw();
+        state.selected = null;
+        commit();
+        toast("Trakway area created · Select mode.");
         return;
       }
       if (tool === "contribution") {
@@ -3150,7 +3191,11 @@
     return (
       '<div class="card trakway-simple"><span class="tag">TRAKWAY</span><h3>Draw it the way you would mark it on a plan</h3><p class="subtle">Choose the panel once, then either tap a route, draw it freehand, or sketch an area and let SAMI fill it with panels.</p></div>' +
       choice("panelProduct", "Panel type", PRODUCTS, r.product) +
-      '<div class="trakway-draw-modes"><button class="hero-tool" data-action="panelRoute"><strong>Touch line</strong><small>Tap route points · Finish</small></button><button class="hero-tool" data-action="panelFreehand"><strong>Freehand run</strong><small>Draw continuously with one finger</small></button><button class="hero-tool" data-action="panelAreaFill"><strong>Fill area</strong><small>Sketch the footprint to panelise</small></button></div><details class="advanced-settings"><summary>Panel setup / joints</summary><div class="row equal"><div>' +
+      '<div class="trakway-draw-modes"><button class="hero-tool" data-action="panelRoute"><strong>Touch line</strong><small>Tap route points · Finish</small></button><button class="hero-tool" data-action="panelFreehand"><strong>Freehand run</strong><small>Draw continuously with one finger</small></button><button class="hero-tool" data-action="panelAreaFill"><strong>Fill area</strong><small>Sketch the footprint to panelise</small></button></div>' +
+      '<details class="compact-section"><summary>Trakway line & area tools</summary>' +
+      '<div class="row equal"><button data-action="trakwayLine"><strong>Trakway line</strong><small>Linear barrier · no grid</small></button><button data-action="trakwayArea"><strong>Trakway area</strong><small>Bounded region · no grid</small></button></div>' +
+      '</details>' +
+      '<details class="advanced-settings"><summary>Panel setup / joints</summary><div class="row equal"><div>' +
       field(
         "panelLength",
         "Along run (m)",
@@ -3684,6 +3729,8 @@
         : "") +
       '<button data-action="editStyle">◐ <span>Style</span></button><details class="selection-more"><summary>•••<span>More</span></summary><div>' +
       button("Duplicate", "editDuplicate") +
+      button("Bring to front", "editBringFront") +
+      button("Send to back", "editSendBack") +
       (grouped
         ? button("Add another item to group", "editGroup") +
           button("Ungroup", "editUngroup")
@@ -4228,6 +4275,22 @@
         startTool("panelAreaFreehand", readPanelOptions());
         return;
       }
+      if (action === "trakwayLine") {
+        startTool("trakwayLine", {
+          label: "Trakway line",
+          includeLegend: true,
+          showArrow: false,
+        });
+        return;
+      }
+      if (action === "trakwayArea") {
+        startTool("trakwayArea", {
+          label: "Trakway area",
+          includeLegend: true,
+          showArrow: false,
+        });
+        return;
+      }
       if (action === "singlePanel") {
         const o = readPanelOptions();
         startTool("singlePanel", {
@@ -4570,6 +4633,30 @@
         toast((members.length > 1 ? "Group" : "Item") + " moved.");
       });
       toast("Drag the white handle, then release.");
+    }
+    if (action === "editBringFront") {
+      const members = groupMembers(f);
+      for (const x of members.filter((x) => !x.properties.guideHidden)) {
+        x.properties.zIndex = (x.properties.zIndex || 0) + 1000;
+      }
+      commit();
+      renderDrawer("selection");
+      toast(
+        "Brought to front" + (members.length > 1 ? " (group)" : "") + ".",
+      );
+      return;
+    }
+    if (action === "editSendBack") {
+      const members = groupMembers(f);
+      for (const x of members.filter((x) => !x.properties.guideHidden)) {
+        x.properties.zIndex = (x.properties.zIndex || 0) - 1000;
+      }
+      commit();
+      renderDrawer("selection");
+      toast(
+        "Sent to back" + (members.length > 1 ? " (group)" : "") + ".",
+      );
+      return;
     }
   }
   function editMarker(p) {
