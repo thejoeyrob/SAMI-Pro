@@ -794,6 +794,10 @@
       markerZoomAnimation: false,
       zoomAnimation: true,
     }).setView(state.project.map.center, state.project.map.zoom);
+    requestAnimationFrame(() => {
+      state.map.invalidateSize();
+      state.map.setView(state.project.map.center, state.project.map.zoom);
+    });
     const tilePerf = {
       maxNativeZoom: 19,
       maxZoom: 23,
