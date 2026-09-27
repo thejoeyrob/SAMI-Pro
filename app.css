@@ -2948,6 +2948,12 @@ textarea:focus-visible {
 .send-btn:hover {
   background: #8fe2b3;
 }
+.send-btn.listening,
+.ask-sami-header.listening {
+  background: #ff4444;
+  color: #fff;
+  box-shadow: 0 0 12px -2px rgba(255, 68, 68, 0.8);
+}
 
 /* Install gate: a touch more polish on first impression */
 .install-gate-card button {

@@ -1052,6 +1052,10 @@
       plan: "Draw directly over Map, Satellite or CAD",
       library: "Trakway, assets and your project items",
     }[mode];
+    const drawingBtn = $('[data-base="drawing"]');
+    if (drawingBtn) {
+      drawingBtn.hidden = mode !== "plan";
+    }
   }
   function switchBase(base, save = true) {
     if (!["street", "satellite", "drawing"].includes(base)) return;
