@@ -293,6 +293,30 @@ p {
 .top-actions #menuButton {
   font-size: 22px;
 }
+.top-actions .ask-sami-header {
+  width: auto;
+  min-width: auto;
+  height: 39px;
+  min-height: 39px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent-soft);
+  border-color: var(--accent-soft);
+}
+.top-actions .ask-sami-header .sami-brand-mark {
+  width: 30px;
+  height: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.top-actions .ask-sami-header span {
+  display: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
 .modebar {
   height: 45px;
   display: flex;

@@ -926,6 +926,7 @@
     };
     $("#dismissWelcome").onclick = dismissWelcome;
     $("#sendBtn").onclick = handleAskButton;
+    if ($("#headerAskBtn")) $("#headerAskBtn").onclick = handleAskButton;
     $("#askInput").onkeydown = (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -8060,23 +8061,31 @@
   }
   function updateAskLabel() {
     const active = state.listening || state.voiceStarting;
-    $("#sendBtn").classList.toggle("listening", active);
-    $("#sendBtn").setAttribute("aria-pressed", String(active));
-    $("#sendBtn").setAttribute(
-      "aria-label",
-      active
-        ? "Stop listening"
-        : $("#askInput").value.trim()
-          ? "Send typed request"
-          : "Ask SAMI by voice",
-    );
-    $("#askButtonLabel").textContent = state.voiceStarting
+    const label = state.voiceStarting
       ? "Starting…"
       : state.listening
         ? "Listening…"
         : $("#askInput").value.trim()
           ? "Send request"
           : "Ask SAMI";
+    const ariaLabel = active
+      ? "Stop listening"
+      : $("#askInput").value.trim()
+        ? "Send typed request"
+        : "Ask SAMI by voice";
+
+    $("#sendBtn").classList.toggle("listening", active);
+    $("#sendBtn").setAttribute("aria-pressed", String(active));
+    $("#sendBtn").setAttribute("aria-label", ariaLabel);
+    if ($("#headerAskBtn")) {
+      $("#headerAskBtn").classList.toggle("listening", active);
+      $("#headerAskBtn").setAttribute("aria-pressed", String(active));
+      $("#headerAskBtn").setAttribute("aria-label", ariaLabel);
+    }
+
+    $("#askButtonLabel").textContent = label;
+    if ($("#headerAskLabel")) $("#headerAskLabel").textContent = label;
+
     $("#voiceHint").textContent = active
       ? "Speak naturally · tap the same button to stop"
       : "Tap Ask SAMI to speak · type and press Enter to send";
