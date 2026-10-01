@@ -398,6 +398,8 @@ window.SAMIWorkspaceController = function (C, O) {
         "Rebuild " + (C.PRODUCTS[m.product]?.name || "Trakway") + " width",
         "rebuildLion",
       );
+    if (m.type === "panel" || (m.type === "asset" && ["lion", "hybrid", "tuff"].includes(m.product)))
+      h += B("Add measurement annotation", "addAssetMeasurement", true);
     return h;
   }
   function panelLayersHTML(fs) {
@@ -3524,6 +3526,19 @@ window.SAMIWorkspaceController = function (C, O) {
         renderDrawer("selection");
         return;
       }
+      if (action === "addAssetMeasurement") {
+        const f = C.selectedFeature();
+        if (!f || !["panel", "asset"].includes(f.properties.type)) {
+          C.toast("Select a panel or asset to add measurement annotations.");
+          return;
+        }
+        ui.drawAsset = "annotation_measure";
+        ui.drawMode = "line";
+        setMode("project");
+        base.runAction("draw:measure");
+        C.toast("Draw measurement annotation on the asset. Annotations snap to the selected item.");
+        return;
+      }
       return await base.runAction(action, b);
     } catch (e) {
       console.error("SAMI action", action, e);
@@ -3775,11 +3790,15 @@ window.SAMIWorkspaceController = function (C, O) {
     if (toolbarGrid) toolbarGrid.prepend(style);
     style.onclick = () => document.body.classList.toggle("map-style-open");
     $("#baseCollapse")?.remove();
-    $$("[data-base]").forEach((b) =>
-      b.addEventListener("click", () =>
-        document.body.classList.remove("map-style-open"),
-      ),
-    );
+    $$("[data-base]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const base = b.dataset.base;
+        if (base) {
+          runAction("workspaceBase:" + base);
+        }
+        document.body.classList.remove("map-style-open");
+      });
+    });
     const mapMeasure = document.createElement("button");
     mapMeasure.id = "mapMeasureButton";
     mapMeasure.type = "button";
