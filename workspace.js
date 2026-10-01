@@ -37,6 +37,7 @@ window.SAMIWorkspaceController = function (C, O) {
       cursorY: 0.5,
       drag: null,
       multi: false,
+      showMeasurements: false,
     },
     boxSelect: false,
   };
@@ -294,6 +295,10 @@ window.SAMIWorkspaceController = function (C, O) {
     return `<div class="stage-intro"><small>PROJECT / DESIGNER</small><h2>Designer information.</h2></div><div class="metadata-grid">${DESIGNER_FIELDS.map(([k, label, type]) => C.field("meta_" + k, label, m[k] || "", type || "text")).join("")}</div><div class="button-pair">${B("Logos", "open:branding")}${B("Saved profiles", "open:profiles")}</div>${B("Save these designer details as a profile", "saveProfile", true)}<p class="subtle">Designer information is kept separate from project/site details and is reused only when you choose a saved profile.</p>`;
   }
   function selectionHTML() {
+    if (S.multiSelection && S.multiSelection.size > 1) {
+      const count = S.multiSelection.size;
+      return `<div class="selection-heading"><small>Multi-selection</small><strong>${count} objects selected</strong></div><p class="subtle">Ctrl+Click to add or remove items from the selection.</p><div class="properties-actions">${B("Group selected items", "groupMultiSelection")}${B("Clear selection", "clearMultiSelection")}</div>`;
+    }
     const f = C.selectedFeature();
     if (!f)
       return '<p class="subtle">Select an object to see its properties.</p>';
@@ -393,6 +398,8 @@ window.SAMIWorkspaceController = function (C, O) {
         "Rebuild " + (C.PRODUCTS[m.product]?.name || "Trakway") + " width",
         "rebuildLion",
       );
+    if (m.type === "panel" || (m.type === "asset" && ["lion", "hybrid", "tuff"].includes(m.product)))
+      h += B("Add measurement annotation", "addAssetMeasurement", true);
     return h;
   }
   function panelLayersHTML(fs) {
@@ -2657,7 +2664,7 @@ window.SAMIWorkspaceController = function (C, O) {
       precisionPanel.className = "precision-panel precision-panel-compact";
       precisionPanel.hidden = true;
       precisionPanel.innerHTML =
-        '<div class="precision-toolbar"><div class="precision-modes" aria-label="Measurement type"><button data-pc="line">Distance</button><button data-pc="area">Area</button></div><div class="precision-readout" id="precisionReadout">Move the cursor or move the map under it, then tap ＋ Point.<small class="precision-coordinates" id="precisionCoordinates"></small></div><div class="precision-quick"><button data-pc="drop" class="primary" aria-label="Add point at cursor">＋ Point</button><button data-pc="locate" aria-label="Centre map on current position" title="Current position">◎ Me</button><button data-pc="undo" aria-label="Undo last point" title="Undo">↶</button><button data-pc="finish">Done</button><button data-pc="more" aria-label="More measurement actions" title="More">•••</button><button data-pc="close" aria-label="Close measurement" title="Close">×</button></div></div><div class="precision-overflow" id="precisionOverflow" hidden><p class="precision-help">Drag the crosshair with one finger, tap the map to reposition it, or move the map beneath the fixed crosshair. ＋ Point records the crosshair position.</p><div class="precision-nudge" aria-label="Nudge measurement cursor"><button data-pc="north" aria-label="Nudge north">↑</button><button data-pc="west" aria-label="Nudge west">←</button><button data-pc="drop" aria-label="Place point at cursor">＋</button><button data-pc="east" aria-label="Nudge east">→</button><button data-pc="south" aria-label="Nudge south">↓</button></div><label class="precision-step">Nudge step<select id="precisionStep"><option value="1">1 m</option><option value="5">5 m</option></select></label><label class="precision-wake">Keep screen awake<button type="button" data-pc="wake" aria-pressed="false">Off</button></label><button data-pc="site">Use measured area for site plan</button><button data-pc="clear">Clear points</button></div>';
+        '<div class="precision-toolbar"><div class="precision-modes" aria-label="Measurement type"><button data-pc="line">Distance</button><button data-pc="area">Area</button></div><div class="precision-readout" id="precisionReadout">Move the cursor or move the map under it, then tap ＋ Point.<small class="precision-coordinates" id="precisionCoordinates"></small></div><div class="precision-quick"><button data-pc="drop" class="primary" aria-label="Add point at cursor">＋ Point</button><button data-pc="locate" aria-label="Centre map on current position" title="Current position">◎ Me</button><button data-pc="undo" aria-label="Undo last point" title="Undo">↶</button><button data-pc="finish">Done</button><button data-pc="more" aria-label="More measurement actions" title="More">•••</button><button data-pc="close" aria-label="Close measurement" title="Close">×</button></div></div><div class="precision-overflow" id="precisionOverflow" hidden><p class="precision-help">Drag the crosshair with one finger, tap the map to reposition it, or move the map beneath the fixed crosshair. ＋ Point records the crosshair position.</p><div class="precision-nudge" aria-label="Nudge measurement cursor"><button data-pc="north" aria-label="Nudge north">↑</button><button data-pc="west" aria-label="Nudge west">←</button><button data-pc="drop" aria-label="Place point at cursor">＋</button><button data-pc="east" aria-label="Nudge east">→</button><button data-pc="south" aria-label="Nudge south">↓</button></div><label class="precision-step">Nudge step<select id="precisionStep"><option value="1">1 m</option><option value="5">5 m</option></select></label><label class="precision-wake">Keep screen awake<button type="button" data-pc="wake" aria-pressed="false">Off</button></label><label class="precision-measurements">Show measurements<button type="button" data-pc="showMeasurements" aria-pressed="false">Off</button></label><button data-pc="site">Use measured area for site plan</button><button data-pc="clear">Clear points</button></div>';
       ($("#mapViewport") || $("#workspace")).append(precisionPanel);
       precisionPanel.onclick = (e) => {
         const a = e.target.closest("[data-pc]")?.dataset.pc;
@@ -2688,6 +2695,15 @@ window.SAMIWorkspaceController = function (C, O) {
         else if (a === "east") nudgePrecision(1, 0);
         else if (a === "wake")
           setPrecisionWake(C.readPref("sami.measure.wake") !== "on");
+        else if (a === "showMeasurements") {
+          ui.precision.showMeasurements = !ui.precision.showMeasurements;
+          const btn = e.target.closest('[data-pc="showMeasurements"]');
+          if (btn) {
+            btn.setAttribute("aria-pressed", String(ui.precision.showMeasurements));
+            btn.textContent = ui.precision.showMeasurements ? "On" : "Off";
+          }
+          refreshPrecision(true);
+        }
       };
       updatePrecisionWakeButton();
     }
@@ -2817,14 +2833,16 @@ window.SAMIWorkspaceController = function (C, O) {
         weight: 3,
         interactive: false,
       }).addTo(precisionLayer);
-      for (let i = 1; i < ps.length; i++) {
-        const d = G.distance(ps[i - 1], ps[i]);
-        precisionLabel(
-          segmentMid(ps[i - 1], ps[i]),
-          formatMeasureDistance(d),
-          "segment",
-          precisionLayer,
-        );
+      if (ui.precision.showMeasurements !== false) {
+        for (let i = 1; i < ps.length; i++) {
+          const d = G.distance(ps[i - 1], ps[i]);
+          precisionLabel(
+            segmentMid(ps[i - 1], ps[i]),
+            formatMeasureDistance(d),
+            "segment",
+            precisionLayer,
+          );
+        }
       }
     }
     if (rebuild && ui.precision.mode === "area" && ps.length > 2)
@@ -2871,17 +2889,19 @@ window.SAMIWorkspaceController = function (C, O) {
           opacity: 0.88,
           interactive: false,
         }).addTo(precisionLiveLayer);
-      precisionLabel(
-        segmentMid(ps.at(-1), c),
-        formatMeasureDistance(next),
-        "live",
-        precisionLiveLayer,
-      );
-      const totalText =
-        ui.precision.mode === "area" && ps.length >= 2
-          ? "Perimeter " + formatMeasureDistance(total)
-          : "Total " + formatMeasureDistance(total);
-      precisionLabel(ps.at(-1), totalText, "total", precisionLiveLayer);
+      if (ui.precision.showMeasurements !== false) {
+        precisionLabel(
+          segmentMid(ps.at(-1), c),
+          formatMeasureDistance(next),
+          "live",
+          precisionLiveLayer,
+        );
+        const totalText =
+          ui.precision.mode === "area" && ps.length >= 2
+            ? "Perimeter " + formatMeasureDistance(total)
+            : "Total " + formatMeasureDistance(total);
+        precisionLabel(ps.at(-1), totalText, "total", precisionLiveLayer);
+      }
     }
     const el = $("#precisionReadout");
     if (el) {
@@ -3527,6 +3547,30 @@ window.SAMIWorkspaceController = function (C, O) {
         $("#dataPackInput").click();
         return;
       }
+      if (action === "groupMultiSelection") {
+        await base.runAction("groupMultiSelection");
+        renderDrawer("selection");
+        return;
+      }
+      if (action === "clearMultiSelection") {
+        S.multiSelection?.clear();
+        C.render();
+        renderDrawer("selection");
+        return;
+      }
+      if (action === "addAssetMeasurement") {
+        const f = C.selectedFeature();
+        if (!f || !["panel", "asset"].includes(f.properties.type)) {
+          C.toast("Select a panel or asset to add measurement annotations.");
+          return;
+        }
+        ui.drawAsset = "annotation_measure";
+        ui.drawMode = "line";
+        setMode("project");
+        base.runAction("draw:measure");
+        C.toast("Draw measurement annotation on the asset. Annotations snap to the selected item.");
+        return;
+      }
       return await base.runAction(action, b);
     } catch (e) {
       console.error("SAMI action", action, e);
@@ -3779,11 +3823,15 @@ window.SAMIWorkspaceController = function (C, O) {
     if (toolbarGrid) toolbarGrid.prepend(style);
     style.onclick = () => document.body.classList.toggle("map-style-open");
     $("#baseCollapse")?.remove();
-    $$("[data-base]").forEach((b) =>
-      b.addEventListener("click", () =>
-        document.body.classList.remove("map-style-open"),
-      ),
-    );
+    $$("[data-base]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const base = b.dataset.base;
+        if (base) {
+          runAction("workspaceBase:" + base);
+        }
+        document.body.classList.remove("map-style-open");
+      });
+    });
     const mapMeasure = document.createElement("button");
     mapMeasure.id = "mapMeasureButton";
     mapMeasure.type = "button";
