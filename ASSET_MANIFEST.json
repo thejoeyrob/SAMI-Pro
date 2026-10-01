@@ -1,5 +1,5 @@
 {
-  "version": "2.7.22",
+  "version": "2.7.23",
   "shell": [
     "./app.css",
     "./bearing.js",

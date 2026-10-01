@@ -1943,7 +1943,9 @@
             ? "<li>Copy this page address.</li><li>Open it in <b>Chrome</b> or <b>Microsoft Edge</b>.</li><li>Choose <b>Install SAMI</b> from that browser’s address bar or menu.</li>"
             : macSafari
               ? "<li>Open Safari’s <b>File</b> menu.</li><li>Choose <b>Add to Dock</b>.</li><li>Confirm the SAMI name and choose <b>Add</b>.</li>"
-              : "<li>Open your browser menu.</li><li>Choose <b>Install app</b> or <b>Add to Home Screen</b>.</li><li>Confirm the installation and open SAMI from its new app icon.</li>";
+              : android
+                ? "<li>Open your browser menu.</li><li>Choose <b>Install app</b> or <b>Add to Home Screen</b>.</li><li>Confirm the installation and open SAMI from its new app icon.</li>"
+                : "<li>Click the <b>Install</b> icon at the right-hand end of the address bar, if one is shown.</li><li>Otherwise open the browser menu: Chrome &rarr; <b>Cast, save and share &rarr; Install page as app</b>; Edge &rarr; <b>Apps &rarr; Install this site as an app</b>.</li><li>Confirm, then open SAMI from its new app window. You can also choose <b>Continue in browser</b>.</li>";
       help.scrollIntoView({ behavior: "smooth", block: "nearest" });
     };
     if (close)
