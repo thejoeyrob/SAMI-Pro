@@ -546,6 +546,7 @@
     routePick: null,
     vertexEditId: null,
     groupPick: null,
+    multiSelection: new Set(),
     serviceScreen: "home",
     project: null,
   };
@@ -1369,6 +1370,32 @@
     openDrawer("selection");
     toast("Group separated into individual items.");
   }
+  function groupMultiSelection() {
+    if (state.multiSelection.size < 2) {
+      toast("Select at least two items to create a group.");
+      return;
+    }
+    const groupId = uid();
+    let count = 0;
+    for (const id of state.multiSelection) {
+      const f = state.project.features.find((x) => x.id === id);
+      if (f && !f.properties.locked) {
+        f.properties.groupId = groupId;
+        f.properties.groupUngrouped = false;
+        count++;
+      }
+    }
+    if (count < 2) {
+      toast("At least two items must not be locked to create a group.");
+      return;
+    }
+    const firstId = state.multiSelection.values().next().value;
+    state.multiSelection.clear();
+    state.selected = firstId;
+    commit();
+    openDrawer("selection");
+    toast(count + " items grouped.");
+  }
   function duplicateSelected() {
     const f = selectedFeature();
     if (!f) return;
@@ -1770,7 +1797,7 @@
     if (Number.isFinite(+m.styleFillOpacity))
       style.fillOpacity = Math.max(0, Math.min(1, +m.styleFillOpacity));
     const gid = selectedGroupId();
-    if (f.id === state.selected || (gid && m.groupId === gid))
+    if (f.id === state.selected || (gid && m.groupId === gid) || state.multiSelection.has(f.id))
       style = {
         ...style,
         color: "#00a885",
@@ -2530,10 +2557,25 @@
     if (!state.tool) {
       const hit = hitFeatureAt(raw);
       if (hit) {
+        const isCtrlClick = e.originalEvent?.ctrlKey || e.originalEvent?.metaKey;
+        if (isCtrlClick) {
+          if (state.multiSelection.has(hit.id)) {
+            state.multiSelection.delete(hit.id);
+          } else {
+            state.multiSelection.add(hit.id);
+          }
+          state.selected = null;
+          render();
+          return;
+        }
+        if (state.multiSelection.size > 0) {
+          state.multiSelection.clear();
+        }
         selectFeature(hit.id, false);
         return;
       }
       state.selected = null;
+      state.multiSelection.clear();
       render();
       return;
     }
@@ -4732,6 +4774,10 @@
     }
     if (action === "cancelGroupPick") {
       cancelGroupPick();
+      return;
+    }
+    if (action === "groupMultiSelection") {
+      groupMultiSelection();
       return;
     }
     if (action === "editUngroup") {

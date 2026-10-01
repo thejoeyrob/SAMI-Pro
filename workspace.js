@@ -295,6 +295,10 @@ window.SAMIWorkspaceController = function (C, O) {
     return `<div class="stage-intro"><small>PROJECT / DESIGNER</small><h2>Designer information.</h2></div><div class="metadata-grid">${DESIGNER_FIELDS.map(([k, label, type]) => C.field("meta_" + k, label, m[k] || "", type || "text")).join("")}</div><div class="button-pair">${B("Logos", "open:branding")}${B("Saved profiles", "open:profiles")}</div>${B("Save these designer details as a profile", "saveProfile", true)}<p class="subtle">Designer information is kept separate from project/site details and is reused only when you choose a saved profile.</p>`;
   }
   function selectionHTML() {
+    if (S.multiSelection && S.multiSelection.size > 1) {
+      const count = S.multiSelection.size;
+      return `<div class="selection-heading"><small>Multi-selection</small><strong>${count} objects selected</strong></div><p class="subtle">Ctrl+Click to add or remove items from the selection.</p><div class="properties-actions">${B("Group selected items", "groupMultiSelection")}${B("Clear selection", "clearMultiSelection")}</div>`;
+    }
     const f = C.selectedFeature();
     if (!f)
       return '<p class="subtle">Select an object to see its properties.</p>';
@@ -3507,6 +3511,17 @@ window.SAMIWorkspaceController = function (C, O) {
       }
       if (action === "dataPack") {
         $("#dataPackInput").click();
+        return;
+      }
+      if (action === "groupMultiSelection") {
+        await base.runAction("groupMultiSelection");
+        renderDrawer("selection");
+        return;
+      }
+      if (action === "clearMultiSelection") {
+        S.multiSelection?.clear();
+        C.render();
+        renderDrawer("selection");
         return;
       }
       return await base.runAction(action, b);
