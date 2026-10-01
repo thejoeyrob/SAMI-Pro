@@ -887,6 +887,7 @@
     snapshot(true);
     initVoice();
     initToolRail();
+    initUnifiedToolbar();
     updateVoiceButton();
     $("#projectName").value = state.project.name;
     $("#welcomeCard").hidden = true;
@@ -6082,6 +6083,84 @@
     };
     h.onpointerup = stop;
     h.onpointercancel = stop;
+  }
+  function initUnifiedToolbar() {
+    const toolbar = $("#unifiedToolbar"),
+      dragBtn = $("#toolbarDrag"),
+      collapseBtn = $("#toolbarCollapse");
+    let dragState = null;
+    let toolbarPos = { x: undefined, y: undefined };
+    try {
+      const saved = JSON.parse(readPref("sami.toolbar") || "{}");
+      if (saved.collapsed) toolbar.classList.add("collapsed");
+      if (saved.x !== undefined && saved.y !== undefined) {
+        toolbarPos.x = saved.x;
+        toolbarPos.y = saved.y;
+        toolbar.style.right = "auto";
+        toolbar.style.left = toolbarPos.x + "px";
+        toolbar.style.top = toolbarPos.y + "px";
+      }
+    } catch {}
+    collapseBtn.onclick = () => {
+      toolbar.classList.toggle("collapsed");
+      saveToolbarState();
+    };
+    dragBtn.onpointerdown = (e) => {
+      const rect = toolbar.getBoundingClientRect();
+      dragState = {
+        startX: e.clientX,
+        startY: e.clientY,
+        toolbarX: rect.left,
+        toolbarY: rect.top,
+      };
+      dragBtn.setPointerCapture(e.pointerId);
+      toolbar.style.right = "auto";
+      e.preventDefault();
+    };
+    dragBtn.onpointermove = (e) => {
+      if (!dragState) return;
+      const deltaX = e.clientX - dragState.startX;
+      const deltaY = e.clientY - dragState.startY;
+      const newX = dragState.toolbarX + deltaX;
+      const newY = dragState.toolbarY + deltaY;
+      toolbar.style.left = Math.max(0, newX) + "px";
+      toolbar.style.top = Math.max(0, Math.min(newY, window.innerHeight - 60)) + "px";
+    };
+    const endDrag = (e) => {
+      if (!dragState) return;
+      dragBtn.releasePointerCapture?.(e.pointerId);
+      const rect = toolbar.getBoundingClientRect();
+      const snapDist = 60;
+      const isNearRight = window.innerWidth - rect.right < snapDist;
+      const isNearTop = rect.top < snapDist;
+      if (isNearRight) {
+        toolbar.style.right = "calc(14px + env(safe-area-inset-right))";
+        toolbar.style.left = "auto";
+        toolbarPos.x = undefined;
+      } else {
+        toolbarPos.x = parseInt(toolbar.style.left);
+      }
+      if (isNearTop) {
+        toolbar.style.top = "calc(14px + env(safe-area-inset-top))";
+        toolbarPos.y = undefined;
+      } else {
+        toolbarPos.y = parseInt(toolbar.style.top);
+      }
+      dragState = null;
+      saveToolbarState();
+    };
+    dragBtn.onpointerup = endDrag;
+    dragBtn.onpointercancel = endDrag;
+    function saveToolbarState() {
+      try {
+        const state = {
+          collapsed: toolbar.classList.contains("collapsed"),
+          x: toolbarPos.x,
+          y: toolbarPos.y,
+        };
+        setPref("sami.toolbar", JSON.stringify(state));
+      } catch {}
+    }
   }
   const W3W_RE =
     /^(?:\/\/\/)?([\p{L}\p{M}-]+)\.([\p{L}\p{M}-]+)\.([\p{L}\p{M}-]+)$/u;
