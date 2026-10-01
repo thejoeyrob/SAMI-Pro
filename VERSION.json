@@ -1,1 +1,5 @@
-{"version": "2.7.21", "descriptor": "BRAND_MARK_CONSISTENCY", "iconVariant": "black"}
+{
+  "version": "2.7.22",
+  "descriptor": "RESTORE_LAYOUT_FIX_MAP_INIT",
+  "iconVariant": "nebula"
+}

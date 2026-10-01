@@ -3722,8 +3722,8 @@ window.SAMIStudioEngine = function (C, O) {
     $("#closeDrawer").onclick = () => {
       $("#dockOptions").open = false;
     };
-    $("#askCollapse").hidden = true;
-    $("#baseCollapse").hidden = true;
+    if ($("#askCollapse")) $("#askCollapse").hidden = true;
+    if ($("#baseCollapse")) $("#baseCollapse").hidden = true;
     $("#selectionBar").hidden = true;
     const smooth = document.createElement("button");
     smooth.id = "smoothingToggle";

@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="en-GB" data-sami-version="2.7.21">
+<html lang="en-GB" data-sami-version="2.7.22">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -47,19 +47,19 @@
         background: #020405 !important;
       }
     </style>
-    <link href="manifest.webmanifest?v=2.7.21" rel="manifest" />
+    <link href="manifest.webmanifest?v=2.7.22" rel="manifest" />
     <title>SAMI · Spatial Analysis Mapping Intelligence</title>
-    <link href="sami-apple-touch-icon.png?v=2.7.21" rel="apple-touch-icon" />
-    <link href="sami-app-icon-192.png?v=2.7.21" rel="icon" />
-    <link href="leaflet.css?v=2.7.21" rel="stylesheet" />
-    <link href="app.css?v=2.7.21" rel="stylesheet" />
-    <link href="creator.css?v=2.7.21" rel="stylesheet" />
-    <link href="cinema.css?v=2.7.21" rel="stylesheet" />
+    <link href="sami-apple-touch-icon.png?v=2.7.22" rel="apple-touch-icon" />
+    <link href="sami-app-icon-192.png?v=2.7.22" rel="icon" />
+    <link href="leaflet.css?v=2.7.22" rel="stylesheet" />
+    <link href="app.css?v=2.7.22" rel="stylesheet" />
+    <link href="creator.css?v=2.7.22" rel="stylesheet" />
+    <link href="cinema.css?v=2.7.22" rel="stylesheet" />
   </head>
   <body>
     <div aria-label="Install SAMI" id="mobileInstallGate">
       <div class="install-gate-card">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.21" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.7.22" />
         <div>
           <h1>Install SAMI to continue</h1>
           <p>
@@ -128,7 +128,7 @@
       <div aria-live="polite" class="cinema-sentence" id="pitchLine"></div>
       <section aria-label="SAMI" class="cinema-brand" id="brandResolve">
         <div id="wordmarkStage">
-          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.7.21" /><svg
+          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.7.22" /><svg
             aria-hidden="true"
             class="logo-edge-pass"
             viewbox="0 0 1116 339"
@@ -157,7 +157,7 @@
         </div>
       </section>
       <div class="cinema-closed" hidden="" id="cinemaClosed">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.21" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.7.22" />
         <p>SAMI closed</p>
         <small>Your project is saved on this device.</small
         ><button id="reopenSami" type="button">Open SAMI</button>
@@ -167,13 +167,13 @@
         id="salesAudio"
         preload="none"
         playsinline
-        src="why-sami-promo-v272.mp3?v=2.7.21"
+        src="why-sami-promo-v272.mp3?v=2.7.22"
       ></audio>
     </section>
     <div aria-hidden="true" class="app-shell" id="app" inert="">
       <header class="topbar">
         <button aria-label="Open project" class="brand-button" id="homeBtn">
-          <img alt="SAMI" src="sami-wordmark.png?v=2.7.21" />
+          <img alt="SAMI" src="sami-wordmark.png?v=2.7.22" />
         </button>
         <div class="project-title-wrap">
           <input
@@ -185,7 +185,7 @@
           />
           <div class="project-meta">
             <span id="saveState">Saved on this device</span> ·
-            <span data-version>v2.7.21</span>
+            <span data-version>v2.7.22</span>
           </div>
         </div>
         <div class="top-actions">
@@ -199,7 +199,7 @@
             class="ask-sami-header"
             id="headerAskBtn"
           >
-            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.21" /><span id="headerAskLabel"
+            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.22" /><span id="headerAskLabel"
               >Ask SAMI</span
             >
           </button
@@ -335,7 +335,7 @@
           <div class="cad-sheet-border"></div>
           <div class="cad-titleblock">
             <div class="cad-brand">
-              <img alt="" src="sami-wordmark.png?v=2.7.21" /><span
+              <img alt="" src="sami-wordmark.png?v=2.7.22" /><span
                 >CREATED USING SAMI</span
               >
             </div>
@@ -354,189 +354,77 @@
             </div>
           </div>
         </div>
-        <div class="unified-toolbar" id="unifiedToolbar">
-          <div class="toolbar-header">
-            <div class="toolbar-title">Tools</div>
-            <button aria-label="Move toolbar" class="toolbar-drag" id="toolbarDrag" title="Drag to move">
-              ⋮⋮
-            </button>
-            <button aria-label="Collapse toolbar" class="toolbar-collapse" id="toolbarCollapse">
-              ‹
+        <div class="canvas-toolbar">
+          <div aria-label="Map background" class="base-switch">
+            <button aria-pressed="false" data-base="street">Map</button
+            ><button aria-pressed="true" class="active" data-base="satellite">
+              Satellite</button
+            ><button aria-pressed="false" data-base="drawing">
+              CAD drawing
             </button>
           </div>
-          <div class="toolbar-content">
-            <div class="toolbar-section history-section">
-              <button disabled="" id="undoBtn" title="Undo (Ctrl or Cmd Z)">
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M7 7L3 11l4 4" />
-                  <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
-                </svg>
-              </button>
-              <button
-                disabled=""
-                id="redoBtn"
-                title="Redo (Ctrl or Cmd Shift Z)"
+          <button
+            aria-expanded="true"
+            aria-label="Collapse background options"
+            class="mini-btn"
+            id="baseCollapse"
+          >
+            <svg
+              class="i"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 9l7 7 7-7" />
+            </svg>
+          </button>
+          <div class="history-controls">
+            <button disabled="" id="undoBtn" title="Undo (Ctrl or Cmd Z)">
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M17 7l4 4-4 4" />
-                  <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
-                </svg>
-              </button>
-            </div>
-            <div class="toolbar-controls-grid">
-              <button aria-label="Map bearing · return north" id="compassButton" title="Map bearing">
-                <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 2L15.2 11.2 12 9.6 8.8 11.2 12 2Z" fill="currentColor" />
-                  <path d="M12 22L8.8 12.8 12 14.4 15.2 12.8 12 22Z" fill="currentColor" opacity=".38" />
-                </svg>
-              </button>
-              <button aria-label="Set map bearing" hidden="" id="bearingButton" title="Set map bearing">
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M12 4v4M12 16v4M4 12h4M16 12h4" />
-                </svg>
-              </button>
-              <button aria-label="Use current location" id="locateBtn" title="Use current location">
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="3.2" />
-                  <path d="M12 2.5v3.2M12 18.3v3.2M21.5 12h-3.2M5.7 12H2.5" />
-                </svg>
-              </button>
-              <button aria-label="Fit plan" id="fitBtn" title="Fit plan">
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M4 9V5.8A1.8 1.8 0 0 1 5.8 4H9" />
-                  <path d="M20 9V5.8A1.8 1.8 0 0 0 18.2 4H15" />
-                  <path d="M4 15v3.2A1.8 1.8 0 0 0 5.8 20H9" />
-                  <path d="M20 15v3.2a1.8 1.8 0 0 1-1.8 1.8H15" />
-                </svg>
-              </button>
-              <button aria-pressed="false" id="lockBtn" title="Lock map">
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="5" y="11" width="14" height="9" rx="2" />
-                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                </svg>
-              </button>
-              <button aria-label="Zoom in" id="zoomInBtn">
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                  stroke-linecap="round"
-                  aria-hidden="true"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-              <button aria-label="Zoom out" id="zoomOutBtn">
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                  stroke-linecap="round"
-                  aria-hidden="true"
-                >
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-              <button data-master="place" title="Place selected asset (P)">▣</button>
-              <button data-master="line" title="Point line (L)">⎁</button>
-              <button data-master="area" title="Point area (A)">⬡</button>
-              <button data-master="freeLine" title="Freehand line (F)">〰</button>
-              <button data-master="freeArea" title="Freehand area (Shift F)">◌</button>
-              <button aria-pressed="true" id="snapToggle" title="Snap to corners (S)">⊞</button>
-            </div>
-            <div class="toolbar-section base-switch-section">
-              <div aria-label="Map background" class="base-switch">
-                <button aria-pressed="false" data-base="street">Map</button
-                ><button aria-pressed="true" class="active" data-base="satellite">
-                  Satellite</button
-                ><button aria-pressed="false" data-base="drawing">
-                  CAD drawing
-                </button>
-              </div>
-              <button
-                aria-expanded="true"
-                aria-label="Collapse background options"
-                class="mini-btn"
-                id="baseCollapse"
+                <path d="M7 7L3 11l4 4" />
+                <path d="M3 11h10.5a5.5 5.5 0 0 1 0 11H10" />
+              </svg>
+              <span>Undo</span></button
+            ><button
+              disabled=""
+              id="redoBtn"
+              title="Redo (Ctrl or Cmd Shift Z)"
+            >
+              <svg
+                class="i"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-                <svg
-                  class="i"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M5 9l7 7 7-7" />
-                </svg>
-              </button>
-            </div>
+                <path d="M17 7l4 4-4 4" />
+                <path d="M21 11H10.5a5.5 5.5 0 0 0 0 11H14" />
+              </svg>
+              <span>Redo</span>
+            </button>
           </div>
         </div>
         <div class="area-chip">
           <button id="areaChip">＋ Define site area</button
           ><span id="sourceChip">OpenStreetMap</span>
         </div>
-        <div aria-label="Map controls" class="map-controls" hidden="">
+        <div aria-label="Map controls" class="map-controls">
           <button
             aria-label="Map bearing · return north"
             id="compassButton"
@@ -645,7 +533,7 @@
             </svg>
           </button>
         </div>
-        <div aria-label="Shared drawing tools" class="master-toolbar" hidden="">
+        <div aria-label="Shared drawing tools" class="master-toolbar">
           <button data-master="place" title="Place selected asset (P)">▣</button
           ><button data-master="line" title="Point line (L)">⎁</button
           ><button data-master="area" title="Point area (A)">⬡</button
@@ -753,7 +641,7 @@
         </section>
         <section aria-live="polite" class="sami-panel" id="samiPanel">
           <div class="sami-panel-head">
-            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.21" />
+            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.22" />
             <div>
               <strong>Ask SAMI</strong
               ><small>Control your site workspace</small>
@@ -779,6 +667,14 @@
             </div>
           </div>
         </section>
+        <button
+          aria-expanded="true"
+          aria-label="Show or hide Ask SAMI"
+          class="ask-collapse"
+          id="askCollapse"
+        >
+          ✦
+        </button>
         <div class="ask-bar-wrap">
           <div class="ask-bar">
             <input
@@ -794,7 +690,7 @@
               class="send-btn"
               id="sendBtn"
             >
-              <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.21" /><span id="askButtonLabel"
+              <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.22" /><span id="askButtonLabel"
                 >Ask SAMI</span
               >
             </button>
@@ -929,7 +825,7 @@
           </div>
           <div class="print-titleblock">
             <div class="print-brand">
-              <img alt="SAMI" src="sami-wordmark.png?v=2.7.21" /><strong
+              <img alt="SAMI" src="sami-wordmark.png?v=2.7.22" /><strong
                 >CREATED USING SAMI</strong
               >
             </div>
@@ -976,23 +872,23 @@
       id="toast"
       role="status"
     ></div>
-    <script defer="" src="version.js?v=2.7.21"></script>
-    <script defer="" src="leaflet.js?v=2.7.21"></script>
-    <script defer="" src="config.js?v=2.7.21"></script>
-    <script defer="" src="polygon-clipping.js?v=2.7.21"></script>
-    <script defer="" src="geometry.js?v=2.7.21"></script>
-    <script defer="" src="qrcode.js?v=2.7.21"></script>
-    <script defer="" src="documents.js?v=2.7.21"></script>
-    <script defer="" src="intelligence.js?v=2.7.21"></script>
-    <script defer="" src="symbols.js?v=2.7.21"></script>
-    <script defer="" src="builtin-assets.js?v=2.7.21"></script>
-    <script defer="" src="shape-import.js?v=2.7.21"></script>
-    <script defer="" src="studio.js?v=2.7.21"></script>
-    <script defer="" src="project-store.js?v=2.7.21"></script>
-    <script defer="" src="bearing.js?v=2.7.21"></script>
-    <script defer="" src="workspace.js?v=2.7.21"></script>
-    <script defer="" src="engine.js?v=2.7.21"></script>
-    <script defer="" src="pwa.js?v=2.7.21"></script>
-    <script defer="" src="cinema.js?v=2.7.21"></script>
+    <script defer="" src="version.js?v=2.7.22"></script>
+    <script defer="" src="leaflet.js?v=2.7.22"></script>
+    <script defer="" src="config.js?v=2.7.22"></script>
+    <script defer="" src="polygon-clipping.js?v=2.7.22"></script>
+    <script defer="" src="geometry.js?v=2.7.22"></script>
+    <script defer="" src="qrcode.js?v=2.7.22"></script>
+    <script defer="" src="documents.js?v=2.7.22"></script>
+    <script defer="" src="intelligence.js?v=2.7.22"></script>
+    <script defer="" src="symbols.js?v=2.7.22"></script>
+    <script defer="" src="builtin-assets.js?v=2.7.22"></script>
+    <script defer="" src="shape-import.js?v=2.7.22"></script>
+    <script defer="" src="studio.js?v=2.7.22"></script>
+    <script defer="" src="project-store.js?v=2.7.22"></script>
+    <script defer="" src="bearing.js?v=2.7.22"></script>
+    <script defer="" src="workspace.js?v=2.7.22"></script>
+    <script defer="" src="engine.js?v=2.7.22"></script>
+    <script defer="" src="pwa.js?v=2.7.22"></script>
+    <script defer="" src="cinema.js?v=2.7.22"></script>
   </body>
 </html>
