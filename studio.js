@@ -3183,14 +3183,14 @@ window.SAMIStudioEngine = function (C, O) {
       importShapePack(e.target.files?.[0]);
       e.target.value = "";
     };
-    $("#askCollapse").onclick = () => {
+    ($("#askCollapse") || {}).onclick = () => {
       document.body.classList.toggle("ask-collapsed");
       $("#askCollapse").setAttribute(
         "aria-expanded",
         String(!document.body.classList.contains("ask-collapsed")),
       );
     };
-    $("#baseCollapse").onclick = () => {
+    ($("#baseCollapse") || {}).onclick = () => {
       document.body.classList.toggle("base-collapsed");
       $("#baseCollapse").setAttribute(
         "aria-expanded",
