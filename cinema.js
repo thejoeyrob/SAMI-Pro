@@ -1770,6 +1770,10 @@
       return;
     }
     finishAtWelcome(false);
+    if (welcomeExit === "auto") {
+      await new Promise((r) => setTimeout(r, 500));
+      enter({ requestPermissions: true });
+    }
   }
   function finishAtWelcome(fromFilm = false) {
     cancelAnimationFrame(raf);

@@ -831,7 +831,33 @@
     state.map.on("mousemove", (e) => {
       $("#coordReadout").textContent =
         e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
+      window.SAMIWorkspace?.onMapMouseMove(e);
     });
+    let touchStartTime = 0;
+    let touchMoved = false;
+    const mapContainer = state.map.getContainer();
+    mapContainer.addEventListener("touchstart", () => {
+      touchStartTime = performance.now();
+      touchMoved = false;
+    }, false);
+    mapContainer.addEventListener("touchmove", () => {
+      touchMoved = true;
+    }, false);
+    mapContainer.addEventListener("touchend", (e) => {
+      const isQuickTap = performance.now() - touchStartTime < 300;
+      if (!touchMoved && isQuickTap && e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        const mapEl = mapContainer.querySelector('.leaflet-container');
+        if (mapEl) {
+          const rect = mapEl.getBoundingClientRect();
+          const clientX = touch.clientX - rect.left;
+          const clientY = touch.clientY - rect.top;
+          const point = state.map.containerPointToLatLng(L.point(clientX, clientY));
+          const clickEvent = { latlng: point, originalEvent: e };
+          onMapClick(clickEvent);
+        }
+      }
+    }, false);
     state.map.on("moveend", () => {
       if (state.mode !== "plan") {
         state.project.map = {

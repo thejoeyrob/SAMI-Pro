@@ -2126,6 +2126,33 @@ window.SAMIWorkspaceController = function (C, O) {
     )
       renderDrawer("selection");
   }
+  function onMapMouseMove(e) {
+    if (ui.precision.active && !ui.precision.multi) {
+      const r = precisionMapRect();
+      if (r) {
+        const oe = e.originalEvent;
+        if (Number.isFinite(oe?.clientX) && Number.isFinite(oe?.clientY))
+          positionPrecisionCursor(
+            oe.clientX - r.left,
+            oe.clientY - r.top,
+            false,
+            r,
+          );
+        else {
+          const pt = S.map.latLngToContainerPoint(e.latlng),
+            screen = bearing?.toScreen ? bearing.toScreen(pt) : null;
+          if (screen)
+            positionPrecisionCursor(
+              screen.x - r.left,
+              screen.y - r.top,
+              false,
+              r,
+            );
+          else positionPrecisionCursor(pt.x, pt.y, false, r);
+        }
+      }
+    }
+  }
   function fitArea() {
     if (!S.project.area) return;
     const r = $("#mapViewport").getBoundingClientRect(),
@@ -4062,6 +4089,7 @@ window.SAMIWorkspaceController = function (C, O) {
     drawHTML: () => libraryHTML(false),
     startTool,
     onMapClick,
+    onMapMouseMove,
     renderDraft,
     finishDraw,
     layersHTML,
