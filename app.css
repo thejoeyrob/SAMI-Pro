@@ -664,7 +664,7 @@ p {
   z-index: 650;
   right: calc(14px + env(safe-area-inset-right));
   top: calc(78px + env(safe-area-inset-top));
-  width: 160px;
+  width: 140px;
   max-height: calc(100vh - 180px);
   display: flex;
   flex-direction: column;
