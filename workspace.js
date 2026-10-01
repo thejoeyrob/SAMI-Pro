@@ -679,6 +679,9 @@ window.SAMIWorkspaceController = function (C, O) {
         "",
       )}</div><div class="section-title">Highlight colour</div><label class="accent-picker"><span>Selected accent</span><input id="appearanceAccent" type="color" value="${accent}"></label><div class="accent-presets">${presets.map((x) => `<button data-action="accent:${x}" style="--chip:${x}" aria-label="Use ${x}"></button>`).join("")}</div><div class="inline-note">Build v${esc(window.SAMI_VERSION?.version || document.documentElement.dataset.samiVersion || "2.7.14")} · Installed PWA icons can remain cached until the device refreshes the app.</div>`;
   }
+  function adminHTML() {
+    return `<p class="subtle">Admin interface options for system and appearance configuration.</p><div class="admin-options"><div class="option-group"><h4>Interface Style</h4><label><input type="radio" name="adminStyle" value="standard"> Standard interface</label><label><input type="radio" name="adminStyle" value="compact"> Compact mode</label><label><input type="radio" name="adminStyle" value="expanded"> Expanded mode</label></div><div class="option-group"><h4>Developer Options</h4><label><input type="checkbox" id="adminDebug"> Enable debug mode</label><label><input type="checkbox" id="adminVerbose"> Verbose logging</label></div><div class="option-group"><h4>Data Management</h4><button data-action="adminClearCache">Clear application cache</button><button data-action="adminExportSettings">Export settings</button><button data-action="adminImportSettings">Import settings</button></div></div><div class="inline-note">These settings are for advanced users and system administrators only.</div>`;
+  }
   function chrome() {
     if (!ui.ready) return;
     const selected = S.mode;
@@ -1423,6 +1426,7 @@ window.SAMIWorkspaceController = function (C, O) {
       details: projectHTML,
       designer: designerHTML,
       appearance: appearanceHTML,
+      admin: adminHTML,
       selection: selectionHTML,
       layers: layersHTML,
       services: servicesHTML,
@@ -1445,6 +1449,7 @@ window.SAMIWorkspaceController = function (C, O) {
           details: "Project details",
           designer: "Designer details",
           appearance: "Appearance",
+          admin: "Admin",
           explore: "Explore",
           area: "Site area",
           selection: "Properties",
@@ -3734,6 +3739,7 @@ window.SAMIWorkspaceController = function (C, O) {
       ["Review & export", "review"],
       ["Project details", "stage:project"],
       ["Appearance", "open:appearance"],
+      ["Admin", "open:admin"],
       ["Settings", "open:settings"],
       ["Help & tutorial", "open:help"],
       ["Why SAMI?", "sales"],
