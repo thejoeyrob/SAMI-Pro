@@ -3742,7 +3742,8 @@ window.SAMIWorkspaceController = function (C, O) {
     style.setAttribute("aria-label", "Map style");
     style.innerHTML =
       '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5L4 8l8 4.5 8-4.5z"/><path d="M4 12l8 4.5L20 12"/><path d="M4 16l8 4.5L20 16"/></svg>';
-    $(".map-controls").prepend(style);
+    const toolbarGrid = $(".toolbar-controls-grid");
+    if (toolbarGrid) toolbarGrid.prepend(style);
     style.onclick = () => document.body.classList.toggle("map-style-open");
     $("#baseCollapse")?.remove();
     $$("[data-base]").forEach((b) =>
@@ -3757,7 +3758,7 @@ window.SAMIWorkspaceController = function (C, O) {
     mapMeasure.setAttribute("aria-label", "Measure distance or area on map");
     mapMeasure.innerHTML = "⌖";
     mapMeasure.onclick = () => runAction("mapMeasure");
-    $(".map-controls").prepend(mapMeasure);
+    if (toolbarGrid) toolbarGrid.prepend(mapMeasure);
     updateMapModeControls();
     const areaChip = $("#areaChip");
     areaChip.title = "Define or update site area";
