@@ -2490,8 +2490,10 @@
       }
     }
     if (!corners.length || !prevPoint) return c;
-    const snapDistances = [5, 4, 3, 2];
+    const snapDistances = [10, 8, 6, 4, 2];
     const pr = G.projection(c);
+    let bestSnap = null;
+    let bestDist = Infinity;
     for (const snapDist of snapDistances) {
       const snapThresholdDeg = (snapDist / 111000) * 1.5;
       for (const corner of corners) {
@@ -2510,11 +2512,13 @@
         const mag2 = Math.hypot(outgoingDx, outgoingDy);
         if (mag1 > 0 && mag2 > 0) {
           const cosAngle = dotProduct / (mag1 * mag2);
-          if (cosAngle < -0.5) {
-            return corner;
+          if (cosAngle < -0.3 && dist < bestDist) {
+            bestSnap = corner;
+            bestDist = dist;
           }
         }
       }
+      if (bestSnap) return bestSnap;
     }
     return c;
   }
