@@ -1625,7 +1625,9 @@
   }
   function frame(now) {
     if (!running) return;
-    const t = (now - start) / 1000,
+    const t = mode === "sales" && salesAudio && !salesAudio.paused
+      ? Math.max(0, salesAudio.currentTime)
+      : (now - start) / 1000,
       cam = cameraFor(t);
     drawGround(cam, t);
     if (mode === "sales") {
