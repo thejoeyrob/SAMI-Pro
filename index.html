@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="en-GB" data-sami-version="2.7.23">
+<html lang="en-GB" data-sami-version="2.8.3">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -47,19 +47,21 @@
         background: #020405 !important;
       }
     </style>
-    <link href="manifest.webmanifest?v=2.7.23" rel="manifest" />
+    <link href="manifest.webmanifest?v=2.8.3" rel="manifest" />
     <title>SAMI · Spatial Analysis Mapping Intelligence</title>
-    <link href="sami-apple-touch-icon.png?v=2.7.23" rel="apple-touch-icon" />
-    <link href="sami-app-icon-192.png?v=2.7.23" rel="icon" />
-    <link href="leaflet.css?v=2.7.23" rel="stylesheet" />
-    <link href="app.css?v=2.7.23" rel="stylesheet" />
-    <link href="creator.css?v=2.7.23" rel="stylesheet" />
-    <link href="cinema.css?v=2.7.23" rel="stylesheet" />
+    <link href="sami-apple-touch-icon.png?v=2.8.3" rel="apple-touch-icon" />
+    <link href="sami-app-icon-192.png?v=2.8.3" rel="icon" />
+    <link href="leaflet.css?v=2.8.3" rel="stylesheet" />
+    <link href="app.css?v=2.8.3" rel="stylesheet" />
+    <link href="creator.css?v=2.8.3" rel="stylesheet" />
+    <link href="cinema.css?v=2.8.3" rel="stylesheet" />
+  <link rel="stylesheet" href="workspace-flow.css?v=2.8.3">
+  <link rel="stylesheet" href="ui-renovation.css?v=2.8.3">
   </head>
   <body>
     <div aria-label="Install SAMI" id="mobileInstallGate">
       <div class="install-gate-card">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.23" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.8.3" />
         <div>
           <h1>Install SAMI to continue</h1>
           <p>
@@ -128,7 +130,7 @@
       <div aria-live="polite" class="cinema-sentence" id="pitchLine"></div>
       <section aria-label="SAMI" class="cinema-brand" id="brandResolve">
         <div id="wordmarkStage">
-          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.7.23" /><svg
+          <img alt="SAMI" id="finalWordmark" src="sami-wordmark.png?v=2.8.3" /><svg
             aria-hidden="true"
             class="logo-edge-pass"
             viewbox="0 0 1116 339"
@@ -157,7 +159,7 @@
         </div>
       </section>
       <div class="cinema-closed" hidden="" id="cinemaClosed">
-        <img alt="SAMI" src="sami-wordmark.png?v=2.7.23" />
+        <img alt="SAMI" src="sami-wordmark.png?v=2.8.3" />
         <p>SAMI closed</p>
         <small>Your project is saved on this device.</small
         ><button id="reopenSami" type="button">Open SAMI</button>
@@ -167,13 +169,13 @@
         id="salesAudio"
         preload="none"
         playsinline
-        src="why-sami-promo-v272.mp3?v=2.7.23"
+        src="why-sami-promo-v272.mp3?v=2.8.3"
       ></audio>
     </section>
     <div aria-hidden="true" class="app-shell" id="app" inert="">
       <header class="topbar">
         <button aria-label="Open project" class="brand-button" id="homeBtn">
-          <img alt="SAMI" src="sami-wordmark.png?v=2.7.23" />
+          <img alt="SAMI" src="sami-wordmark.png?v=2.8.3" />
         </button>
         <div class="project-title-wrap">
           <input
@@ -185,7 +187,7 @@
           />
           <div class="project-meta">
             <span id="saveState">Saved on this device</span> ·
-            <span data-version>v2.7.23</span>
+            <span data-version>v2.8.3</span>
           </div>
         </div>
         <div class="top-actions">
@@ -199,7 +201,7 @@
             class="ask-sami-header"
             id="headerAskBtn"
           >
-            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.23" /><span id="headerAskLabel"
+            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.8.3" /><span id="headerAskLabel"
               >Ask SAMI</span
             >
           </button
@@ -275,7 +277,21 @@
                 d="M9 19.5L3.8 17V5.2L9 7.7l6-2.5 5.2 2.5V17L14 14.5l-5 2.5z"
               />
               <path d="M9 7.7v9.3M15 5.2v9.3" /></svg
-            ><span>Explore</span></button
+            ><span>Map</span></button
+          ><button aria-pressed="false" data-mode="plan">
+            <svg
+              class="i"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3.5" y="3.5" width="17" height="17" rx="1.5" />
+              <path d="M3.5 9h17M9 3.5v17" stroke-dasharray="1.6 2" /></svg
+            ><span>Site Plan</span></button
           ><button aria-pressed="false" data-mode="route">
             <svg
               class="i"
@@ -291,21 +307,7 @@
               <circle cx="18.5" cy="18" r="2" />
               <path d="M7.2 7.2L11 11c1.6 1.6 1.6 4 0 5.6" /></svg
             ><span>Route</span></button
-          ><button aria-pressed="false" data-mode="plan">
-            <svg
-              class="i"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3.5" y="3.5" width="17" height="17" rx="1.5" />
-              <path d="M3.5 9h17M9 3.5v17" stroke-dasharray="1.6 2" /></svg
-            ><span>Site Plan</span></button
-          ><button aria-pressed="false" data-mode="create">
+          ><button aria-pressed="false" data-mode="review">
             <svg
               class="i"
               viewBox="0 0 24 24"
@@ -320,7 +322,7 @@
               <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
               <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
               <path d="M17 13.5v7M13.5 17h7" /></svg
-            ><span>Create</span>
+            ><span>Export</span>
           </button>
         </div>
         <span class="mode-caption" id="modeCaption"></span>
@@ -335,7 +337,7 @@
           <div class="cad-sheet-border"></div>
           <div class="cad-titleblock">
             <div class="cad-brand">
-              <img alt="" src="sami-wordmark.png?v=2.7.23" /><span
+              <img alt="" src="sami-wordmark.png?v=2.8.3" /><span
                 >CREATED USING SAMI</span
               >
             </div>
@@ -491,7 +493,7 @@
               <path d="M4 15v3.2A1.8 1.8 0 0 0 5.8 20H9" />
               <path d="M20 15v3.2a1.8 1.8 0 0 1-1.8 1.8H15" />
             </svg></button
-          ><button aria-pressed="false" id="lockBtn" title="Lock map">
+          ><button aria-label="Lock map" aria-pressed="false" id="lockBtn" title="Lock map">
             <svg
               class="i"
               viewBox="0 0 24 24"
@@ -641,7 +643,7 @@
         </section>
         <section aria-live="polite" class="sami-panel" id="samiPanel">
           <div class="sami-panel-head">
-            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.23" />
+            <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.8.3" />
             <div>
               <strong>Ask SAMI</strong
               ><small>Control your site workspace</small>
@@ -690,7 +692,7 @@
               class="send-btn"
               id="sendBtn"
             >
-              <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.7.23" /><span id="askButtonLabel"
+              <img alt="" class="sami-brand-mark" src="sami-badge.png?v=2.8.3" /><span id="askButtonLabel"
                 >Ask SAMI</span
               >
             </button>
@@ -825,7 +827,7 @@
           </div>
           <div class="print-titleblock">
             <div class="print-brand">
-              <img alt="SAMI" src="sami-wordmark.png?v=2.7.23" /><strong
+              <img alt="SAMI" src="sami-wordmark.png?v=2.8.3" /><strong
                 >CREATED USING SAMI</strong
               >
             </div>
@@ -872,23 +874,24 @@
       id="toast"
       role="status"
     ></div>
-    <script defer="" src="version.js?v=2.7.23"></script>
-    <script defer="" src="leaflet.js?v=2.7.23"></script>
-    <script defer="" src="config.js?v=2.7.23"></script>
-    <script defer="" src="polygon-clipping.js?v=2.7.23"></script>
-    <script defer="" src="geometry.js?v=2.7.23"></script>
-    <script defer="" src="qrcode.js?v=2.7.23"></script>
-    <script defer="" src="documents.js?v=2.7.23"></script>
-    <script defer="" src="intelligence.js?v=2.7.23"></script>
-    <script defer="" src="symbols.js?v=2.7.23"></script>
-    <script defer="" src="builtin-assets.js?v=2.7.23"></script>
-    <script defer="" src="shape-import.js?v=2.7.23"></script>
-    <script defer="" src="studio.js?v=2.7.23"></script>
-    <script defer="" src="project-store.js?v=2.7.23"></script>
-    <script defer="" src="bearing.js?v=2.7.23"></script>
-    <script defer="" src="workspace.js?v=2.7.23"></script>
-    <script defer="" src="engine.js?v=2.7.23"></script>
-    <script defer="" src="pwa.js?v=2.7.23"></script>
-    <script defer="" src="cinema.js?v=2.7.23"></script>
+    <script defer="" src="version.js?v=2.8.3"></script>
+    <script defer="" src="leaflet.js?v=2.8.3"></script>
+    <script defer="" src="config.js?v=2.8.3"></script>
+    <script defer="" src="polygon-clipping.js?v=2.8.3"></script>
+    <script defer="" src="geometry.js?v=2.8.3"></script>
+    <script defer="" src="qrcode.js?v=2.8.3"></script>
+    <script defer="" src="documents.js?v=2.8.3"></script>
+    <script defer="" src="intelligence.js?v=2.8.3"></script>
+    <script defer="" src="symbols.js?v=2.8.3"></script>
+    <script defer="" src="builtin-assets.js?v=2.8.3"></script>
+    <script defer="" src="shape-import.js?v=2.8.3"></script>
+    <script defer="" src="studio.js?v=2.8.3"></script>
+    <script defer="" src="project-data.js?v=2.8.3"></script>
+    <script defer="" src="project-store.js?v=2.8.3"></script>
+    <script defer="" src="bearing.js?v=2.8.3"></script>
+    <script defer="" src="workspace.js?v=2.8.3"></script>
+    <script defer="" src="engine.js?v=2.8.3"></script>
+    <script defer="" src="pwa.js?v=2.8.3"></script>
+    <script defer="" src="cinema.js?v=2.8.3"></script>
   </body>
 </html>

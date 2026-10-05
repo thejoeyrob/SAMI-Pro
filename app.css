@@ -2165,36 +2165,6 @@ textarea {
   border-color: var(--line2);
   backdrop-filter: blur(12px);
 }
-.movable-toolbar {
-  position: absolute !important;
-  display: flex !important;
-  gap: 5px !important;
-  z-index: 625 !important;
-}
-.movable-toolbar[data-orient="vertical"] {
-  flex-direction: column !important;
-}
-.movable-toolbar[data-orient="horizontal"] {
-  flex-direction: row !important;
-}
-.movable-toolbar .toolbar-grip {
-  font-size: 13px !important;
-  color: var(--muted) !important;
-  cursor: grab !important;
-  touch-action: none !important;
-}
-.movable-toolbar .toolbar-grip:active {
-  cursor: grabbing !important;
-}
-.canvas-quick-tools.movable-toolbar {
-  left: calc(var(--inspector) + 14px + env(safe-area-inset-left));
-  top: 84px;
-}
-.map-controls.movable-toolbar {
-  right: calc(12px + env(safe-area-inset-right));
-  left: auto;
-  top: 14px;
-}
 .appearance-grid {
   display: grid;
   gap: 8px;
@@ -2314,10 +2284,6 @@ textarea {
   .brand-button img {
     width: 34px;
     height: 34px;
-  }
-  .movable-toolbar[data-orient="horizontal"] {
-    max-width: calc(100vw - 12px);
-    overflow-x: auto;
   }
 }
 

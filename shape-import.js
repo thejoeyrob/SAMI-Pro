@@ -579,8 +579,7 @@
       )) {
         if ((cell(section, "NoShow", 0) || 0) > 0.5) continue;
         let path = [],
-          cur = null,
-          start = null;
+          cur = null;
         const flush = (close = false) => {
           if (path.length > 1) {
             if (
@@ -595,7 +594,6 @@
           }
           path = [];
           cur = null;
-          start = null;
         };
         for (const row of directChildren(section, "Row")) {
           if (parts.length >= MAX_PARTS) break;
@@ -614,7 +612,6 @@
               y *= H;
             }
             cur = [x, y];
-            start = cur.slice();
             path = [pt(m, cur)];
           } else if (
             t === "lineto" ||

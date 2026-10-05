@@ -1,0 +1,223 @@
+/* SAMI 2.8.1 — familiar field/CAD interaction renovation.
+   One stage bar, one task panel, one canvas command bar. */
+:root { --command-h: 58px; }
+
+/* --- primary application structure --- */
+.topbar { min-height: 56px; padding-left: calc(10px + env(safe-area-inset-left)); padding-right: calc(8px + env(safe-area-inset-right)); }
+.project-title { font-size: 14px !important; }
+.project-meta { font-size: 10px; }
+.top-actions { gap: 6px; }
+.top-actions #exportBtn { display: none !important; }
+.top-actions .ask-sami-header { min-width: 44px; border: 1px solid color-mix(in srgb,var(--accent) 35%,var(--line)); border-radius: 9px; }
+@media (min-width: 720px) { .top-actions .ask-sami-header span { display: inline; } }
+
+.modebar { height: 48px; padding: 0; border-bottom: 1px solid var(--line); }
+.mode-tabs { width: 100%; gap: 0; }
+.mode-tabs button { flex: 1 1 20%; min-width: 0; padding: 0 7px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; }
+.mode-tabs button .i { width: 18px; height: 18px; }
+.mode-tabs button.active { background: var(--panel); box-shadow: inset 0 -3px var(--accent); border: 0; }
+.mode-tabs button.active:after { display:none; }
+.mode-tabs button[aria-current="step"] { color: var(--ink); }
+
+/* The task panel is the only left/bottom tool surface. */
+.inspector { width: calc(var(--inspector) + env(safe-area-inset-left)); z-index: 660; }
+html[data-layout="guided"] body:not(.inspector-collapsed) { --inspector: 320px; }
+html[data-layout="compact"] body:not(.inspector-collapsed) { --inspector: 272px; }
+html[data-layout="studio"] body:not(.inspector-collapsed) { --inspector: 370px; }
+#inspectorTabs { min-height: 48px; position: sticky; top: 0; z-index: 4; }
+#inspectorTabs button { min-height: 48px; font-size: 12px; padding: 7px 10px; }
+#inspectorTabs #inspectorCollapse { flex-basis: 42px; }
+.drawer-head { padding: 14px 16px 6px; }
+.drawer-head h2 { font-size: 17px; }
+.drawer-content { max-width: none; width: 100%; padding: 12px 16px 24px; font-size: 13px; line-height: 1.45; }
+.drawer-content .subtle,.drawer-content .field-label { font-size: 12.5px; }
+.drawer-content .field { min-height: 44px; font-size: 16px; }
+.drawer-content button { min-height: 44px; font-size: 13px; }
+.panel-intro { display:grid; gap:2px; padding: 2px 0 10px; }
+.panel-intro strong { font-size:15px; }
+.panel-intro small { color:var(--muted); font-size:12px; }
+
+/* All obsolete duplicated tool surfaces stay out of the way. */
+.tool-rail,.master-toolbar,.selection-bar,#askCollapse,#mapMeasureButton,.history-controls { display:none !important; }
+#exportBtn { display:none !important; }
+
+/* --- canvas command bar: always reachable, never offscreen --- */
+.primary-command-bar {
+  position:absolute; z-index:675;
+  left: calc(var(--inspector) + 14px + env(safe-area-inset-left));
+  right: calc(72px + env(safe-area-inset-right));
+  width: max-content; max-width: calc(100% - var(--inspector) - 100px);
+  margin: 0 auto;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform:none;
+  min-height: var(--command-h);
+  padding:5px;
+  display:flex; align-items:stretch; gap:3px;
+  border:1px solid #52625a; border-radius:12px;
+  background:color-mix(in srgb,var(--panel) 94%,transparent);
+  box-shadow:0 10px 30px #0007;
+  backdrop-filter:blur(14px);
+}
+.primary-command-bar > button,
+.primary-command-bar .command-history > button {
+  min-width:64px; min-height:48px; padding:4px 9px;
+  border:0; border-radius:8px; background:transparent;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  color:var(--ink); font-size:11px;
+}
+.primary-command-bar button:hover,.primary-command-bar button:focus-visible { background:var(--surface); }
+.primary-command-bar button:active,.primary-command-bar button.active { background:var(--accent-soft); }
+.primary-command-bar button:disabled { opacity:.35; }
+.primary-command-bar .i { width:20px; height:20px; }
+.command-history { display:flex; gap:3px; padding-left:3px; border-left:1px solid var(--line); }
+.primary-command-bar #undoBtn span,.primary-command-bar #redoBtn span { display:block; font-size:11px; }
+body[data-stage="project"] .primary-command-bar,
+body[data-stage="review"] .primary-command-bar,
+body[data-stage="create"] .primary-command-bar { display:none; }
+body:not([data-stage="plan"]) .primary-command-bar [data-command="select"],
+body:not([data-stage="plan"]) .primary-command-bar [data-command="add"],
+body:not([data-stage="plan"]) .primary-command-bar .command-history { display:none; }
+
+/* Active drawing prompt sits above the command bar rather than competing with it. */
+.draw-status { left: calc(var(--inspector) + 18px + env(safe-area-inset-left)); right: calc(72px + env(safe-area-inset-right)); bottom: calc(var(--command-h) + 28px + env(safe-area-inset-bottom)); max-width:720px; border-radius:10px; }
+
+/* --- map controls --- */
+.map-controls { top:12px; right:calc(10px + env(safe-area-inset-right)); gap:6px; }
+.map-controls button { width:42px; min-width:42px; height:42px; min-height:42px; border-radius:9px; }
+.canvas-toolbar { top:12px; right:calc(60px + env(safe-area-inset-right)); pointer-events:none; }
+.canvas-toolbar .base-switch { pointer-events:auto; padding:5px; border-radius:10px; }
+.base-switch button { min-height:38px; padding:7px 10px; font-size:11px; }
+.area-chip { top:12px; left:calc(var(--inspector) + 12px + env(safe-area-inset-left)); max-width: min(360px, calc(100% - var(--inspector) - 90px)); }
+.area-chip button { min-height:38px; border-radius:9px; font-size:11px; }
+.area-chip #sourceChip { display:none; }
+#restoreInspector { top:12px; min-height:42px; font-size:12px; }
+
+/* --- Add panel / asset selection --- */
+.draw-methods { gap:6px; margin: 4px 0 12px; }
+.draw-methods button { min-height:58px; border-radius:9px; }
+.draw-methods button small { display:block; margin-top:2px; font-size:10px; }
+.active-tool { margin: 8px 0 10px; padding:10px; border-radius:9px; }
+.asset-search { display:flex; align-items:center; gap:8px; margin:8px 0; border:1px solid var(--line); border-radius:9px; padding:0 10px; background:var(--surface); }
+.asset-search span { color:var(--muted); font-size:18px; }
+.asset-search input { width:100%; min-height:42px; border:0 !important; padding:0 !important; background:transparent !important; font-size:16px !important; }
+.asset-family-picker { padding:6px 0 10px; }
+.asset-grid { gap:7px; }
+.asset-tile { min-height:66px; border-radius:9px; }
+.asset-tile[hidden] { display:none !important; }
+
+/* --- one SAMI entry point: header -> single conversation panel --- */
+.sami-panel { position:fixed; z-index:1450; top:calc(112px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right)); bottom:auto; width:min(390px,calc(100vw - 24px)); max-height:min(68dvh,620px); border-radius:12px; box-shadow:0 18px 48px #0009; }
+.sami-panel.open { display:flex; flex-direction:column; }
+.sami-messages { flex:1 1 auto; min-height:120px; overflow:auto; }
+.sami-panel .ask-bar-wrap { position:static; z-index:auto; width:auto; padding:10px; border:0; border-top:1px solid var(--line); border-radius:0; background:var(--panel); box-shadow:none; }
+.sami-panel .ask-bar { gap:7px; }
+.sami-panel .ask-bar input { min-height:44px; font-size:16px; }
+.sami-panel .send-btn { min-height:44px; min-width:48px; border-radius:8px; }
+.ask-collapsed .sami-panel .ask-bar-wrap { display:block; }
+.voice-hint { margin-top:5px; font-size:10px; color:var(--muted); }
+
+/* --- grouped, predictable application menu --- */
+.global-menu { position:fixed; z-index:1600; top:calc(60px + env(safe-area-inset-top)); right:calc(10px + env(safe-area-inset-right)); width:min(310px,calc(100vw - 20px)); max-height:calc(100dvh - 78px - env(safe-area-inset-top)); overflow:auto; padding:8px; border:1px solid var(--line); border-radius:12px; background:var(--panel) !important; box-shadow:0 18px 50px #0009; }
+.global-menu[hidden] { display:none; }
+.menu-group { padding:5px 0 8px; border-bottom:1px solid var(--line); }
+.menu-group:last-child { border-bottom:0; padding-bottom:2px; }
+.menu-group h3 { margin:0; padding:5px 9px 4px; color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.global-menu .menu-group button { width:100%; min-height:42px; justify-content:flex-start; text-align:left; padding:8px 10px; border:0; background:transparent !important; color:var(--ink) !important; font-size:13px; }
+.global-menu .menu-group button:hover,.global-menu .menu-group button:focus-visible { background:var(--surface); }
+.global-menu .menu-close button { color:var(--danger) !important; }
+
+/* portrait: bottom task sheet + command bar above it. */
+@media (max-aspect-ratio:1/1) {
+  :root { --inspector-height: 39dvh; }
+  html[data-layout] body:not(.inspector-collapsed) { --inspector:0px; }
+  .inspector { left:0; right:0; width:100%; height:var(--inspector-height); max-height:440px; padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+  #mapViewport { bottom:var(--inspector-height); }
+  .primary-command-bar { left:50%; right:auto; width:max-content; max-width:calc(100vw - 20px); margin:0; transform:translateX(-50%); bottom:calc(var(--inspector-height) + 10px); }
+  .inspector-collapsed .primary-command-bar { bottom:calc(10px + env(safe-area-inset-bottom)); }
+  .primary-command-bar > button,.primary-command-bar .command-history > button { min-width:56px; padding:4px 7px; }
+  .draw-status { left:10px; right:62px; bottom:calc(var(--inspector-height) + var(--command-h) + 22px); }
+  .inspector-collapsed .draw-status { bottom:calc(var(--command-h) + 22px + env(safe-area-inset-bottom)); }
+  .area-chip { left:10px; max-width:calc(100% - 72px); }
+  #restoreInspector { top:auto; bottom:calc(var(--command-h) + 20px + env(safe-area-inset-bottom)); }
+  .drawer-head { display:flex; }
+}
+
+/* phone: stage labels stay readable; nonessential map zoom is delegated to pinch. */
+@media (max-width:600px) {
+  .brand-button { width:86px; min-width:86px; }
+  .project-title-wrap { min-width:70px; }
+  .project-title { font-size:12px !important; }
+  .project-meta { font-size:8.5px; }
+  .modebar { height:46px; }
+  .mode-tabs button { flex-direction:column; gap:1px; padding:3px 2px; font-size:10px; }
+  .mode-tabs button .i { width:16px; height:16px; }
+  .top-actions .ask-sami-header { width:42px; min-width:42px; padding:0; justify-content:center; }
+  .top-actions .ask-sami-header span { display:none; }
+  .map-controls #zoomInBtn,.map-controls #zoomOutBtn { display:none; }
+  .primary-command-bar { min-height:54px; padding:4px; }
+  .primary-command-bar > button,.primary-command-bar .command-history > button { min-width:52px; min-height:46px; font-size:10px; }
+  .primary-command-bar .i { width:18px; height:18px; }
+  .drawer-content { padding:10px 12px 22px; }
+  #inspectorTabs button { font-size:11px; }
+  .draw-methods { grid-template-columns:repeat(5,minmax(0,1fr)); }
+  .draw-methods button { min-width:0; padding:5px 2px; }
+  .sami-panel { top:calc(108px + env(safe-area-inset-top)); right:8px; width:calc(100vw - 16px); max-height:62dvh; }
+}
+
+/* landscape phones: keep all controls inside the short viewport. */
+@media (max-height:520px) and (orientation:landscape) {
+  .topbar { min-height:46px; height:46px; padding-top:3px; padding-bottom:3px; }
+  .modebar { height:38px; }
+  .mode-tabs button { flex-direction:row; font-size:10px; }
+  .inspector { max-width:290px; }
+  .primary-command-bar { bottom:8px; min-height:48px; }
+  .primary-command-bar > button,.primary-command-bar .command-history > button { min-height:40px; min-width:54px; }
+  .draw-status { bottom:64px; }
+  .map-controls { top:8px; }
+  .map-controls button { width:38px; min-width:38px; height:38px; min-height:38px; }
+  .area-chip { top:8px; }
+}
+
+.sami-panel-head strong,.sami-panel-head small{display:block}.sami-panel-head small{margin-top:2px;color:var(--muted)}
+
+/* Stage-specific declutter: keep canvas furniture only where it is relevant. */
+body:not([data-stage="map"]) .area-chip{display:none}
+body[data-stage="project"] .map-controls,body[data-stage="project"] .canvas-toolbar,body[data-stage="review"] .map-controls,body[data-stage="review"] .canvas-toolbar{display:none}
+html[data-layout="focus"] .canvas-toolbar{top:12px;bottom:auto}
+
+/* Status messages must never cover the primary drawing controls. */
+#toast { bottom:calc(var(--command-h) + 24px + env(safe-area-inset-bottom)); }
+@media (max-aspect-ratio:1/1) {
+  #toast { bottom:calc(var(--inspector-height) + var(--command-h) + 24px + env(safe-area-inset-bottom)); }
+  body[data-stage="project"] #toast,body[data-stage="review"] #toast { bottom:calc(var(--inspector-height) + 18px + env(safe-area-inset-bottom)); }
+}
+@media (max-height:600px) { #toast { bottom:70px; } }
+
+/* Group selection is a temporary task: its completion controls stay visible. */
+.selection-bar.group-picking:not([hidden]) {
+  display:flex !important; left:calc(var(--inspector) + 12px); right:72px;
+  bottom:calc(var(--command-h) + 28px); top:auto; transform:none;
+  width:auto; max-width:540px; flex-wrap:wrap; padding:8px; gap:8px;
+}
+.selection-bar.group-picking [data-group-normal] { display:none !important; }
+.selection-bar.group-picking button { min-height:44px; }
+.labelled-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.labelled-actions button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-width:0; min-height:58px; }
+.labelled-actions .i { width:20px; height:20px; }
+@media (max-aspect-ratio:1/1) {
+  .selection-bar.group-picking:not([hidden]) { left:10px; right:10px; bottom:calc(var(--inspector-height) + var(--command-h) + 22px); }
+  .inspector-collapsed .selection-bar.group-picking:not([hidden]) { bottom:calc(var(--command-h) + 22px + env(safe-area-inset-bottom)); }
+}
+
+/* Touch layout uses a bottom sheet at every width, including desktop. */
+html[data-layout="touch"] .primary-command-bar { left:50%; right:auto; margin:0; transform:translateX(-50%); max-width:calc(100vw - 20px); bottom:calc(var(--inspector-height) + 10px); }
+html[data-layout="touch"] .draw-status,
+html[data-layout="touch"] .selection-bar.group-picking:not([hidden]) { left:10px; right:72px; bottom:calc(var(--inspector-height) + var(--command-h) + 24px); }
+html[data-layout="touch"] #toast { bottom:calc(var(--inspector-height) + var(--command-h) + 24px); }
+
+body.group-picking-active #toast { display:none; }
+.selection-bar.group-picking > span:first-child { display:block; flex:1 1 100%; }
+@media (max-width:600px) and (max-height:740px) {
+  .map-controls { display:grid; grid-template-columns:repeat(2,42px); gap:6px; }
+  .selection-bar.group-picking:not([hidden]) { right:106px; }
+}

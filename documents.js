@@ -1157,12 +1157,7 @@
         n;
     return [x, y];
   }
-  function tileLL(x, y, z) {
-    const n = 2 ** z,
-      lon = (x / n) * 360 - 180,
-      lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI;
-    return [lon, lat];
-  }
+
   async function imageFromBlob(blob) {
     if ("createImageBitmap" in window) return await createImageBitmap(blob);
     return await new Promise((res, rej) => {
@@ -1189,8 +1184,6 @@
   async function fetchMapJPEG(bounds, style, wPx = 1600, hPx = 1000) {
     if (style === "cad" || !bounds) return null;
     try {
-      const span =
-        tileXY(bounds[2], bounds[1], 0)[0] - tileXY(bounds[0], bounds[3], 0)[0];
       let z = 18;
       for (let zz = 3; zz <= 18; zz++) {
         const a = tileXY(bounds[0], bounds[3], zz),
@@ -1988,9 +1981,9 @@
     return (
       !m.hidden &&
       !m.guideHidden &&
-      !project.hiddenTypes?.includes(m.type) &&
+      (m.planCommitted || !project.hiddenTypes?.includes(m.type)) &&
       !(
-        m.type === "service" &&
+        m.type === "service" && !m.planCommitted &&
         project.serviceVisibility?.[m.serviceType] === false
       ) &&
       includeFeature(f, opt)
@@ -2342,11 +2335,11 @@
       "SPATIAL ANALYSIS / MAPPING INTELLIGENCE",
       58,
       10.5,
-      4.8,
+      6.5,
       true,
       "#6a7f73",
     );
-    page.text(title, 58, 16.2, 11, true, "#233f34");
+    page.text(title, 58, 16.2, 13, true, "#233f34");
     page.text(`${pageNo} / ${total}`, page.w - 21, 15.5, 7, false, "#50685f");
     page.line(8, 21, page.w - 8, 21, "#9dad9f", 0.25);
   }
@@ -2385,18 +2378,18 @@
     rows.forEach(([k, v], i) => {
       const xx = x + (i % cols) * cw,
         yy = y + 5 + Math.floor(i / cols) * 10.5;
-      page.text(k, xx, yy, 4.7, true, "#697e72");
-      page.wrapped(v, xx, yy + 4.3, cw - 3.5, 6.4, true, "#203e31", 2.8, 2);
+      page.text(k, xx, yy, 6.5, true, "#697e72");
+      page.wrapped(v, xx, yy + 4.3, cw - 3.5, 8.5, true, "#203e31", 3.2, 2);
     });
     const contact = [m.designerEmail, m.designerPhone]
       .filter(Boolean)
       .join("  |  ");
-    if (contact) page.text(contact, 12, page.h - 7, 5.2, false, "#567568");
+    if (contact) page.text(contact, 12, page.h - 7, 7, false, "#567568");
     page.text(
       "Created with SAMI · JW EDS",
       page.w - 52,
       page.h - 7,
-      5.2,
+      7,
       false,
       "#567568",
     );
@@ -2436,12 +2429,12 @@
     };
     for (const [label, entries] of order) {
       if (colYs[col] + 5.5 > maxY && !nextCol()) break;
-      page.text(label, colXs[col], colYs[col], 5, true, "#5a7568");
+      page.text(label, colXs[col], colYs[col], 6.5, true, "#5a7568");
       colYs[col] += 4.4;
       for (const [name, st] of entries) {
         if (colYs[col] + 5 > maxY) {
           if (!nextCol()) break;
-          page.text(label, colXs[col], colYs[col], 5, true, "#5a7568");
+          page.text(label, colXs[col], colYs[col], 6.5, true, "#5a7568");
           colYs[col] += 4.4;
         }
         page.line(
@@ -2459,10 +2452,10 @@
             colXs[col] + 7.5,
             colYs[col],
             colW - 7.5,
-            5.4,
+            7.5,
             false,
             "#36523f",
-            2.9,
+            3.4,
             2,
           ) + 2.2;
       }
@@ -2475,11 +2468,11 @@
       ([, v]) => v !== undefined && v !== null && String(v).trim() !== "",
     );
     if (!present.length) return y;
-    page.text(title, x, y, 7.4, true, "#204d3a");
+    page.text(title, x, y, 9, true, "#204d3a");
     let yy = y + 7;
     for (const [k, v] of present) {
-      page.text(k.toUpperCase(), x, yy, 4.8, true, "#708274");
-      yy = page.wrapped(v, x, yy + 4, w, 6.8, false, "#314d3e", 3.5, 4) + 4;
+      page.text(k.toUpperCase(), x, yy, 6.5, true, "#708274");
+      yy = page.wrapped(v, x, yy + 4, w, 8.5, false, "#314d3e", 4, 4) + 4;
     }
     return yy;
   }
@@ -2656,8 +2649,7 @@
     const overviewBox = { x: 8, y: 24, w: 280, h: 132 },
       approachBox = { x: 8, y: 162, w: 80, h: 89 },
       turnBox = { x: 92, y: 162, w: 82, h: 89 },
-      rb = expandBounds(routeBounds(r), Math.max(100, (r.distanceKm || 1) * 8)),
-      tr = makeTransform(rb, overviewBox);
+      rb = expandBounds(routeBounds(r), Math.max(100, (r.distanceKm || 1) * 8));
     const drawRoute = async (box, bounds, title, labelW) => {
       const t = makeTransform(bounds, box);
       p.rect(box.x, box.y, box.w, box.h, "#769280", "#f7f9f6", 0.25);
@@ -2746,7 +2738,7 @@
       110,
     );
     const vehicle = r.vehicle || {};
-    y = infoBlock(
+    infoBlock(
       p,
       "JOURNEY",
       [

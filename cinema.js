@@ -6,7 +6,6 @@
     film = $("#introFilm"),
     ctx = canvas?.getContext("2d", { alpha: false }),
     gate = $("#launchStartGate"),
-    brand = $("#brandResolve"),
     logo = $("#finalWordmark"),
     wordmarkStage = $("#wordmarkStage"),
     welcomeUI = $(".welcome-ui"),
@@ -89,12 +88,9 @@
     sparks = [],
     seed = 170926,
     suspendedAt = 0,
-    filmUrl = "",
-    filmLoading = null,
     filmFallback = false;
   const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)),
     lerp = (a, b, t) => a + (b - a) * t,
-    out = (t) => 1 - Math.pow(1 - clamp(t), 3),
     smooth = (t) => {
       t = clamp(t);
       return t * t * (3 - 2 * t);
@@ -622,20 +618,7 @@
     }
     return ps;
   }
-  function roughCircleProjected(cam, r, y = -0.29, phase = 0, n = 52) {
-    const ps = [];
-    for (let i = 0; i <= n; i++) {
-      const a = (i / n) * Math.PI * 2,
-        noise =
-          1 +
-          0.09 * Math.sin(a * 7 + phase) +
-          0.045 * Math.sin(a * 13 - phase * 1.7),
-        rr = r * noise,
-        p = project(cam, [Math.cos(a) * rr, y, Math.sin(a) * rr]);
-      if (p) ps.push(p);
-    }
-    return ps;
-  }
+
   function drawCrater(cam, t, energy) {
     if (mode === "sales") return;
     const impact = 2.78;
@@ -861,38 +844,7 @@
     });
     ctx.restore();
   }
-  function irregularProgress(t) {
-    const keys = [
-      [0.8, 0],
-      [2, 0.06],
-      [3.2, 0.12],
-      [4.4, 0.19],
-      [5.8, 0.27],
-      [7.2, 0.34],
-      [8.6, 0.42],
-      [10, 0.5],
-      [11.4, 0.59],
-      [12.8, 0.68],
-      [14, 0.77],
-      [15.2, 0.85],
-      [16.2, 0.92],
-      [17.35, 1],
-    ];
-    if (t <= keys[0][0]) return 0;
-    for (let i = 1; i < keys.length; i++)
-      if (t <= keys[i][0]) {
-        const [a, x] = keys[i - 1],
-          [b, y] = keys[i];
-        return lerp(x, y, smooth((t - a) / (b - a)));
-      }
-    return 1;
-  }
-  function crackProgress(t) {
-    if (mode === "welcome") return 0;
-    if (t < 17.8) return irregularProgress(t);
-    if (t < 20.05) return 1 - ease((t - 17.8) / 2.25);
-    return 0;
-  }
+
   function partialPolyline(cam, pts, progress) {
     if (progress <= 0) return [];
     const segs = [];
@@ -944,142 +896,7 @@
     }
     return ps.at(-1);
   }
-  function drawCracks(cam, t) {
-    const base = crackProgress(t);
-    if (base <= 0) return;
-    const retract = mode === "welcome" ? t >= 7.6 : t >= 17.8;
-    const chaos = mode === "sales" && t < 20.2;
-    for (const c of cracks) {
-      const p = clamp((base - c.delay) / (1 - c.delay)),
-        ps = partialPolyline(cam, c.pts, p);
-      if (ps.length < 2) continue;
-      ctx.save();
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      const pulse = 0.55 + 0.45 * Math.sin(t * 6.2 + c.seed * 0.91),
-        flicker = chaos
-          ? 0.72 +
-            0.28 *
-              Math.sin(t * 17 + c.flicker * 11) *
-              Math.sin(t * 4.6 + c.seed * 0.21)
-          : 1;
-      if (chaos) {
-        ctx.strokeStyle = `rgba(2,6,5,${0.82})`;
-        ctx.lineWidth = c.branch ? 4.6 : 7.4;
-        ctx.shadowBlur = 0;
-        path(ps);
-        ctx.stroke();
-        ctx.globalCompositeOperation = "screen";
-        if (c.broken) {
-          ctx.setLineDash(c.branch ? [10, 8, 2, 10] : [18, 12, 4, 12]);
-          ctx.lineDashOffset = -(t * (c.branch ? 46 : 66) + c.seed * 9) % 60;
-        }
-        ctx.strokeStyle = `rgba(61,255,123,${(0.06 + 0.05 * pulse) * flicker})`;
-        ctx.lineWidth = c.branch ? 8.5 : 14.5;
-        ctx.shadowColor = "rgba(53,255,122,.98)";
-        ctx.shadowBlur = c.branch ? 20 : 34;
-        path(ps);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(140,255,136,${(0.09 + 0.09 * pulse) * flicker})`;
-        ctx.lineWidth = c.branch ? 3.2 : 5.8;
-        ctx.shadowColor = "rgba(114,255,128,.92)";
-        ctx.shadowBlur = 12;
-        path(ps);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.strokeStyle = `rgba(248,255,220,${(0.22 + 0.3 * pulse) * flicker})`;
-        ctx.lineWidth = c.branch ? 0.9 : 1.25;
-        ctx.shadowBlur = 3;
-        path(ps);
-        ctx.stroke();
-      } else {
-        ctx.strokeStyle = `rgba(21,255,122,${0.028 + 0.042 * pulse})`;
-        ctx.lineWidth = c.branch ? 7 : 12;
-        ctx.shadowColor = "#1fff77";
-        ctx.shadowBlur = c.branch ? 18 : 28;
-        path(ps);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(39,226,127,${0.1 + 0.1 * pulse})`;
-        ctx.lineWidth = c.branch ? 2.5 : 4.2;
-        ctx.shadowBlur = 8;
-        path(ps);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(195,255,218,${0.32 + 0.38 * pulse})`;
-        ctx.lineWidth = c.branch ? 0.55 : 0.82;
-        ctx.shadowBlur = 2;
-        path(ps);
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-      const travel = retract
-          ? 1 - ((t * 1.45 + c.seed * 0.031) % 1)
-          : (t * 0.82 + c.seed * 0.019) % 1,
-        bead = pointAlong(ps, travel);
-      if (bead) {
-        const radius = chaos ? (c.branch ? 10 : 14) : c.branch ? 8 : 12,
-          gr = ctx.createRadialGradient(
-            bead.x,
-            bead.y,
-            0,
-            bead.x,
-            bead.y,
-            radius,
-          );
-        gr.addColorStop(0, "rgba(245,255,246,.95)");
-        gr.addColorStop(
-          0.18,
-          chaos ? "rgba(179,255,123,.75)" : "rgba(93,255,163,.55)",
-        );
-        gr.addColorStop(1, chaos ? "rgba(64,255,137,0)" : "rgba(45,255,137,0)");
-        ctx.fillStyle = gr;
-        ctx.beginPath();
-        ctx.arc(bead.x, bead.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
-  function drawBlocks(cam, t) {
-    if (mode !== "sales" || t < 1 || t > 20.1) return;
-    const f = irregularProgress(t),
-      collapse = smooth((t - 17.8) / 2.25);
-    for (const b of blocks) {
-      const q = clamp((f - (b.seed % 8) * 0.012) / 0.72),
-        dr = b.r1 * (0.25 + 0.75 * q) * (1 - 0.5 * collapse);
-      const jitter =
-          (0.02 + 0.045 * Math.sin(t * 3.7 + b.seed)) * q * (1 - collapse),
-        a = b.a + b.tilt * q + jitter;
-      const lift =
-        (0.02 + b.lift * 0.12) *
-        Math.sin(Math.PI * clamp((t - 1) / 6)) *
-        q *
-        (1 - collapse);
-      const pts = [
-        [
-          Math.cos(a - b.span) * b.r0,
-          -0.29 + lift,
-          Math.sin(a - b.span) * b.r0,
-        ],
-        [Math.cos(a - b.span) * dr, -0.285 + lift, Math.sin(a - b.span) * dr],
-        [Math.cos(a + b.span) * dr, -0.29 + lift, Math.sin(a + b.span) * dr],
-        [
-          Math.cos(a + b.span) * b.r0,
-          -0.29 + lift,
-          Math.sin(a + b.span) * b.r0,
-        ],
-      ]
-        .map((p) => project(cam, p))
-        .filter(Boolean);
-      if (pts.length === 4) {
-        ctx.fillStyle = `rgba(${5 + (b.seed % 4)},${10 + (b.seed % 7)},${8 + (b.seed % 5)},${0.54 - collapse * 0.46})`;
-        path(pts);
-        ctx.fill();
-        ctx.strokeStyle = `rgba(84,248,151,${0.045 * q * (1 - collapse)})`;
-        ctx.lineWidth = 0.55;
-        ctx.stroke();
-      }
-    }
-  }
+
   function drawImpactDebris(cam, t) {
     return;
   }
