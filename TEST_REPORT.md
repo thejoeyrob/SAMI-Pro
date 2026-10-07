@@ -1,6 +1,61 @@
 # SAMI v2.7.14 — Test report
 
-Tested 22 September 2026. A pass below means the check was run against the final release tree; limitations are stated explicitly.
+Historical v2.7.14 results below were tested 22 September 2026. They do not certify the current release.
+
+## Current v2.8.8 workspace-profile supplement
+
+Checked 7 October 2026:
+
+| Area | Result | Evidence |
+|---|---|---|
+| Profile catalog | **PASS — static** | Five admin profiles combine a layout, theme and accent; the admin action remains behind the existing unlock gate. |
+| Classic Pro layout | **PASS — static** | Wide desktop rules restore the left inspector and bottom command dock; tablet/portrait layout rules remain separate. |
+| Live preview | **NOT RUN in browser** | Profiles apply immediately and are reversible through admin/manual settings, but rendered screenshots and physical device testing remain outstanding. |
+
+## Current v2.8.7 Ask SAMI supplement
+
+Checked 7 October 2026:
+
+| Area | Result | Evidence |
+|---|---|---|
+| Local assistant guidance | **PASS — static** | Local help and project-summary paths are present; common stage/map/undo phrases are recognized. |
+| Failure feedback | **PASS — syntax/static** | Async command failures are caught and shown in the conversation. |
+| Endpoint state | **PASS — static** | The panel distinguishes local mode from a configured-but-unverified endpoint; saving connection settings refreshes the indicator. |
+| OpenAI response | **NOT RUN** | No backend URL or provider credentials were supplied. OpenAI must be called from a secure server endpoint, not directly with a browser-held secret. |
+
+## Current v2.8.6 reliability and data-source supplement
+
+Checked 7 October 2026:
+
+| Area | Result | Evidence |
+|---|---|---|
+| Release tests | **PASS** | `node --test geometry-tests.mjs release-tests.mjs`: 6 tests passed, 0 failed. |
+| CAD site-area guard | **PASS — source/test** | CAD is disabled without an area; clearing an area exits Site Plan and clears its captured background. Legacy CAD state falls back to a valid map base. |
+| OSM gas/water mapping | **AVAILABLE — reference only** | Existing bounded OSM snapshots include mapped gas/water utility tags; coverage is sparse and absence is not evidence of absence. |
+| Official gas-data candidate | **NOT CONNECTED** | SpatialData.gov.scot lists SGN Scotland WFS layers, but its service metadata marks them **Restricted**. See [dataset metadata](https://data.spatialhub.scot/dataset/sgn_gas_network-sgn). |
+| Official water-data candidate | **NOT CONNECTED** | Scottish Water stopcock points and supply-catchment polygons are catalogued, not distribution-main geometry; no clear reuse licence was returned in the catalogue search. See [stopcocks](https://www.data.gov.uk/dataset/scottish-waters-stopcocks) and [supply catchments](https://www.data.gov.uk/dataset/scottish-waters-water-supply-catchments). |
+| what3words | **API-BASED** | Existing route/access lookup and user-key settings remain; a downloadable/licensable local grid database was not identified. |
+| AI source repair | **NOT IMPLEMENTED** | `SAMI_AI_BACKEND_SPEC.md` now describes the authenticated, isolated diff/test/approval/deploy service needed; the static app cannot write repository files or run builds. |
+| Browser/device interaction | **NOT RUN** | No browser automation or physical tablet acceptance was available in this environment. |
+
+The 2.8.5 UI and 2.8.4 verification supplements and older v2.7.14/13 results below do not certify the current rendering.
+
+## Current v2.8.4 verification supplement
+
+Checked 7 October 2026:
+
+| Area | Result | Evidence |
+|---|---|---|
+| JavaScript syntax | **PASS** | `node --check` completed for every root `.js` file. |
+| Regression tests | **PASS** | `node --test geometry-tests.mjs release-tests.mjs`: 4 tests passed, 0 failed. |
+| Release integrity | **PASS** | Generated runtime, HTML, config, manifest, service worker and asset manifest agree on v2.8.4; every generated shell file exists and audio remains outside the critical shell. |
+| Browser zoom | **PASS — static** | Viewport sizing remains enabled without `maximum-scale` or `user-scalable=no`. |
+| Grouping fix | **PASS — syntax only** | Mixed locked/unlocked grouping now selects a feature that was actually grouped. No browser interaction run was available here. |
+| Browser/device acceptance | **NOT RUN** | No Chromium/Playwright installation was detectable in this environment. Use `MANUAL_TEST_CHECKLIST.md` for installed-app, touch, provider and assistive-technology acceptance. |
+
+The historic v2.7.14 and v2.7.13 results below remain useful regression context, but have not been rerun against v2.8.4.
+
+---
 
 ## v2.7.14 feedback-fix verification
 

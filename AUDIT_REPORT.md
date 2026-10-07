@@ -1,5 +1,7 @@
 # SAMI v2.7.13 - Audit report
 
+> **Historical report:** this audit assessed the v2.7.13 release, not the current v2.8.4 tree. Its scores and “fixed” findings below are retained as historical evidence and must not be read as a fresh audit or certification of v2.8.4. Current checks and remaining verification gaps are recorded in `TEST_REPORT.md`.
+
 ## Provenance and recovery
 
 - Supplied v2.7.6 ZIP SHA-256: `fa728976f99addfad9d30d3159cda76714bf2b8ec3adda047b63fcb342ed2a35` - verified before use.

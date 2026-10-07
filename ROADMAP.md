@@ -1,4 +1,6 @@
-# SAMI — Proposed, not applied after v2.7.13
+# SAMI — Historical proposed improvements
+
+> This backlog was written for v2.7.13 and has not been reconciled against the current v2.8.4 source tree. Treat items below as candidates to verify, not a current list of missing features.
 
 Ordered by field value and risk reduction. These items were deliberately not improvised into this static release.
 

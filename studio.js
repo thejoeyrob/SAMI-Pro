@@ -1603,7 +1603,7 @@ window.SAMIStudioEngine = function (C, O) {
       ) +
       '<p class="subtle">Normal operation uses bundled recordings offline. If an answer is not covered, SAMI uses the generic recorded response unless live fallback is explicitly enabled.</p><div class="section-title">SAMI AI</div><div class="card"><strong>' +
       (ai ? "Connected endpoint configured" : "Local command engine only") +
-      '</strong><p class="subtle">The local engine can operate SAMI tools. A connected AI endpoint adds natural questions, project-aware answers and source-grounded UK construction guidance. The OpenAI API key must stay on the server, never in this PWA.</p></div>' +
+      '</strong><p class="subtle">Speech recognition turns your voice into a request. Local commands work on-device; open-ended questions need a reachable HTTPS AI backend. This endpoint can connect an OpenAI-compatible service, but its API key must stay on that server. Enter the endpoint URL here, never the provider key.</p></div>' +
       F(
         "connectedAiUrl",
         "SAMI AI HTTPS endpoint",
@@ -2162,6 +2162,7 @@ window.SAMIStudioEngine = function (C, O) {
             throw Error("Use an HTTPS endpoint.");
           C.setPref(key, value);
         }
+        window.dispatchEvent(new Event("sami:assistant-config"));
         C.toast("Connections saved.");
         return;
       }

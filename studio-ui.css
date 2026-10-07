@@ -1,0 +1,613 @@
+/* SAMI studio surface: conventional editor chrome, unchanged tool behavior. */
+:root {
+  --command-h: 60px;
+  --studio-divider: color-mix(in srgb, var(--line) 78%, transparent);
+  font-family: "Avenir Next", "SF Pro Text", "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+.topbar {
+  background: color-mix(in srgb, var(--panel) 88%, var(--bg));
+  border-bottom-color: var(--studio-divider);
+  gap: 22px;
+}
+
+.brand-button {
+  width: 96px;
+  min-width: 96px;
+}
+
+.project-title {
+  font-size: 15px !important;
+  font-weight: 650;
+}
+
+.project-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+#saveState {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#saveState::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  content: "";
+}
+
+#saveState[data-state="saving"]::before {
+  background: var(--warn);
+}
+
+#saveState[data-state="failed"]::before {
+  background: var(--danger);
+}
+
+.modebar {
+  background: var(--panel);
+  border-bottom-color: var(--studio-divider);
+}
+
+.mode-tabs {
+  gap: 3px;
+}
+
+.mode-tabs button {
+  min-height: 44px;
+  padding-inline: 16px;
+  border-radius: 5px 5px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mode-tabs button.active {
+  background: var(--surface);
+  box-shadow: inset 0 -2px var(--accent);
+  border: 0;
+}
+
+.inspector {
+  box-shadow: none;
+}
+
+#inspectorTabs {
+  gap: 3px;
+  padding: 7px 10px 0;
+  background: var(--panel);
+  border-bottom-color: var(--studio-divider);
+}
+
+#inspectorTabs button {
+  border-radius: 5px 5px 0 0;
+  font-size: 12px;
+}
+
+#inspectorTabs button.active {
+  background: var(--surface);
+  box-shadow: inset 0 -2px var(--accent);
+}
+
+.drawer-head {
+  padding: 18px 18px 8px;
+}
+
+.drawer-head h2 {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.drawer-content {
+  padding: 14px 18px 28px;
+  scrollbar-color: var(--line2) transparent;
+}
+
+.drawer-content .section-title,
+.drawer-content .section-heading {
+  margin-top: 22px;
+  padding-top: 13px;
+  border-top: 1px solid var(--studio-divider);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.drawer-content button {
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.drawer-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+.drawer-content select,
+.drawer-content textarea {
+  border-radius: 5px;
+}
+
+.asset-tile,
+.layout-choice,
+.compact-section summary {
+  border-radius: 5px;
+}
+
+.global-menu {
+  border-radius: 7px;
+}
+
+/* Desktop: canvas, contextual controls, and a right-side task/properties panel. */
+@media (min-width: 1200px) and (min-aspect-ratio: 1/1) and (hover: hover) and (pointer: fine) {
+  :root {
+    --inspector: 336px;
+    --command-h: 60px;
+  }
+
+  .topbar {
+    height: calc(62px + env(safe-area-inset-top));
+    min-height: calc(62px + env(safe-area-inset-top));
+    padding-top: calc(9px + env(safe-area-inset-top));
+    padding-bottom: 9px;
+  }
+
+  .modebar {
+    height: 52px;
+    padding-inline: 18px;
+  }
+
+  .mode-tabs {
+    width: auto;
+  }
+
+  .mode-tabs button {
+    flex: 0 0 auto;
+    padding-inline: 18px;
+  }
+
+  .mode-caption {
+    display: block;
+    margin-left: auto;
+    padding-right: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .inspector {
+    left: auto;
+    right: 0;
+    width: calc(var(--inspector) + env(safe-area-inset-right));
+    padding-right: env(safe-area-inset-right);
+    padding-left: 0;
+    border-right: 0;
+    border-left: 1px solid var(--studio-divider);
+  }
+
+  #mapViewport {
+    left: 0;
+    right: calc(var(--inspector) + env(safe-area-inset-right));
+  }
+
+  #inspectorTabs {
+    min-height: 54px;
+    padding: 8px 12px 0;
+  }
+
+  #inspectorTabs button {
+    min-height: 46px;
+  }
+
+  #inspectorTabs #inspectorCollapse .i {
+    transform: rotate(180deg);
+  }
+
+  .drawer-head {
+    padding: 20px 20px 8px;
+  }
+
+  .drawer-content {
+    padding: 14px 20px 30px;
+  }
+
+  #restoreInspector {
+    right: 0;
+    left: auto;
+    border-radius: 5px 0 0 5px;
+  }
+
+  .canvas-toolbar {
+    top: 12px;
+    right: auto;
+    left: 14px;
+  }
+
+  .base-switch {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 6px;
+    box-shadow: none;
+  }
+
+  .base-switch button {
+    min-height: 38px;
+    padding-inline: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .base-switch button.active {
+    background: var(--hover);
+    box-shadow: inset 0 0 0 1px var(--line2);
+  }
+
+  #baseCollapse {
+    display: none !important;
+  }
+
+  .area-chip {
+    top: 62px;
+    left: 14px;
+    max-width: min(340px, calc(100% - var(--inspector) - 120px));
+  }
+
+  .area-chip button {
+    min-height: 40px;
+    border-radius: 5px;
+    font-size: 12px;
+  }
+
+  .map-controls {
+    top: 12px;
+    right: calc(var(--inspector) + 14px + env(safe-area-inset-right));
+    gap: 5px;
+  }
+
+  .map-controls button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    border-color: var(--line2);
+    box-shadow: 0 2px 8px #0003;
+  }
+
+  .primary-command-bar {
+    top: 12px;
+    right: calc(var(--inspector) + 72px + env(safe-area-inset-right));
+    bottom: auto;
+    left: 112px;
+    width: max-content;
+    max-width: calc(100% - var(--inspector) - 210px);
+    min-height: 52px;
+    margin: 0 auto;
+    padding: 3px;
+    gap: 2px;
+    border-color: var(--line2);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    box-shadow: 0 2px 8px #0003;
+    backdrop-filter: blur(10px);
+  }
+
+  .primary-command-bar > button,
+  .primary-command-bar .command-history > button {
+    min-width: 72px;
+    min-height: 44px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .primary-command-bar .i {
+    width: 19px;
+    height: 19px;
+  }
+
+  .command-history {
+    gap: 2px;
+  }
+
+  .draw-status,
+  .selection-bar {
+    right: calc(var(--inspector) + 84px + env(safe-area-inset-right));
+    left: 18px;
+  }
+
+  .draw-status {
+    border-radius: 6px;
+  }
+
+  .selection-bar {
+    border-radius: 6px;
+  }
+
+  .selection-bar.group-picking:not([hidden]) {
+    right: calc(var(--inspector) + 84px + env(safe-area-inset-right));
+    left: 18px;
+  }
+}
+
+/* Touch-first tablets keep the bottom command dock and gain comfortable targets. */
+@media (min-width: 700px) and (hover: none),
+  (min-width: 700px) and (pointer: coarse) {
+  .topbar {
+    min-height: 64px;
+  }
+
+  .top-actions button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .modebar {
+    min-height: 52px;
+  }
+
+  .mode-tabs button {
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  #inspectorTabs button {
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  .map-controls button {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .primary-command-bar > button,
+  .primary-command-bar .command-history > button {
+    min-height: 50px;
+    min-width: 60px;
+    font-size: 12px;
+  }
+
+  .drawer-content button,
+  .drawer-content .compact-section summary {
+    min-height: 48px;
+  }
+}
+
+@media (min-width: 1200px) and (min-aspect-ratio: 1/1) and (hover: hover) and (pointer: fine) {
+  html[data-layout="touch"] .inspector {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--inspector-height, 38dvh);
+    max-height: 440px;
+    padding-right: env(safe-area-inset-right);
+    padding-left: env(safe-area-inset-left);
+    border: 0;
+    border-top: 1px solid var(--studio-divider);
+  }
+
+  html[data-layout="touch"] #mapViewport {
+    right: 0;
+    bottom: var(--inspector-height, 38dvh);
+  }
+
+  html[data-layout="touch"] #restoreInspector {
+    right: auto;
+    left: 0;
+  }
+
+  html[data-layout="touch"] .primary-command-bar {
+    top: auto;
+    right: auto;
+    bottom: calc(var(--inspector-height, 38dvh) + 10px);
+    left: 50%;
+    max-width: calc(100vw - 20px);
+    margin: 0;
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-tabs button,
+  .drawer-content button {
+    transition: none;
+  }
+}
+
+.workspace-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 10px;
+  margin: 10px 0 20px;
+}
+
+.workspace-profile-choice {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  align-content: start;
+  gap: 5px 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  text-align: left;
+  background: var(--panel);
+}
+
+.workspace-profile-choice:hover {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--line2));
+}
+
+.workspace-profile-choice.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.workspace-profile-choice strong {
+  align-self: end;
+  font-size: 14px;
+}
+
+.workspace-profile-choice small,
+.workspace-profile-meta {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.workspace-profile-meta {
+  align-self: end;
+  padding-top: 2px;
+  color: var(--accent);
+}
+
+.workspace-profile-preview {
+  position: relative;
+  grid-row: 1 / span 3;
+  width: 78px;
+  aspect-ratio: 1.35;
+  overflow: hidden;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: #101418;
+}
+
+.workspace-profile-preview i,
+.workspace-profile-preview b,
+.workspace-profile-preview em {
+  position: absolute;
+  display: block;
+  border: 1px solid #66736e;
+}
+
+.workspace-profile-preview i {
+  inset: 0 0 auto;
+  height: 8px;
+  border-width: 0 0 1px;
+  background: #28312f;
+}
+
+.workspace-profile-preview b {
+  inset: 10px auto 3px 3px;
+  width: 18px;
+  background: #263a32;
+}
+
+.workspace-profile-preview em {
+  inset: 10px 3px 3px 24px;
+  background: #dce2df;
+}
+
+.workspace-profile-preview[data-profile="studio"] b,
+.workspace-profile-preview[data-profile="drafting"] b {
+  right: 3px;
+  left: auto;
+}
+
+.workspace-profile-preview[data-profile="studio"] em,
+.workspace-profile-preview[data-profile="drafting"] em {
+  right: 24px;
+  left: 3px;
+}
+
+.workspace-profile-preview[data-profile="field"] b {
+  inset: auto 3px 3px;
+  width: auto;
+  height: 13px;
+}
+
+.workspace-profile-preview[data-profile="field"] em {
+  inset: 10px 3px 19px;
+}
+
+.workspace-profile-preview[data-profile="focus"] b {
+  width: 9px;
+}
+
+.workspace-profile-preview[data-profile="focus"] em {
+  left: 15px;
+}
+
+.workspace-profile-preview[data-profile="drafting"] {
+  background: #e9e5d9;
+}
+
+.workspace-profile-preview[data-profile="drafting"] em {
+  background: #fffdf7;
+}
+
+@media (min-width: 1200px) and (min-aspect-ratio: 1/1) and (hover: hover) and (pointer: fine) {
+  html[data-layout="classic"] body:not(.inspector-collapsed) {
+    --inspector: 324px;
+  }
+
+  html[data-layout="classic"] .inspector {
+    right: auto;
+    left: 0;
+    width: calc(var(--inspector) + env(safe-area-inset-left));
+    padding-right: 0;
+    padding-left: env(safe-area-inset-left);
+    border-right: 1px solid var(--studio-divider);
+    border-left: 0;
+  }
+
+  html[data-layout="classic"] #mapViewport {
+    right: 0;
+    left: calc(var(--inspector) + env(safe-area-inset-left));
+  }
+
+  html[data-layout="classic"] #restoreInspector {
+    right: auto;
+    left: env(safe-area-inset-left);
+    border-radius: 0 5px 5px 0;
+  }
+
+  html[data-layout="classic"] .canvas-toolbar {
+    right: calc(60px + env(safe-area-inset-right));
+    left: auto;
+  }
+
+  html[data-layout="classic"] .base-switch {
+    display: none;
+  }
+
+  html[data-layout="classic"] .map-style-open .base-switch {
+    display: flex;
+  }
+
+  html[data-layout="classic"] .map-controls {
+    right: calc(10px + env(safe-area-inset-right));
+  }
+
+  html[data-layout="classic"] .primary-command-bar {
+    top: auto;
+    right: calc(72px + env(safe-area-inset-right));
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: calc(var(--inspector) + 14px + env(safe-area-inset-left));
+    max-width: calc(100% - var(--inspector) - 100px);
+    margin: 0 auto;
+    transform: none;
+  }
+
+  html[data-layout="classic"] .draw-status,
+  html[data-layout="classic"] .selection-bar {
+    left: calc(var(--inspector) + 18px + env(safe-area-inset-left));
+  }
+
+  html[data-layout="classic"] .selection-bar.group-picking:not([hidden]) {
+    left: calc(var(--inspector) + 18px + env(safe-area-inset-left));
+  }
+}
+
+@media (max-width: 620px) {
+  .workspace-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}

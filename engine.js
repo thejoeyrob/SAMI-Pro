@@ -120,7 +120,7 @@
       source:
         "OpenStreetMap power=cable / man_made=pipeline / utility features",
       status: "Built-in bounded snapshot",
-      note: "Gas, water, sewer/drainage, electricity and telecom references where mapped. Coverage is incomplete and this is never a safe-dig record.",
+      note: "Sparse contributor-mapped gas, water, sewer/drainage, electricity and telecom references only. No complete openly licensed UK-wide mains dataset is connected; this is never a safe-dig record.",
     },
     {
       id: "planning-data-constraints",
@@ -938,6 +938,7 @@
       }
     };
     $("#askInput").oninput = updateAskLabel;
+    window.addEventListener("sami:assistant-config", updateAskLabel);
     $("#closeSami").onclick = () => $("#samiPanel").classList.remove("open");
     $("#muteSami").onclick = () => {
       setPref(
@@ -1059,17 +1060,30 @@
     const drawingBtn = $('[data-base="drawing"]');
     if (drawingBtn) {
       drawingBtn.hidden = mode !== "plan";
+      drawingBtn.disabled = !state.project.area;
+      drawingBtn.setAttribute("aria-disabled", String(!state.project.area));
+      drawingBtn.title = state.project.area
+        ? "CAD site drawing"
+        : "Define a site area to enable CAD";
     }
   }
   function switchBase(base, save = true) {
-    if (base === "drawing" && state.mode !== "plan") base = state.project.exploreBase || "satellite";
+    const exploreBase = ["street", "satellite"].includes(
+      state.project.exploreBase,
+    )
+      ? state.project.exploreBase
+      : "satellite";
+    if (base === "drawing" && state.mode !== "plan") base = exploreBase;
     if (!["street", "satellite", "drawing"].includes(base)) return;
     if (base === "drawing" && !state.project.area) {
-      openDrawer("area");
-      toast(
-        "Define the site drawing area before creating the bounded CAD view.",
-      );
-      return;
+      if (save) {
+        openDrawer("area");
+        toast(
+          "Define the site drawing area before creating the bounded CAD view.",
+        );
+        return;
+      }
+      base = exploreBase;
     }
     Object.values(state.bases).forEach((l) => {
       if (state.map.hasLayer(l)) state.map.removeLayer(l);
@@ -1082,7 +1096,8 @@
       const on = b.dataset.base === base;
       b.classList.toggle("active", on);
       b.setAttribute("aria-pressed", String(on));
-      b.disabled = false;
+      b.disabled = b.dataset.base === "drawing" && !state.project.area;
+      b.setAttribute("aria-disabled", String(b.disabled));
     });
     $("#sourceChip").textContent =
       base === "drawing"
@@ -1380,12 +1395,14 @@
       return;
     }
     const groupId = uid();
-    let count = 0;
+    let count = 0,
+      firstGroupedId = null;
     for (const id of state.multiSelection) {
       const f = state.project.features.find((x) => x.id === id);
       if (f && !f.properties.locked) {
         f.properties.groupId = groupId;
         f.properties.groupUngrouped = false;
+        firstGroupedId ??= id;
         count++;
       }
     }
@@ -1393,9 +1410,8 @@
       toast("At least two items must not be locked to create a group.");
       return;
     }
-    const firstId = state.multiSelection.values().next().value;
     state.multiSelection.clear();
-    state.selected = firstId;
+    state.selected = firstGroupedId;
     commit();
     openDrawer("selection");
     toast(count + " items grouped.");
@@ -1480,6 +1496,17 @@
     state.project.planBaseMeta = null;
     state.selected = null;
     cancelDraw();
+    if (state.base === "drawing") {
+      const fallback = ["street", "satellite"].includes(
+        state.project.exploreBase,
+      )
+        ? state.project.exploreBase
+        : "satellite";
+      state.project.planBaseStyle = fallback;
+      state.project.base = fallback;
+      switchBase(fallback, false);
+    }
+    if (state.mode === "plan") setMode("map");
     commit();
     openDrawer("area");
     toast(
@@ -8102,6 +8129,12 @@
         : $("#askInput").value.trim()
           ? "Send request"
           : "Ask SAMI";
+    const aiConfigured = !!samiAiEndpoint(),
+      capability = $("#assistantCapability");
+    if (capability)
+      capability.textContent = aiConfigured
+        ? "AI endpoint configured · availability not verified"
+        : "Local commands · AI not connected";
     const ariaLabel = active
       ? "Stop listening"
       : $("#askInput").value.trim()
@@ -8122,7 +8155,9 @@
 
     $("#voiceHint").textContent = active
       ? "Speak naturally · tap the same button to stop"
-      : "Tap Ask SAMI to speak · type and press Enter to send";
+      : aiConfigured
+        ? "Ask naturally · voice and typed requests use the configured AI endpoint"
+        : "Local commands work now · connect an HTTPS AI backend for open questions";
   }
   function handleAskButton() {
     primeSpeech();
@@ -8246,7 +8281,13 @@
     updateAskLabel();
     addMessage("user", q);
     $("#samiPanel").classList.add("open");
-    handleCommand(q);
+    void handleCommand(q).catch((error) => {
+      console.error("SAMI request failed", error);
+      samiSay(
+        "I couldn't complete that request. " +
+          String(error?.message || "Try a different command.").slice(0, 180),
+      );
+    });
   }
   function addMessage(who, text, source) {
     const d = document.createElement("div");
@@ -8551,9 +8592,62 @@
     }
     return false;
   }
+  function localProjectSummary() {
+    const project = state.project;
+    if (!project) return "No project is open.";
+    const features = (project.features || []).filter(
+        (f) => !f.properties?.guideHidden,
+      ),
+      counts = {};
+    for (const f of features) {
+      const type = f.properties?.type || "other";
+      counts[type] = (counts[type] || 0) + 1;
+    }
+    const lines = [
+      `${project.name || "Untitled site"}.`,
+      `Site area: ${project.area ? areaText() : "not defined"}.`,
+      `${features.length} project items total.`,
+    ];
+    if (counts.panel) lines.push(`${counts.panel} Trakway panels.`);
+    if (counts.asset) lines.push(`${counts.asset} site assets.`);
+    if (counts.service) lines.push(`${counts.service} service or constraint records.`);
+    if (project.routes?.length)
+      lines.push(`${project.routes.length} saved route${project.routes.length === 1 ? "" : "s"}.`);
+    return lines.join(" ");
+  }
+  function localAssistantHelp() {
+    const aiNote = samiAiEndpoint()
+      ? "An AI endpoint is configured, but SAMI cannot confirm it is reachable until it successfully answers a request."
+      : "Open-ended questions need a connected HTTPS AI backend; no OpenAI key belongs in this app.";
+    samiSay(
+      "I can run local workspace commands and report this project's contents. Try: open the site plan; open the route; show services; switch to satellite; define the site area; measure a line; add a note; create a 15 by 15 metre Lion pad; summarize this project; undo. " +
+        aiNote,
+    );
+  }
   async function handleCommand(q) {
     const n = q.toLowerCase().trim();
-    if (/^(undo|undo that|go back one)[.!]?$/.test(n)) {
+    if (/^(help|commands|what can you do|what can sami do)[.!?]?$/.test(n)) {
+      localAssistantHelp();
+      return;
+    }
+    if (
+      /\b(summarize|summary|project status|what(?:'s| is) in (?:the )?(?:project|site)|how many (?:items|objects|assets))\b/.test(n)
+    ) {
+      samiSay(localProjectSummary());
+      return;
+    }
+    if (/\b(open|show|switch to|use)\s+(?:the\s+)?cad\b/.test(n)) {
+      if (!state.project.area) {
+        openDrawer("area");
+        samiSay("Define a site area first. CAD will then show only that site area and its configured bleed.");
+        return;
+      }
+      setMode("plan");
+      switchBase("drawing");
+      samiSay("CAD site drawing opened for the selected site area only.");
+      return;
+    }
+    if (/^(undo|undo that|undo last (?:step|change)|go back one)[.!?]?$/.test(n)) {
       undo();
       samiSay("Undo requested.");
       return;
@@ -8580,7 +8674,7 @@
       );
       return;
     }
-    if (/site drawing|plan drawing|drawing view|open (the )?plan/.test(n)) {
+    if (/site drawing|site plan|plan drawing|drawing view|open (the )?plan|switch to (the )?plan/.test(n)) {
       setMode("plan");
       samiSay(
         "Site Drawing is open. Draw over Map, Satellite or switch separately to the CAD background.",
@@ -8595,7 +8689,8 @@
       return;
     }
     if (tryHandleIntelligentObject(q)) return;
-    if (/map view|street view/.test(n)) {
+    if (/map view|street view|open (the )?map|show (the )?map/.test(n)) {
+      setMode("map");
       switchBase("street");
       samiSay("Map background opened.");
       return;
@@ -8607,7 +8702,7 @@
       );
       return;
     }
-    if (/route to site|hgv route|lorry route|truck route/.test(n)) {
+    if (/route to site|hgv route|lorry route|truck route|open (the )?route/.test(n)) {
       setMode("route");
       samiSay(
         "Route to site is open. Choose the vehicle profile and enter or pick the two route endpoints.",
@@ -8625,7 +8720,7 @@
     ) {
       openDrawer("services");
       samiSay(
-        "Choose the types to display. Service data is limited to the site plus the quarter-mile buffer and should be verified before safety-critical use.",
+        "Choose the types to display. Public service data is limited to the site plus about 500 feet, may be incomplete, and must be checked against authoritative records before safety-critical use.",
       );
       return;
     }

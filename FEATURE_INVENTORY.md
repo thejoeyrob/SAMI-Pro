@@ -1,5 +1,7 @@
 # SAMI v2.7.13 — Feature inventory and baseline trace
 
+> **Historical inventory:** counts and dependency details below describe the v2.7.6/v2.7.13 comparison, not the current v2.8.4 tree. Re-run the inventory before treating these counts as current.
+
 This document preserves the full pre-edit v2.7.6 inventory below so the regression boundary remains auditable. The continuation also compared the repaired GitHub v2.7.12 baseline (`aa59b001941f3d761c490298e6ae54bf0d965e03`) before applying v2.7.13 changes.
 
 The automated v2.7.12 inventory found 20 active HTML/JS source files, 191 literal controls, 113 literal actions, 24 literal `sami.*` storage keys, 59 HTML sinks, 79 dependency edges and 681 named functions. The final v2.7.13 inventory found 20 active sources, 194 controls, 117 actions, 26 keys, 59 sinks, 89 dependency edges and 700 named functions. No literal baseline control, action or storage key is missing.

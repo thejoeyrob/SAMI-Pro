@@ -696,7 +696,45 @@ window.SAMIWorkspaceController = function (C, O) {
     compact: ["Compact", "Narrow tools panel with more map space."],
     studio: ["Studio", "Wide properties panel for desktop drawing."],
     focus: ["Canvas focus", "Tools fold away when you start drawing."],
-    touch: ["Touch", "Large controls and a bottom tools panel."]
+    touch: ["Touch", "Large controls and a bottom tools panel."],
+    classic: ["Classic Pro", "Familiar left-side tools with the modern command dock."],
+  };
+  const WORKSPACE_PROFILES = {
+    classic: {
+      name: "Classic Pro",
+      note: "Familiar left inspector, map controls and bottom command dock, with current touch targets and save feedback.",
+      layout: "classic",
+      appearance: "graphite",
+      accent: "#54d79a",
+    },
+    studio: {
+      name: "Studio Pro",
+      note: "Right-side properties, persistent map styles and a focused desktop canvas.",
+      layout: "studio",
+      appearance: "graphite",
+      accent: "#54d79a",
+    },
+    field: {
+      name: "Field Tablet",
+      note: "Bottom task sheet, high-contrast controls and generous touch targets.",
+      layout: "touch",
+      appearance: "arcticLight",
+      accent: "#267a9b",
+    },
+    drafting: {
+      name: "Paper Drafting",
+      note: "Light drawing-board surfaces with a wide properties panel for review.",
+      layout: "studio",
+      appearance: "paper",
+      accent: "#356f86",
+    },
+    focus: {
+      name: "Canvas Focus",
+      note: "A broad drawing surface with tools kept compact and close to the canvas.",
+      layout: "focus",
+      appearance: "carbon",
+      accent: "#d1a34a",
+    },
   };
   let adminUnlocked = false;
   function applyLayout(name) {
@@ -705,10 +743,39 @@ window.SAMIWorkspaceController = function (C, O) {
     C.setPref("sami.layout",name);
     requestAnimationFrame(() => S.map?.invalidateSize());
   }
+  function applyWorkspaceProfile(key) {
+    const profile = WORKSPACE_PROFILES[key];
+    if (!profile) return false;
+    applyAppearance(profile.appearance);
+    applyAccent(profile.accent);
+    applyLayout(profile.layout);
+    C.setPref("sami.workspaceProfile", key);
+    C.toast(profile.name + " workspace applied.");
+    return true;
+  }
   function adminHTML() {
-    if (!adminUnlocked) return '<form id="adminLogin"><label class="field-label" for="adminPin">Admin code</label><input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="4" autocomplete="off"><p id="adminError" role="status"></p><button class="primary" type="submit">Unlock layouts</button></form>';
-    const selected = C.readPref("sami.layout") || "guided";
-    return '<p class="subtle">Choose how the workspace is arranged. All layouts use the same project and drawing tools.</p><div class="layout-choices">' + Object.entries(LAYOUTS).map(([key,[name,note]]) => `<button class="layout-choice ${selected === key ? "active" : ""}" data-action="layout:${key}" aria-pressed="${selected === key}"><span class="layout-preview" data-preview="${key}"><i></i><b></b></span><strong>${name}</strong><small>${note}</small></button>`).join("") + '</div>' + B("Done", "adminDone");
+    if (!adminUnlocked)
+      return '<form id="adminLogin"><label class="field-label" for="adminPin">Admin code</label><input id="adminPin" class="field" type="password" inputmode="numeric" maxlength="4" autocomplete="off"><p id="adminError" role="status"></p><button class="primary" type="submit">Unlock interface options</button></form>';
+    const selected = C.readPref("sami.layout") || "guided",
+      selectedProfile = C.readPref("sami.workspaceProfile") || "";
+    return (
+      '<div class="stage-intro"><small>WORKSPACE DESIGN</small><h3>Choose a complete interface</h3><p class="subtle">Profiles apply a layout, appearance and accent together. They update this workspace immediately and never change project data.</p></div><div class="workspace-profile-grid">' +
+      Object.entries(WORKSPACE_PROFILES)
+        .map(
+          ([key, profile]) =>
+            `<button class="workspace-profile-choice ${selectedProfile === key ? "active" : ""}" data-action="workspaceProfile:${key}" aria-pressed="${selectedProfile === key}"><span class="workspace-profile-preview" data-profile="${key}" aria-hidden="true"><i></i><b></b><em></em></span><strong>${profile.name}</strong><small>${profile.note}</small><span class="workspace-profile-meta">${LAYOUTS[profile.layout][0]} · ${APPEARANCES[profile.appearance].name}</span></button>`,
+        )
+        .join("") +
+      '</div><div class="section-title">Fine-tune layout</div><p class="subtle">Change the panel arrangement without changing your chosen theme.</p><div class="layout-choices">' +
+      Object.entries(LAYOUTS)
+        .map(
+          ([key, [name, note]]) =>
+            `<button class="layout-choice ${selected === key ? "active" : ""}" data-action="layout:${key}" aria-pressed="${selected === key}"><span class="layout-preview" data-preview="${key}"><i></i><b></b></span><strong>${name}</strong><small>${note}</small></button>`,
+        )
+        .join("") +
+      '</div><p class="subtle">Change colours, contrast and highlight colour in Appearance.</p>' +
+      B("Done", "adminDone")
+    );
   }
   function chrome() {
     if (!ui.ready) return;
@@ -3199,7 +3266,16 @@ window.SAMIWorkspaceController = function (C, O) {
         renderDrawer("routeToSite");
         return;
       }
-      if (cmd === "layout" && adminUnlocked) { applyLayout(arg); renderDrawer("admin"); return; }
+      if (cmd === "workspaceProfile" && adminUnlocked) {
+        if (applyWorkspaceProfile(arg)) renderDrawer("admin");
+        return;
+      }
+      if (cmd === "layout" && adminUnlocked) {
+        C.setPref("sami.workspaceProfile", "");
+        applyLayout(arg);
+        renderDrawer("admin");
+        return;
+      }
       if (action === "adminDone") { adminUnlocked=false; openDrawer(TABS[S.mode][0][0]); return; }
       if (action === "suggestCadDetail") {
         S.project.planDetail=window.SAMIProjectData.recommendedDetail(G.area(S.project.area),S.project.features.length);
@@ -3211,6 +3287,7 @@ window.SAMIWorkspaceController = function (C, O) {
         return;
       }
       if (cmd === "appearance") {
+        C.setPref("sami.workspaceProfile", "");
         applyAppearance(arg);
         renderDrawer("appearance");
         return;

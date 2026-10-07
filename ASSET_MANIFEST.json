@@ -1,5 +1,5 @@
 {
-  "version": "2.7.23",
+  "version": "2.8.8",
   "shell": [
     "./app.css",
     "./bearing.js",
@@ -21,15 +21,19 @@
     "./marker-icon.png",
     "./marker-shadow.png",
     "./polygon-clipping.js",
+    "./project-data.js",
     "./project-store.js",
     "./pwa.js",
     "./qrcode.js",
     "./sami-badge.png",
     "./sami-wordmark.png",
     "./shape-import.js",
+    "./studio-ui.css",
     "./studio.js",
     "./symbols.js",
+    "./ui-renovation.css",
     "./version.js",
+    "./workspace-flow.css",
     "./workspace.js"
   ],
   "optional": [

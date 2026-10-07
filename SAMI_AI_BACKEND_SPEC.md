@@ -94,3 +94,18 @@ Unknown actions are ignored. The service must not return script, HTML or arbitra
 - Defend against prompt injection from imported notes and files; the server decides sources and actions independently of untrusted project text.
 - Validate the response against a JSON schema before returning it. Log source URLs and accepted/rejected action types for audit without logging secrets.
 - Return a JSON error with an appropriate HTTP status. The client will report the failure while keeping local drawing tools usable.
+
+## Developer repair mode — separate service required
+
+This workflow is **not implemented by the static PWA or the v1 assistant contract**. A browser-only app cannot read/write the checked-out source tree, run project tests, or publish a service-worker update. Do not simulate this with arbitrary AI actions or generated JavaScript in the live page.
+
+A future developer endpoint must be separate from the normal project assistant and must:
+
+- Require an authenticated developer identity and operate only on an isolated worktree/branch with a strict repository path allowlist.
+- Accept a reported fault, app version, relevant diagnostics, and explicitly selected project/source context; exclude client/site data unless the developer knowingly includes it.
+- Return a structured proposal (summary, unified diff, affected paths, risks, and required checks), never executable code for direct evaluation in the page.
+- Apply the proposal only in the isolated worktree, run syntax/tests/build there, and return a reviewable preview URL and test results. Reject the change if checks fail.
+- Require an explicit human approval before merge/deploy. Publish a versioned build; the existing service-worker update flow can then offer **Save & reload** without interrupting unsaved work.
+- Keep provider and Git credentials server-side, audit accepted/rejected diffs, rate-limit requests, and provide rollback to the last known-good build.
+
+Until this service exists, Ask SAMI can provide source-grounded guidance and allowlisted in-app actions only; it cannot repair or deploy SAMI's own source files.

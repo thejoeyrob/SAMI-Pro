@@ -1,3 +1,98 @@
+# SAMI v2.8.8 — Complete workspace profiles
+
+## Changed in v2.8.8
+
+- Added five live admin workspace profiles that combine layout, appearance and accent: Classic Pro, Studio Pro, Field Tablet, Paper Drafting and Canvas Focus.
+- Classic Pro restores the familiar left inspector and bottom command dock while retaining the current stage navigation, touch-sized actions, save feedback and project tools.
+- Added profile thumbnails and descriptions; individual layout and Appearance settings remain independently adjustable. Manual changes clear the active-profile indicator.
+- Kept the existing admin code gate and added release regression coverage for profile definitions and the Classic Pro layout.
+
+## Verification
+
+- Admin profile/release tests pass. Visual desktop and tablet acceptance remains in `MANUAL_TEST_CHECKLIST.md`.
+
+---
+
+# SAMI v2.8.7 — Ask SAMI voice and local command improvements
+
+## Changed in v2.8.7
+
+- Ask SAMI now distinguishes local commands from an AI endpoint that is merely configured; it does not claim that a saved URL is reachable.
+- Added a local command guide and spoken project summary, broadened common phrasing for opening Map, Site Plan, Route and CAD, and improved undo wording.
+- Command exceptions now produce a visible response instead of silently leaving the request unanswered.
+- Voice/AI settings explain that speech recognition is not an LLM and that open-ended answers need a reachable HTTPS backend. OpenAI credentials must remain server-side.
+- Corrected the public-services command guidance to the actual 0.1 mile buffer and clarified its incomplete coverage.
+
+## Verification
+
+- Geometry/release suite: 7 tests pass; all root JavaScript syntax checks and diagnostics pass.
+- No AI backend credentials or endpoint were supplied, so live OpenAI-backed responses were not tested.
+
+---
+
+# SAMI v2.8.6 — Bounded CAD and service-source clarity
+
+## Fixed and clarified in v2.8.6
+
+- CAD is disabled until a site area exists. Clearing an area exits Site Plan/CAD, discards the bounded CAD snapshot, and returns to the saved map base. Legacy projects with an invalid saved CAD base fall back to Street or Satellite.
+- Public gas/water source descriptions now state that OpenStreetMap coverage is sparse and not a utility search. No restricted or unclear-licence utility feed is presented as open data.
+- Confirmed the what3words integration is API-based; there is no bundled/offline UK grid database in this release. SAMI retains coordinate/address use when the API is unavailable.
+- Added a CAD area-gate regression check and specified the separate authenticated preview/approval backend required for future AI-assisted code repairs.
+
+## Verification
+
+- Geometry and release suite: 6 tests pass; engine syntax passes.
+- Live UK data review found no verified, openly licensed UK-wide gas/water mains feed. Browser/device interaction remains for manual acceptance.
+
+---
+
+# SAMI v2.8.5 — Desktop studio and tablet workspace
+
+## Changed in v2.8.5
+
+- Refined the editor chrome with clearer stage navigation, a distinct project/save header, consistent controls, and more legible task sections.
+- On desktop, moved the task/properties inspector to the right, kept Map/Satellite/CAD choices visible, and aligned the Select/Add/Measure/Undo/Redo dock with the top canvas controls.
+- On touch-first tablets, retained the bottom command dock and increased key controls to comfortable touch sizes. Phone sizing and the user-selected Touch layout remain intact.
+- Added `studio-ui.css` to the generated offline shell and added responsive stylesheet integrity checks.
+
+## Verification
+
+- Geometry and release suite: 5 tests pass; all root JavaScript syntax checks and CSS/HTML diagnostics pass.
+- Browser screenshots and physical tablet checks remain outstanding; see `MANUAL_TEST_CHECKLIST.md`.
+
+---
+
+# SAMI v2.8.4 — Reliability and accessibility fixes
+
+## Fixed in v2.8.4
+
+- Reconciled `VERSION.json` with the generated runtime, page, config, manifest, service worker and asset manifest. A release build now keeps the visible version and service-worker cache identity aligned.
+- Restored browser pinch/text zoom by removing viewport settings that prevented user scaling.
+- Multi-selection grouping now focuses the first unlocked feature actually included in the new group, even when the selection also contains locked items.
+- Added dependency-free release tests for version stamps, browser zoom and generated shell asset integrity.
+
+## Verification
+
+- All root JavaScript files pass `node --check`.
+- `node --test geometry-tests.mjs release-tests.mjs`: 4 tests pass.
+- Browser/device integration checks were not run for this release; see `TEST_REPORT.md` and `MANUAL_TEST_CHECKLIST.md`.
+
+---
+
+# SAMI v2.7.23 — Desktop install guidance
+
+- Improved desktop install guidance and the install-gate wording.
+
+---
+
+# SAMI v2.7.22 — Toolbar and startup recovery
+
+- Restored the established map-controls and canvas-toolbar layout after the unified-toolbar experiment caused a startup regression.
+- Restored the Ask SAMI collapse control and guarded optional element lookups so initialization does not stop when a control is absent.
+- Retained the Map/Satellite/CAD controls, Ctrl/⌘ multi-selection and grouping, corner snapping, and measurement annotations.
+
+---
+
 # SAMI v2.7.21 — Brand mark consistency, higher-quality sources
 
 ## Changed in v2.7.21
