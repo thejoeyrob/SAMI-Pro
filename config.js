@@ -105,7 +105,7 @@ window.SAMI_CONFIG = {
   recordedVoiceResponse: "voice-response.8d526f596c.mp3",
   organisation: "JW EDS",
   productName: "SAMI",
-  build: "2.8.8",
+  build: "2.9.0",
   what3wordsApiKey: "FCWMCK0M",
   hgvRouteEndpoint: "",
   siteImageMatchEndpoint: "",

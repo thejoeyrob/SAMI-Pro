@@ -2229,7 +2229,7 @@ window.SAMIStudioEngine = function (C, O) {
         );
         return;
       }
-      O.runAction(action, b);
+      return O.runAction(action, b);
     } catch (e) {
       C.toast(e.message);
     }
@@ -2744,7 +2744,10 @@ window.SAMIStudioEngine = function (C, O) {
     }
     return out;
   }
-  async function refreshOhlSnapshot(opts = {}) {
+  function refreshOhlSnapshot(opts = {}) {
+    return C.runServiceRefresh("ohl", () => refreshOhlSnapshotWork(opts));
+  }
+  async function refreshOhlSnapshotWork(opts = {}) {
     if (!S.project.area) {
       if (!opts.auto) C.openDrawer("area");
       return;
@@ -2790,13 +2793,15 @@ window.SAMIStudioEngine = function (C, O) {
     const adopt = async (fs, { cached = false } = {}) => {
       if (project !== S.project || generation !== S.areaGeneration) return;
       applyEdits(fs);
-      await C.replaceSourceFeatures(
+      const replaced = await C.replaceSourceFeatures(
         "builtin:ohl-osm",
         fs,
         "OHL intelligence snapshot", project, generation,
       );
       if (project !== S.project || generation !== S.areaGeneration)
         return false;
+      if (!replaced && !fs.length && existingMapped.length)
+        return {status:"retained",count:existingMapped.length,message:"No replacement OHL records; previous snapshot kept."};
       project.hiddenTypes = project.hiddenTypes.filter((t) => t !== "service");
       project.serviceVisibility.ohl = true;
       project.meta = project.meta || {};
@@ -2817,7 +2822,7 @@ window.SAMIStudioEngine = function (C, O) {
         C.toast(
           `${lineCount} mapped OHL line records and ${supportCount} mapped support references saved${cached ? " from the last-known-good cache" : ""}. Verify before safety-critical use.`,
         );
-      return true;
+      return {status:cached ? "retained" : fs.length ? "ready" : "empty", count:fs.length, message:cached ? "Using stored OHL records." : fs.length ? "Mapped OHL records loaded." : "No mapped OHL returned. Verify site conditions."};
     };
     try {
       const bbox = [bounds[1], bounds[0], bounds[3], bounds[2]].join(","),
@@ -2837,16 +2842,15 @@ window.SAMIStudioEngine = function (C, O) {
           C.toast(
             "No replacement OHL records were returned. SAMI retained the last-known-good mapped OHL snapshot instead of clearing it.",
           );
-        return;
+        return {status:"retained",count:existingMapped.length,message:project.meta.ohlLastRefreshError};
       }
       if (!fs.length) {
         const cached = loadOhlFallback(bounds);
         if (cached?.features?.length) {
-          await adopt(cached.features, { cached: true });
-          return;
+          return await adopt(cached.features, { cached: true });
         }
       }
-      await adopt(fs);
+      return await adopt(fs);
     } catch (e) {
       if (project !== S.project || generation !== S.areaGeneration) return;
       if (sameSnapshot && existingMapped.length) {
@@ -2858,16 +2862,16 @@ window.SAMIStudioEngine = function (C, O) {
           C.toast(
             "OHL live refresh failed. The last-known-good mapped snapshot has been retained.",
           );
-        return;
+        return {status:"retained",count:existingMapped.length,message:project.meta.ohlLastRefreshError};
       }
       const cached = loadOhlFallback(bounds);
       if (cached?.features?.length) {
-        await adopt(cached.features, { cached: true });
+        const result = await adopt(cached.features, { cached: true });
         if (!opts.auto)
           C.toast(
             "Live OHL source was unavailable, so SAMI restored the last-known-good local snapshot.",
           );
-        return;
+        return result;
       }
       project.meta = project.meta || {};
       project.meta.ohlStale = true;
@@ -2879,6 +2883,7 @@ window.SAMIStudioEngine = function (C, O) {
             e.message +
             ". No saved snapshot was removed.",
         );
+      return {status:cached?.features?.length ? "retained" : "error",message:e.message || "OHL source unavailable; existing records kept."};
     }
   }
   function updateLaunchGate() {
@@ -3045,7 +3050,7 @@ window.SAMIStudioEngine = function (C, O) {
     else if (k === "a") activateMaster("area");
     else if (k === "f") activateMaster(e.shiftKey ? "freeArea" : "freeLine");
     else if (k === "p") activateMaster("place");
-    else if (k === "m") C.startTool("measure", { snap: true });
+    else if (k === "m") window.SAMIWorkspace?.runAction("dimensionTool");
     else if (k === "s") {
       ui.snap = !ui.snap;
       S.options.snap = ui.snap;
@@ -3092,6 +3097,7 @@ window.SAMIStudioEngine = function (C, O) {
           width: Math.max(0.1, Math.min(500, +a.width || 1)),
           category: "My shapes",
           symbolPartsJSON: JSON.stringify(a.parts),
+          symbolSpace: a.symbolSpace || "footprint",
           angle: 0,
           dimensionLocked:
             !a.needsScale &&

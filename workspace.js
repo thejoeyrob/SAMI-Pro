@@ -18,7 +18,9 @@ window.SAMIWorkspaceController = function (C, O) {
   const ui = {
     drawer: "explore",
     drawAsset: "panel_lion",
-    drawMode: "freeArea",
+    drawMode: "line",
+    assetQuery: "",
+    favourites: new Set((() => { try { const v=JSON.parse(C.readPref("sami.favourites") || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } })()),
     assetFamily: "Trakway",
     category: new Set(["Trakway"]),
     serviceMode: "show",
@@ -84,16 +86,19 @@ window.SAMIWorkspaceController = function (C, O) {
     map: [
       ["explore", "Find site"],
       ["area", "Site area"],
+      ["background", "View"],
     ],
     route: [
       ["routeToSite", "Route"],
       ["access", "Entrances"],
+      ["background", "View"],
     ],
     plan: [
-      ["draw", "Add"],
+      ["draw", "Items"],
       ["services", "Services"],
       ["layers", "Objects"],
-      ["background", "Style"],
+      ["background", "View"],
+      ["selection", "Properties"],
     ],
     review: [["review", "Review & export"]],
     create: [
@@ -176,16 +181,14 @@ window.SAMIWorkspaceController = function (C, O) {
     };
   }
   function methodsHTML() {
-    const a = currentAsset();
-    return `<div class="draw-methods" aria-label="Drawing mode">${Object.entries(
-      METHODS,
-    )
-      .map(
-        ([k, [i, n]]) =>
-          `<button data-action="method:${k}" aria-label="${n}" title="${n}" aria-pressed="${k === ui.drawMode}" class="${k === ui.drawMode ? "active" : ""}" ${!a.allowed?.includes(k) ? "disabled" : ""}>${i}<small>${n}</small></button>`,
-      )
-      .join("")}</div>`;
+    const a = currentAsset(), panel = a.type === "panel";
+    const names = panel ? {line:"Run",area:"Pad",place:"Single panel",freeLine:"Freehand run",freeArea:"Freehand pad"}
+      : {place:"Place",line:"Repeat along line",area:"Fill area",freeLine:"Freehand line",freeArea:"Freehand area"};
+    const button = k => `<button data-action="method:${k}" aria-pressed="${k === ui.drawMode}" class="${k === ui.drawMode ? "active" : ""}">${names[k]}</button>`;
+    const allowed = a.allowed || ["place"];
+    return `<div class="placement-modes" aria-label="Placement method">${allowed.filter(k => !k.startsWith("free")).map(button).join("")}</div>${allowed.some(k => k.startsWith("free")) ? details("Freehand tools",`<div class="placement-modes">${allowed.filter(k => k.startsWith("free")).map(button).join("")}</div>`,"freehand") : ""}`;
   }
+
   function sabreOptions() {
     return `<div class="inline-note">Sabre-X: 1.80 m progression × 3.80 m usable width. Joining flanges remain separate from the usable footprint.</div>${C.field("sabreJoint", "Verified joint spacing (mm)", S.project.route.jointSpacingMm || "", "number", 'min="1" max="300" step="1" placeholder="Enter from product joint drawing"')}<label class="switch-row"><span>Joint spacing checked against product drawing</span><input id="sabreVerified" type="checkbox" ${S.project.route.jointVerified ? "checked" : ""}></label>`;
   }
@@ -199,8 +202,11 @@ window.SAMIWorkspaceController = function (C, O) {
         { name },
       ]),
     };
-    for (const [k, a] of Object.entries(C.ASSETS))
-      (groups[a.category || "Site assets"] ??= []).push([k, a]);
+    for (const [k, a] of Object.entries(C.ASSETS)) {
+      const category = /vehicle/i.test(a.category || "") ? "Vehicles" : /plant/i.test(a.category || "") ? "Plant & equipment" : a.category || "Site assets";
+      (groups[category] ??= []).push([k, a]);
+    }
+    groups.Favourites = Object.values(groups).flat().filter(([k]) => ui.favourites.has(k));
     return groups;
   }
   function assetTile(k, a, family = null, hidden = false) {
@@ -216,8 +222,8 @@ window.SAMIWorkspaceController = function (C, O) {
       detail =
         k === "panel_sabre"
           ? "4.00 × 2.00 m panel · special stagger"
-          : a.length
-            ? `${a.length} × ${a.width} m`
+          : a.needsScale ? "Set real dimensions" : a.length
+            ? `${Number(Number(a.length).toFixed(2))} × ${Number(Number(a.width).toFixed(2))} m`
             : kind === "surface"
               ? `Draw ${a.mode}`
               : kind === "annotation"
@@ -225,11 +231,11 @@ window.SAMIWorkspaceController = function (C, O) {
                 : a.category || "Site asset",
       thumb =
         kind === "surface"
-          ? "⎁"
+          ? '<svg viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 48L30 12l55 10-5 26z"/><path d="M22 39l17-17 33 8" stroke-dasharray="4 4"/></svg>'
           : kind === "annotation"
             ? k.endsWith("textBox")
-              ? "T"
-              : "◇"
+              ? '<svg viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="3"><path d="M28 18v-5h44v5M50 13v36M39 49h22"/></svg>'
+              : '<svg viewBox="0 0 100 60" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 50V10M85 50V10M15 22h70M11 26l8-8M81 26l8-8"/><path d="M25 40h50" stroke-dasharray="3 3"/></svg>'
             : C.assetIconSVG(k, a);
     return `<button class="asset-tile ${selected ? "active" : ""}" ${hidden ? "hidden" : ""} ${family ? `data-family="${esc(family)}"` : ""} data-search="${esc((a.name + " " + detail + " " + (family || "")).toLowerCase())}" data-action="choose:${k}" aria-pressed="${selected}" title="${esc(a.name)}" draggable="${canDrag}" ${canDrag ? `data-asset-drag="${esc(k)}"` : ""}><span class="asset-thumb">${thumb}</span><span class="asset-tile-copy"><strong>${esc(a.name)}</strong><small>${esc(detail)}</small></span>${selected ? "<b>✓</b>" : ""}</button>`;
   }
@@ -242,23 +248,20 @@ window.SAMIWorkspaceController = function (C, O) {
     if (a.type === "panel" && ["area", "freeArea"].includes(ui.drawMode))
       html += `<div class="pad-orientation">${C.choice("padOrientation", "Panel orientation", { auto: "Follow first edge", north: "North–south · 0°", east: "East–west · 90°", custom: "Custom bearing" }, S.project.padBearing == null ? "auto" : S.project.padBearing === 0 ? "north" : S.project.padBearing === 90 ? "east" : "custom")}${C.field("padBearing", "Panel length direction (° clockwise from north)", S.project.padBearing ?? 0, "number", 'min="0" max="359.9" step="0.1"')}<p class="subtle">Applies to this pad. Set the direction before drawing; Follow first edge keeps the existing automatic alignment.</p></div>`;
     if (ui.drawAsset === "panel_sabre") html += sabreOptions();
+    if (a.dimensionLocked === false) html += `${a.needsScale ? '<p class="scale-warning">Set the real footprint before placing this imported item.</p>' : ""}<div class="property-grid">${C.field("customAssetLength","Length (m)",a.length,"number",'min="0.1" max="500" step="0.1"')}${C.field("customAssetWidth","Width (m)",a.width,"number",'min="0.1" max="500" step="0.1"')}</div>${a.needsScale ? B("Confirm dimensions","confirmAssetScale",true) : ""}`;
+    if (a.type !== "panel" && !ui.drawAsset.startsWith("annotation_") && ["line","area","freeLine","freeArea"].includes(ui.drawMode))
+      html += C.field("repeatGap","Space between items (m)",S.project.assetGap || 0,"number",'min="0" max="100" step="0.1"');
     return html;
   }
-  function libraryHTML(place = false) {
-    const groups = assetGroups(),
-      families = Object.keys(groups);
-    if (!groups[ui.assetFamily])
-      ui.assetFamily = groups.Trakway ? "Trakway" : families[0];
-    const rows = groups[ui.assetFamily] || [],
-      visible = rows.filter(
-        ([k]) =>
-          place ||
-          ui.assetFamily === "Annotation" ||
-          !k.startsWith("annotation_") ||
-          ANNOTATIONS[k.slice(11)]?.[1] === ui.drawMode ||
-          ui.drawMode === "freeArea",
-      );
-    return `<div class="panel-intro"><strong>Add to plan</strong><small>Choose how to place it, then choose the item.</small></div>${methodsHTML()}${drawSetupHTML()}<div class="active-tool"><i></i><span>${esc(currentAsset()?.name || "Choose an item")}</span>${S.tool ? "<small>Ready · draw on the plan</small>" : "<small>Choose an item below</small>"}</div><label class="asset-search"><span aria-hidden="true">⌕</span><input id="assetSearch" type="search" autocomplete="off" placeholder="Search all assets" aria-label="Search assets"></label><label class="asset-family-picker"><span>Category</span><select id="assetFamily" aria-label="Asset category">${families.map((name) => `<option value="${esc(name)}" ${name === ui.assetFamily ? "selected" : ""}>${esc(name)}</option>`).join("")}</select></label><div class="asset-family-heading"><strong>${esc(ui.assetFamily)}</strong><small id="assetVisibleCount" role="status">${visible.length} ${visible.length === 1 ? "item" : "items"}</small></div>${ui.assetFamily === "Annotation" ? '<p class="subtle annotation-note">Text, arrows and drawing annotations. Use Measure on the canvas for dimensions.</p>' : ""}<div class="asset-grid">${Object.entries(groups).flatMap(([family, items]) => items.map(([k, a]) => assetTile(k, a, family, family !== ui.assetFamily || !visible.some(([key]) => key === k)))).join("")}</div>${details("Selection & library tools", B("Select an area", "selectArea") + B("Import SVG / DXF / Visio", "importShapePack") + B("Shape builder", "stage:create") + B("My logos", "open:branding") + B("Export asset pack", "exportShapePack"), "Selection & library tools")}`;
+  function libraryHTML() {
+    const groups = assetGroups(), families = Object.keys(groups);
+    if (!groups[ui.assetFamily]) ui.assetFamily = "Trakway";
+    const rows = groups[ui.assetFamily] || [], a = currentAsset();
+    const query = ui.assetQuery.trim().toLowerCase();
+    const all = Object.entries(groups).filter(([family]) => family !== "Favourites");
+    const matches = query ? all.flatMap(([family,items]) => items.filter(([k,x]) => (x.name+" "+family).toLowerCase().includes(query)).map(([k,x])=>[k,x,family])) : rows.map(([k,x])=>[k,x,ui.assetFamily]);
+    const preview = a?.name ? `<section class="item-setup"><div class="item-setup-heading"><div><small>SELECTED ITEM</small><strong>${esc(a.name)}</strong></div><button data-action="favourite:${ui.drawAsset}" aria-label="${ui.favourites.has(ui.drawAsset) ? "Remove favourite" : "Save favourite"}" aria-pressed="${ui.favourites.has(ui.drawAsset)}">${ui.favourites.has(ui.drawAsset) ? "★" : "☆"}</button></div>${methodsHTML()}${drawSetupHTML()}${B(ui.drawAsset === "annotation_measure" ? "Add dimension" : a.type === "panel" ? (["area","freeArea"].includes(ui.drawMode) ? "Draw pad" : ui.drawMode === "place" ? "Place panel" : "Draw run") : ui.drawMode === "place" ? "Place on plan" : "Start drawing","startDrawing",true)}</section>` : "";
+    return `<div class="library-intro"><p>Choose an item, then place or draw it.</p><button data-action="importShapePack" title="Import SVG, DXF or Visio">Import</button></div><label class="asset-search"><span aria-hidden="true">⌕</span><input id="assetSearch" type="search" value="${esc(ui.assetQuery)}" autocomplete="off" placeholder="Search items…" aria-label="Search all items"></label><label class="asset-family-picker"><span>Library</span><select id="assetFamily">${families.map(name => `<option value="${esc(name)}" ${name === ui.assetFamily ? "selected" : ""}>${esc(name)} (${groups[name].length})</option>`).join("")}</select></label><div class="asset-family-heading"><strong>${query ? "Search results" : esc(ui.assetFamily)}</strong><small id="assetVisibleCount" role="status">${matches.length} items</small></div><div class="asset-grid">${all.flatMap(([family,items]) => items.map(([k,x]) => assetTile(k,x,family,!matches.some(([id])=>id === k)))).join("")}</div><p class="library-empty" ${matches.length ? "hidden" : ""}>No items here yet. Try another search or add a favourite.</p>${preview}${details("Manage library", B("Create a shape", "stage:create") + B("My imported assets", "myAssets") + B("My logos", "open:branding") + B("Export asset pack", "exportShapePack"), "library-tools")}`;
   }
 
   function exploreHTML() {
@@ -304,6 +307,7 @@ window.SAMIWorkspaceController = function (C, O) {
     if (!f)
       return '<p class="subtle">Select an object to see its properties.</p>';
     const m = f.properties;
+    if (m.dimension) return `<div class="selection-heading"><small>DIMENSION</small><strong>${esc(window.SAMIPlanning.dimensionLabel(G.length(f.geometry.coordinates),m))}</strong></div>${C.field("editLabel","Name",m.label || "Dimension")}${C.field("dimensionOffset","Distance from edge (m)",+(m.dimensionOffset || 0).toFixed(2),"number",'step="0.1"')}${C.choice("dimensionUnits","Units",{m:"Metres",mm:"Millimetres",ft:"Feet"},m.dimensionUnits || "m")}${C.choice("dimensionPrecision","Decimal places",{0:"0",1:"1",2:"2",3:"3"},String(m.dimensionPrecision ?? 2))}<p class="subtle">Snapped endpoints follow their objects when moved or rotated. A negative distance places the label on the other side.</p>${B("Add another dimension","dimensionTool",true)}${B("Delete dimension","editDelete")}`;
     if (m.type === "service") {
       const svc = C.SERVICES[m.serviceType] || {
           name: m.serviceType || "Service / constraint",
@@ -530,7 +534,8 @@ window.SAMIWorkspaceController = function (C, O) {
       a === "ohl" ? -1 : b === "ohl" ? 1 : (counts[b] || 0) - (counts[a] || 0),
     );
     if (!C.SERVICES[ui.serviceEditType]) ui.serviceEditType = "ohl";
-    const tabs = `<div class="segmented">${B("Show", "serviceMode:show", ui.serviceMode === "show")}${B("Add", "serviceMode:add", ui.serviceMode === "add")}${B("Edit", "serviceMode:edit", ui.serviceMode === "edit")}</div>`;
+    const statuses = Object.entries(S.project.serviceStatus || {}).map(([key,st]) => `<div class="source-status" data-state="${esc(st.status)}"><strong>${{ohl:"Overhead electricity",utilities:"Public utilities",constraints:"Planning constraints"}[key] || esc(key)}</strong><span>${esc(st.message || st.status)}</span>${st.checkedAt ? `<small>${new Date(st.checkedAt).toLocaleString("en-GB")}</small>` : ""}</div>`).join("");
+    const tabs = `${statuses}<div class="segmented">${B("Show", "serviceMode:show", ui.serviceMode === "show")}${B("Add", "serviceMode:add", ui.serviceMode === "add")}${B("Edit", "serviceMode:edit", ui.serviceMode === "edit")}</div>`;
     if (ui.serviceMode === "edit") {
       const selected = ui.serviceEditType,
         v = C.SERVICES[selected];
@@ -566,12 +571,16 @@ window.SAMIWorkspaceController = function (C, O) {
     if (warning)
       warning.innerHTML =
         '<strong>Route suitability</strong><p class="subtle">Uses your actual dimensions and gross weight with the configured truck-routing service. Public routing is labelled as a reference preview. Check route restrictions and site access before travel.</p>';
+    const first=template.content.querySelector('.route-endpoint');
+    if(first) first.insertAdjacentHTML("beforebegin",`<div class="route-quick">${B("Use my location","routeCurrentLocation")}</div>`);
+    const submit=template.content.querySelector('[data-action="planHgv"]');
+    if(submit) { submit.disabled=!!S.routeBusy; submit.setAttribute("aria-busy",String(!!S.routeBusy)); }
     return template.innerHTML;
   }
   function backgroundHTML() {
-    if (S.mode !== "plan") return '<p class="subtle">CAD drawing style belongs to Site Plan.</p>' + B("Open Site Plan", "stage:plan", true);
+    if (S.mode !== "plan") return '<div class="section-title">Map background</div><div class="button-pair">' + B("Street map","workspaceBase:street") + B("Satellite","workspaceBase:satellite") + '</div><p class="subtle">Find your site, then define an area to create a CAD drawing.</p>' + B("Define site area", "open:area");
     const suggested=window.SAMIProjectData.recommendedDetail(G.area(S.project.area),S.project.features.length);
-    return `<div class="button-pair">${B("Map", "workspaceBase:street")}${B("Satellite", "workspaceBase:satellite")}${B("CAD", "workspaceBase:drawing")}</div><p class="subtle">Suggested detail: <strong>${suggested}</strong>, based on this site's size and object count.</p>${C.choice("cadDetail","CAD detail",{low:"Low · overview",medium:"Medium · standard",high:"High · detailed"},S.project.planDetail || "high")}${B("Use suggested detail","suggestCadDetail")}${C.field("cadBleed","Drawing bleed (metres)",S.project.planBleed ?? 20,"number",'min="0" max="200"')}<p class="subtle">${S.project.planBaseMeta?.capturedAt ? "Stored CAD snapshot: " + esc(new Date(S.project.planBaseMeta.capturedAt).toLocaleString("en-GB")) : "Capture a CAD background for this site."}</p>${B("Capture / refresh CAD detail", "capturePlanBase")}${B("Fit plan", "fitArea")}${B("Review & export", "review")}`;
+    return `<div class="button-pair">${B("Map", "workspaceBase:street")}${B("Satellite", "workspaceBase:satellite")}${B("CAD", "workspaceBase:drawing")}</div><p class="subtle">Suggested detail: <strong>${suggested}</strong>, based on this site's size and object count.</p>${C.choice("cadDetail","CAD detail",{low:"Low · overview",medium:"Medium · standard",high:"High · detailed"},S.project.planDetail || "high")}${B("Use suggested detail","suggestCadDetail")}${C.field("cadBleed","Drawing bleed (metres)",S.project.planBleed ?? 10,"number",'min="0" max="200"')}<p class="subtle">${S.project.planBaseMeta?.capturedAt ? "Stored CAD snapshot: " + esc(new Date(S.project.planBaseMeta.capturedAt).toLocaleString("en-GB")) : "Capture a CAD background for this site."}</p>${B("Capture / refresh CAD detail", "capturePlanBase")}${B("Fit plan", "fitArea")}${B("Review & export", "review")}`;
   }
   const APPEARANCES = {
     graphite: {
@@ -793,6 +802,7 @@ window.SAMIWorkspaceController = function (C, O) {
     });
     document.body.dataset.stage = selected;
     $("#modeCaption").textContent = "";
+    $("#editorSummary") && ($("#editorSummary").textContent = S.tool ? "Drawing · " + (S.options?.name || S.tool) : `${S.project.features.filter(f=>!f.properties.guideHidden && f.properties.type!=="service").length} objects · ${base.ui.snap ? "Snap on" : "Snap off"}`);
     $("#inspectorTabs").innerHTML =
       (TABS[selected] || TABS.map)
         .map(
@@ -818,6 +828,14 @@ window.SAMIWorkspaceController = function (C, O) {
   }
   function openDrawer(k, reveal = false) {
     k = canonical(k);
+    if (k === "assets" && C.ASSETS[base.ui.asset]) {
+      ui.drawAsset = base.ui.asset;
+      ui.assetFamily = C.ASSETS[base.ui.asset].category || "Site assets";
+      ui.assetQuery = "";
+      ui.drawMode = "place";
+      k = "draw";
+      reveal = true;
+    }
     if (k === "create") {
       setMode("create");
       return;
@@ -1162,7 +1180,7 @@ window.SAMIWorkspaceController = function (C, O) {
     return `<div class="section-title">Drawing assistance</div><label class="switch-row">Snap to geometry<input id="settingSnap" type="checkbox" ${base.ui.snap ? "checked" : ""}></label><label class="switch-row">Measurement grid snap<input id="settingGridSnap" type="checkbox" ${S.project.gridSnap !== false ? "checked" : ""}></label>${C.choice("settingGridStep", "Measurement grid", { 0.1: "0.10 m", 0.25: "0.25 m", 0.5: "0.50 m", 1: "1.00 m", 2: "2.00 m", 5: "5.00 m" }, String(S.project.gridStep || 0.5))}<p class="subtle">Measurements snap to object corners and edges first, then to the selected grid interval.</p><div class="section-title">Presentation</div><label class="switch-row">Prestige mode <small class="subtle">— shine &amp; motion on buttons and the intro</small><input id="settingPrestige" type="checkbox" ${C.readPref("sami.reducedMotion") === "on" ? "" : "checked"}></label><p class="subtle">Off = Simple mode: flat, instant, minimal motion — best for glare, older devices or battery life. Your device's own reduced-motion setting is always respected either way.</p><label class="switch-row">Function name bubbles<input id="settingTips" type="checkbox" ${ui.tooltips ? "checked" : ""}></label><div class="section-title">Location integration</div>${C.field("settingW3wKey", "what3words API key", C.readPref("sami.w3w.key") || "", "password", 'placeholder="Add your own key — leave blank to use the demo key"')}<p class="subtle">${C.readPref("sami.w3w.key") ? "Using your own what3words account." : window.SAMI_CONFIG?.what3wordsApiKey ? "Currently using the built-in demo what3words key. Add your own key above to use your account and quota instead." : "No what3words key configured yet. Coordinates and normal addresses still work without one."} <a href="https://what3words.com/select-plan" target="_blank" rel="noopener">Get your own what3words API key ↗</a></p><div class="section-title">Image recognition</div>${C.field("settingImageMatcher", "Visual image matcher HTTPS endpoint", C.readPref("sami.imageMatch.url") || window.SAMI_CONFIG?.siteImageMatchEndpoint || "", "url", 'placeholder="https://…/match-site-image"')}<p class="subtle">GPS metadata is used first. A connected matcher can identify image-only screenshots; without one, SAMI opens the image on the current map for manual registration instead of failing.</p><div class="section-title">Connected tools</div>${B("Voice & connected services", "open:voice")}${B("Save project file", "backup")}${B("Previous saved versions", "history")}`;
   }
   function helpHTML() {
-    return `<h2>From site to drawing</h2><ol class="help-steps"><li>Complete <b>Project</b> details.</li><li>In <b>Map</b>, find the site and define the area.</li><li>Open <b>Site Plan</b>. Tap <b>Add</b> to choose an item, or <b>Measure</b> on the canvas.</li><li>Use <b>Finish</b> to commit a line or area. Tap an item to edit it.</li><li>Open <b>Route</b>, then <b>Export</b> for the finished drawing pack.</li></ol>${details("Touch & drawing", "<p>Use two fingers to pan or zoom while drawing. Rotation starts locked; tap the N compass to unlock it, reset North or set a bearing. Drag a selected object or its centre handle to move; use ↻ to rotate. Adjustable assets have resize handles. Fixed Trakway panels retain their dimensions.</p><p>Freehand commits automatically when you lift your finger; freehand areas close back to their starting point. Point mode remains editable until you choose Finish, and Undo point removes the last point.</p>", "help-touch")}${details("Keyboard", "<p>V Select · P Place · L Line · A Area · F Freehand · S Snap · Ctrl/⌘ Z Undo · Ctrl/⌘ S Save · Escape Cancel</p>")}${details("Field evidence & services", "<p>Explore notes and photos are project evidence. Enable “Show on issued drawing” only for items you want in the PDF.</p><p>" + CAVEAT + "</p>")}${B("Guided first project", "tutorial")}${B("Why ask SAMI?", "sales")}`;
+    return `<h2>From site to drawing</h2><ol class="help-steps"><li>Complete <b>Project</b> details.</li><li>In <b>Map</b>, find the site and define the area.</li><li>Open <b>Site Plan</b>. Tap <b>Items</b> to choose an item, then choose <b>Run</b>, <b>Pad</b> or <b>Place</b> and press the drawing button.</li><li>Use <b>Finish</b> to commit a line or area. Tap an item to edit it. For dimensions, tap <b>Dimension</b>, pick two corners, then tap where the label should sit.</li><li>Open <b>Route</b>, then <b>Export</b> for the finished drawing pack.</li></ol>${details("Touch & drawing", "<p>Use two fingers to pan or zoom while drawing. Rotation starts locked; tap the N compass to unlock it, reset North or set a bearing. Drag a selected object or its centre handle to move; use ↻ to rotate. Adjustable assets have resize handles. Fixed Trakway panels retain their dimensions.</p><p>Freehand commits automatically when you lift your finger; freehand areas close back to their starting point. Point mode remains editable until you choose Finish, and Undo point removes the last point.</p>", "help-touch")}${details("Keyboard", "<p>V Select · M Dimension · P Place · L Line · A Area · F Freehand · S Snap · Ctrl/⌘ Z Undo · Ctrl/⌘ S Save · Escape Cancel</p>")}${details("Field evidence & services", "<p>Explore notes and photos are project evidence. Enable “Show on issued drawing” only for items you want in the PDF.</p><p>" + CAVEAT + "</p>")}${B("Guided first project", "tutorial")}${B("Why ask SAMI?", "sales")}`;
   }
   function validate() {
     const issues = [],
@@ -1249,25 +1267,25 @@ window.SAMIWorkspaceController = function (C, O) {
   }
   async function save(checkpoint = false, label = "Autosave") {
     if (!ui.ready) return false;
-    const sequence = ++saveSeq;
+    const sequence = ++saveSeq, badge = $("#saveState");
     S.project.session = session();
     if (S.mode === "plan") S.project.planView = captureView();
     else S.project.map = captureView();
     S.project.savedAt = new Date().toISOString();
     S.project.storageRevision = 1;
-    $("#saveState").dataset.state = "saving";
-    $("#saveState").textContent = "Saving…";
+    badge.dataset.state = "saving";
+    badge.textContent = "Saving…";
     try {
       await Store.save(S.project, { checkpoint, label });
       if (sequence === saveSeq) {
-        $("#saveState").dataset.state = "saved";
-        $("#saveState").textContent = "✓ Saved on this device";
+        badge.dataset.state = "saved";
+        badge.textContent = "✓ Saved on this device";
       }
       return true;
     } catch (e) {
-      $("#saveState").dataset.state = "failed";
-      $("#saveState").textContent = "Save failed · download a backup";
-      C.toast(
+      badge.dataset.state = "failed";
+      badge.textContent = "Save failed · download a backup";
+      if (badge.isConnected) C.toast(
         "Device storage could not save this project. Use menu → Download project file.",
       );
       return false;
@@ -1276,6 +1294,11 @@ window.SAMIWorkspaceController = function (C, O) {
   async function loadProject(p) {
     ui.ready = false;
     S.areaGeneration++;
+    S.routeRequest = (S.routeRequest || 0) + 1;
+    S.routeBusy = false;
+    S.planCaptureError = null;
+    S.planCapturePromise = null;
+    S.planCapturing = false;
     S.request?.abort?.();
     clearTimeout(S._ohlAutoRefresh);
     S.cache?.clear();
@@ -1296,7 +1319,8 @@ window.SAMIWorkspaceController = function (C, O) {
     ui.precision.mode = saved.measurement?.mode === "area" ? "area" : "line";
     ui.precision.showMeasurements = saved.measurement?.showMeasurements !== false;
     ui.drawAsset = saved.asset || "panel_lion";
-    ui.drawMode = saved.method || "freeArea";
+    if (!currentAsset().name) ui.drawAsset = "panel_lion";
+    ui.drawMode = saved.method || "line";
     ui.assetFamily = saved.assetFamily || "Trakway";
     ui.category = new Set(saved.categories || ["Trakway"]);
     S.mode = STAGES[saved.mode] ? saved.mode : "project";
@@ -1325,6 +1349,7 @@ window.SAMIWorkspaceController = function (C, O) {
     if (ui.reference?.dataUrl && ui.reference?.bounds)
       showReferenceOverlay(ui.reference.bounds);
     ui.ready = true;
+    window.dispatchEvent(new Event("sami:cadstatus"));
     document.body.classList.toggle("asset-creation-mode", S.mode === "create");
     $("#creatorWorkspace").hidden = S.mode !== "create";
     if (S.mode === "create") base.openCreator();
@@ -1340,6 +1365,13 @@ window.SAMIWorkspaceController = function (C, O) {
     const n = base.normaliseProject(p);
     n.padBearing = typeof p.padBearing === "number" && Number.isFinite(p.padBearing)
       ? ((p.padBearing % 360) + 360) % 360 : null;
+    n.showAutoMeasurements = p.showAutoMeasurements === true;
+    n.serviceStatus = {};
+    for (const key of ["ohl", "utilities", "constraints"]) {
+      const status = p.serviceStatus?.[key];
+      if (status && ["ready", "empty", "retained", "error"].includes(status.status))
+        n.serviceStatus[key] = {status:status.status, message:String(status.message || "").slice(0,1000), count:Math.max(0,+status.count || 0), checkedAt:String(status.checkedAt || "")};
+    }
     n.snapEnabled = p.snapEnabled !== false;
     n.gridSnap = p.gridSnap !== false;
     n.gridStep = [0.1, 0.25, 0.5, 1, 2, 5].includes(+p.gridStep)
@@ -1555,11 +1587,11 @@ window.SAMIWorkspaceController = function (C, O) {
     };
     if (functions[k]) {
       box.innerHTML = functions[k]();
-      const next = {explore:["Continue to Site Plan →","stage:plan"],draw:["Plan route to site →","stage:route"],routeToSite:["Review & export →","stage:review"]}[k];
+      const next = {explore:["Continue to Site Plan →","stage:plan"],routeToSite:["Review & export →","stage:review"]}[k];
       if (next && (k !== "explore" || S.project.area)) box.innerHTML += '<div class="workflow-next">' + B(next[0], next[1], true) + '</div>';
       $("#drawerTitle").textContent =
         {
-          draw: "Add",
+          draw: "Item library",
           place: "Place",
           details: "Project details",
           designer: "Designer details",
@@ -1632,19 +1664,31 @@ window.SAMIWorkspaceController = function (C, O) {
     if (["draw", "place", "assets"].includes(k)) {
       $("#assetFamily")?.addEventListener("change", (e) => {
         ui.assetFamily = e.target.value;
+        ui.assetQuery = "";
         renderDrawer(k);
       });
       $("#assetSearch")?.addEventListener("input", (e) => {
+        ui.assetQuery = e.target.value;
         const q = e.target.value.trim().toLowerCase();
         let count = 0;
         $$(".asset-grid .asset-tile").forEach((tile) => {
-          const show = q ? (tile.dataset.search || "").includes(q) : tile.dataset.family === ui.assetFamily;
+          const show = q ? (tile.dataset.search || "").includes(q) : (ui.assetFamily === "Favourites" ? ui.favourites.has(tile.dataset.action.slice(7)) : tile.dataset.family === ui.assetFamily);
           tile.hidden = !show;
           if (show) count++;
         });
         const label = $("#assetVisibleCount");
         if (label) label.textContent = count + (count === 1 ? " item" : " items");
+        const heading=$(".asset-family-heading strong"),empty=$(".library-empty");
+        if(heading)heading.textContent=q ? "Search results" : ui.assetFamily;
+        if(empty)empty.hidden=count>0;
       });
+      for (const id of ["customAssetLength","customAssetWidth"]) $("#"+id)?.addEventListener("change",()=>{
+        const asset=C.ASSETS[ui.drawAsset];if(!asset || asset.dimensionLocked!==false)return;
+        const length=Number($("#customAssetLength").value),width=Number($("#customAssetWidth").value);
+        if(!(length>=.1 && length<=500 && width>=.1 && width<=500)){C.toast("Enter dimensions between 0.1 and 500 metres.");return;}
+        Object.assign(asset,{length,width});C.saveSoon();
+      });
+      $("#repeatGap")?.addEventListener("change",e=>{S.project.assetGap=Math.max(0,Math.min(100,+e.target.value||0));C.saveSoon();});
       const setPadBearing = (bearing) => {
         S.project.padBearing = bearing;
         if (["panelAreaPoints", "panelAreaFreehand"].includes(S.tool))
@@ -1687,6 +1731,12 @@ window.SAMIWorkspaceController = function (C, O) {
       base.bindAssetPaletteDrag?.();
     }
     if (k === "selection") {
+      for (const key of ["dimensionOffset","dimensionUnits","dimensionPrecision"])
+        $("#"+key)?.addEventListener("change",e=>{
+          const f=C.selectedFeature(); if(!f) return;
+          f.properties[key]=key === "dimensionUnits" ? e.target.value : Number(e.target.value);
+          C.commit();
+        });
       const f = C.selectedFeature();
       if (!f) return;
       $("#editLabel").onchange = (e) => {
@@ -1993,6 +2043,8 @@ window.SAMIWorkspaceController = function (C, O) {
     }
     if (ui.precision.active) setPrecision(false);
     S.routePick = null;
+    S.routeRequest = (S.routeRequest || 0) + 1;
+    S.routeBusy = false;
     if (S.tool)
       ui.drafts[S.mode] = {
         tool: S.tool,
@@ -2000,14 +2052,18 @@ window.SAMIWorkspaceController = function (C, O) {
         options: copy(S.options),
       };
     else delete ui.drafts[S.mode];
-    if (S.mode === "plan") S.project.planView = captureView();
+    if (S.mode === "plan" && !S.areaViewPending) S.project.planView = captureView();
     else if (S.mode === "map") S.project.map = captureView();
     C.cancelDraw();
     S.mode = mode;
     C.switchBase(mode === "plan" ? S.project.planBaseStyle : S.project.exploreBase, false);
     document.body.classList.toggle("asset-creation-mode", mode === "create");
     $("#creatorWorkspace").hidden = mode !== "create";
-    if (mode === "plan") applyView(S.project.planView || S.project.map);
+    if (mode === "plan") {
+      S.areaViewPending = false;
+      if (S.project.planView) applyView(S.project.planView);
+      else requestAnimationFrame(fitArea);
+    }
     else if (mode === "map") applyView(S.project.map);
     if (mode === "create") base.openCreator();
     else openDrawer(TABS[mode][0][0], true);
@@ -2081,10 +2137,30 @@ window.SAMIWorkspaceController = function (C, O) {
       Object.assign(S.options, values);
       Object.assign(S.project.route, values);
     } else base.activateMaster(ui.drawMode);
-    openDrawer("draw");
+    if (innerWidth < 900 || ["focus", "touch"].includes(C.readPref("sami.layout"))) closeDrawer(true);
+    else openDrawer("draw");
   }
   function renderDraft() {
     base.renderDraft();
+    if (S.tool === "measure" && S.options.dimension) {
+      S.draftGroup.clearLayers();
+      const hover=S.options.dimensionHover, points=S.points.slice(0,2), color="#18a976";
+      const line=(ps,dashed=false)=>L.polyline(ps.map(C.latlng),{color,weight:1.5,dashArray:dashed?"5 4":null,interactive:false}).addTo(S.draftGroup);
+      if(points.length===1 && hover) line([points[0],hover.coord],true);
+      if(points.length===2) {
+        const offset=hover ? window.SAMIPlanning.offsetAt(points[0],points[1],hover.coord) : 2;
+        const d=window.SAMIPlanning.dimensionGeometry({geometry:{coordinates:points},properties:{dimensionOffset:offset}});
+        if(d){d.extensions.forEach(ps=>line(ps));line(d.line);L.marker(C.latlng(d.midpoint),{interactive:false,icon:L.divIcon({className:"dimension-note",html:`<button tabindex="-1" style="transform:translate(-50%,-50%) rotate(var(--counter-bearing,0deg))">${window.SAMIPlanning.dimensionLabel(d.length)}</button>`,iconSize:[0,0]})}).addTo(S.draftGroup);}
+      }
+      for(const point of points)L.circleMarker(C.latlng(point),{radius:4,color,weight:1.5,fillColor:"#fff",fillOpacity:1,interactive:false}).addTo(S.draftGroup);
+      if(hover && points.length<2)L.circleMarker(C.latlng(hover.coord),{radius:hover.anchor?7:4,color,weight:2,fillOpacity:.15,interactive:false}).addTo(S.draftGroup);
+      $("#toolName").textContent = "Dimension";
+      $("#drawHint").textContent = S.points.length === 0 ? "1 · Tap the first corner" : S.points.length === 1 ? "2 · Tap the second corner" : "3 · Tap where the dimension line should sit";
+      $("#finishDrawBtn").hidden = true;
+      $("#backPointBtn").hidden = false;
+      $("#backPointBtn").disabled = !S.points.length;
+      return;
+    }
     if (!S.tool) return;
     const repeatPlace = ["asset", "singlePanel"].includes(S.tool),
       pointOnly = [
@@ -2102,7 +2178,7 @@ window.SAMIWorkspaceController = function (C, O) {
             ? 3
             : 2;
     const freehand = C.isFreehandTool(S.tool);
-    $("#finishDrawBtn").hidden = pointOnly || automatic || freehand;
+    $("#finishDrawBtn").hidden = pointOnly || repeatPlace || automatic || freehand;
     $("#backPointBtn").hidden = pointOnly || repeatPlace || freehand;
     $("#finishDrawBtn").disabled = repeatPlace
       ? !S.options.placedIds?.length
@@ -2158,6 +2234,7 @@ window.SAMIWorkspaceController = function (C, O) {
     C.saveSoon();
   }
   function finishDraw() {
+    if (S.tool === "measure" && S.options.dimension) { C.toast("Tap the plan to position the dimension line."); return; }
     const wasArea = /^planArea/.test(S.tool || ""),
       ohl = S.options?.serviceType === "ohl";
     base.finishDraw();
@@ -2257,7 +2334,9 @@ window.SAMIWorkspaceController = function (C, O) {
     el.addEventListener("pointercancel", end, { capture: true });
   }
   function onMapClick(e) {
-    if (S.suppressMapClick > performance.now()) return;
+    if (S.suppressMapClick > performance.now() && !S.routePick) return;
+    if (S.routePick) { base.onMapClick(e); return; }
+    if (S.tool === "measure" && S.options.dimension) { dimensionClick(e); return; }
     if (ui.precision.active && !ui.precision.multi) {
       const r = precisionMapRect();
       if (r) {
@@ -2290,6 +2369,29 @@ window.SAMIWorkspaceController = function (C, O) {
       !document.body.classList.contains("inspector-collapsed")
     )
       renderDrawer("selection");
+  }
+  function beginDimension() {
+    if (!S.project.area) { setMode("map"); openDrawer("area",true); C.toast("Define your site area first."); return; }
+    const sourceId = S.selected;
+    if (S.mode !== "plan") setMode("plan");
+    if (ui.precision.active) setPrecision(false);
+    startTool("measure", {dimension:true, dimensionOffset:2, dimensionUnits:"m", dimensionPrecision:2, anchors:[], sourceId, includeLegend:false, snap:true});
+    closeDrawer(true);
+    renderDraft();
+  }
+  function dimensionClick(e) {
+    const raw = C.coord(e.latlng), P = window.SAMIPlanning;
+    if (S.points.length < 2) {
+      const hit=P.nearestCorner(raw,S.project.features,S.project,c=>S.map.latLngToContainerPoint(C.latlng(c)),matchMedia("(pointer:coarse)").matches ? 24 : 16,S.options.sourceId);
+      if (S.points.length && G.distance(S.points[0],hit.coord)<.01) { C.toast("Choose a different second corner."); return; }
+      S.options.anchors = (S.options.anchors || []).slice(0,S.points.length);
+      S.points.push(hit.coord); S.options.anchors.push(hit.anchor); S.options.dimensionHover=null;
+      renderDraft(); if(hit.anchor) C.toast("Snapped to corner"); return;
+    }
+    const offset=P.offsetAt(S.points[0],S.points[1],raw);
+    const f=C.feature("measure",{type:"LineString",coordinates:copy(S.points.slice(0,2))},{label:"Dimension",dimension:true,dimensionOffset:offset,dimensionUnits:"m",dimensionPrecision:2,dimensionAnchors:JSON.stringify(S.options.anchors),includeLegend:false});
+    S.project.features.push(f); C.cancelDraw(); delete ui.drafts[S.mode]; S.selected=f.id; C.commit();
+    C.toast("Dimension added. Select its label to edit units and spacing.");
   }
   function onMapMouseMove() { /* Hover never repositions the touch cursor. */ }
   function fitArea() {
@@ -3247,16 +3349,51 @@ window.SAMIWorkspaceController = function (C, O) {
         return;
       }
       if (cmd === "choose") {
+        C.cancelDraw();
         ui.drawAsset = arg;
-        activateAsset();
+        base.ui.asset = arg;
+        const a = currentAsset();
+        ui.drawMode = a.type === "panel" ? (["line","area","place"].includes(ui.drawMode) ? ui.drawMode : "line") : a.allowed.includes("place") ? "place" : a.allowed[0];
+        renderDrawer("draw");
+        $(".item-setup")?.scrollIntoView({block:"nearest",behavior:"smooth"});
+        return;
+      }
+      if (cmd === "favourite") {
+        ui.favourites.has(arg) ? ui.favourites.delete(arg) : ui.favourites.add(arg);
+        C.setPref("sami.favourites",JSON.stringify([...ui.favourites]));
+        renderDrawer("draw"); return;
+      }
+      if (action === "myAssets") {ui.assetFamily="My shapes";ui.assetQuery="";openDrawer("draw",true);return;}
+      if (action === "startDrawing") {
+        if (ui.drawAsset === "annotation_measure") beginDimension();
+        else activateAsset();
+        return;
+      }
+      if (action === "dimensionTool" || action === "addAssetMeasurement" || action === "measureTool") { beginDimension(); return; }
+      if (action === "confirmAssetScale") {
+        base.ui.asset = ui.drawAsset;
+        await base.runAction(action);
+        renderDrawer("draw");
+        return;
+      }
+      if (action === "routeCurrentLocation") {
+        if (!navigator.geolocation) { C.toast("Location is unavailable on this device."); return; }
+        const project=S.project;
+        navigator.geolocation.getCurrentPosition(p => {
+          if(S.project!==project)return;
+          const coord=[p.coords.longitude,p.coords.latitude];
+          S.project.hgv={...S.project.hgv,start:coord,startText:coord[1].toFixed(6)+", "+coord[0].toFixed(6)};
+          C.commit(); renderDrawer("routeToSite");
+        },()=>C.toast("Location could not be found. Enter an address or pick the map."),{enableHighAccuracy:true,timeout:12000});
         return;
       }
       if (cmd === "method") {
         ui.drawMode = arg;
-        activateAsset();
+        renderDrawer("draw");
         return;
       }
       if (cmd === "vehicle") {
+        try { C.readHgvOptions(); } catch {}
         Object.assign(S.project.hgv, {
           ...C.HGV_PROFILES[arg],
           profile: arg,
@@ -3711,19 +3848,6 @@ window.SAMIWorkspaceController = function (C, O) {
         renderDrawer("selection");
         return;
       }
-      if (action === "addAssetMeasurement") {
-        const f = C.selectedFeature();
-        if (!f || !["panel", "asset"].includes(f.properties.type)) {
-          C.toast("Select a panel or asset to add measurement annotations.");
-          return;
-        }
-        ui.drawAsset = "annotation_measure";
-        ui.drawMode = "line";
-        setMode("project");
-        base.runAction("draw:measure");
-        C.toast("Draw measurement annotation on the asset. Annotations snap to the selected item.");
-        return;
-      }
       return await base.runAction(action, b);
     } catch (e) {
       console.error("SAMI action", action, e);
@@ -3773,7 +3897,8 @@ window.SAMIWorkspaceController = function (C, O) {
   }
 
   function mount() {
-    applyLayout(C.readPref("sami.layout") || "guided");
+    applyLayout(C.readPref("sami.layout") || "classic");
+    document.body.classList.add("studio-workspace");
     applyAppearance();
     const viewport = document.createElement("div");
     viewport.id = "mapViewport";
@@ -3909,7 +4034,7 @@ window.SAMIWorkspaceController = function (C, O) {
     commandBar.innerHTML =
       '<button type="button" data-command="select" aria-label="Select objects"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3l12 8-6 2-2 6z"/></svg><span>Select</span></button>' +
       '<button type="button" data-command="add" aria-label="Add item"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button>' +
-      '<button type="button" data-command="measure" aria-label="Measure"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16L16 4l4 4L8 20z"/><path d="M10 10l2 2M13 7l2 2M7 13l2 2"/></svg><span>Measure</span></button>';
+      '<button type="button" data-command="measure" aria-label="Add dimension"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16L16 4l4 4L8 20z"/><path d="M10 10l2 2M13 7l2 2M7 13l2 2"/></svg><span>Dimension</span></button>';
     const history = document.createElement("div");
     history.className = "command-history";
     history.append($("#undoBtn"), $("#redoBtn"));
@@ -3923,7 +4048,30 @@ window.SAMIWorkspaceController = function (C, O) {
       }
       openDrawer("draw", true);
     };
-    commandBar.querySelector('[data-command="measure"]').onclick = () => runAction("mapMeasure");
+    commandBar.querySelector('[data-command="measure"]').onclick = () => S.mode === "plan" ? runAction("dimensionTool") : runAction("mapMeasure");
+    const extra=document.createElement("div"); extra.className="ribbon-insert";
+    extra.innerHTML=`<button data-action="ribbonTrakway"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3h16v18H4zM4 9h16M4 15h16M12 3v18"/></svg><span>Trakway</span></button><button data-action="ribbonText"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 6V4h14v2M12 4v16M8 20h8"/></svg><span>Text</span></button>`;
+    commandBar.insertBefore(extra,history);
+    extra.onclick=e=>{const a=e.target.closest("[data-action]")?.dataset.action;if(a === "ribbonTrakway"){if(S.mode!=="plan"&&!setMode("plan"))return;ui.assetFamily="Trakway";openDrawer("draw",true);}else if(a === "ribbonText"){ui.drawAsset="annotation_textBox";activateAsset();}};
+    commandBar.append($("#snapToggle"));
+    const backgrounds=$(".base-switch"); if(backgrounds)commandBar.append(backgrounds);
+    const statusbar=document.createElement("footer"); statusbar.id="editorStatus"; statusbar.setAttribute("aria-live","polite");
+    statusbar.innerHTML='<span id="editorSummary">Ready</span><button id="cadStatus" type="button">Site view</button>';
+    statusbar.querySelector('button').onclick=()=>openDrawer("background",true);
+    $("#workspace").append(statusbar);
+    const updateStatus=()=>{const x=$("#cadStatus");if(!x)return;x.classList.toggle("is-busy",!!S.planCapturing);x.textContent=S.planCapturing?"Building site CAD…":S.planCaptureError?"CAD needs attention":S.project.planBaseMeta?.capturedAt?"CAD · "+(S.project.planBase?.length||0)+" features":"Site view";x.title=S.planCaptureError||"Map background and CAD detail";};
+    window.addEventListener("sami:cadstatus",updateStatus); updateStatus();
+    let dimensionFrame;
+    S.map.on("mousemove",e=>{
+      if(S.tool!=="measure" || !S.options.dimension) return;
+      cancelAnimationFrame(dimensionFrame);
+      dimensionFrame=requestAnimationFrame(()=>{
+        if(S.tool!=="measure" || !S.options.dimension) return;
+        const coord=C.coord(e.latlng);
+        S.options.dimensionHover=S.points.length<2 ? window.SAMIPlanning.nearestCorner(coord,S.project.features,S.project,c=>S.map.latLngToContainerPoint(C.latlng(c)),16,S.options.sourceId) : {coord};
+        renderDraft();
+      });
+    });
 
     // Ask SAMI has one entry point in the header. The conversation and input
     // live together in one panel rather than floating over the map.

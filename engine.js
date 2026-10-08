@@ -24,7 +24,7 @@
       "-" +
       Math.random().toString(36).slice(2);
   const SERVICE_BUFFER_M = 160.9344,
-    PLAN_BLEED_DEFAULT = 60;
+    PLAN_BLEED_DEFAULT = 10;
   const SERVICES = {
     electric: { name: "Underground electricity", color: "#df4141" },
     gas: { name: "Gas", color: "#ce9b00" },
@@ -847,6 +847,14 @@
       }
     });
     state.map.on("zoomend", renderAssetIllustrations);
+    state.map.on("zoomend bearingchange", () => {
+      for (const f of state.project.features) if (f.properties.dimension) {
+        const old = state.layers.get(f.id);
+        if (old) state.group.removeLayer(old);
+        state.layers.delete(f.id);
+        if (visibleFeature(f)) renderDimensionView(f);
+      }
+    });
     for (const b of Object.values(state.bases)) {
       let warned = false;
       b.on("tileerror", () => {
@@ -1113,7 +1121,11 @@
       state.project[state.mode === "plan" ? "planBaseStyle" : "exploreBase"] = base;
       saveSoon();
     }
+<<<<<<< HEAD
+    if (base === "drawing" && planBaseNeedsCapture() && !state.planCaptureError)
+=======
     if (base === "drawing" && planBaseNeedsCapture())
+>>>>>>> origin/main
       queueMicrotask(() => capturePlanBase(true));
     render();
   }
@@ -1490,6 +1502,7 @@
     if (!state.project.area) return;
     abortLayerRequest();
     state.areaGeneration++;
+    state.planCaptureError = null;
     state.cache.clear();
     state.project.area = null;
     state.project.planBase = [];
@@ -1715,7 +1728,7 @@
   }
   function visibleFeature(f) {
     const m = f.properties;
-    if (m.guideHidden) return null;
+    if (m.guideHidden || (m.autoAnnotation && !state.project.showAutoMeasurements)) return null;
     if (state.project.hiddenTypes.includes(m.type)) return null;
     if (
       m.type === "service" &&
@@ -2059,12 +2072,39 @@
       }).addTo(state.routeGroup);
     }
   }
+  function renderDimensionView(f) {
+    const P=window.SAMIPlanning, d=P.dimensionGeometry(f,state.project.features);
+    if(!d) return;
+    const selected=state.selected===f.id, color=selected ? "#18a976" : state.base === "drawing" ? "#384951" : "#edf5f0";
+    const group=L.featureGroup().addTo(state.group);
+    const line=points=>L.polyline(points.map(latlng),{color,weight:selected?1.8:1.15,interactive:true}).addTo(group);
+    d.extensions.forEach(line); line(d.line);
+    const a=state.map.latLngToContainerPoint(latlng(d.line[0])),b=state.map.latLngToContainerPoint(latlng(d.line[1]));
+    const dx=b.x-a.x,dy=b.y-a.y,n=Math.hypot(dx,dy)||1,ux=dx/n,uy=dy/n;
+    for(const pt of [a,b]) {
+      const corners=[L.point(pt.x-4*(ux-uy),pt.y-4*(uy+ux)),L.point(pt.x+4*(ux-uy),pt.y+4*(uy+ux))];
+      line(corners.map(p=>coord(state.map.containerPointToLatLng(p))));
+    }
+    let angle=Math.atan2(dy,dx)*180/Math.PI+(state.map.getBearing?.()||0);
+    angle=((angle+180)%360+360)%360-180;if(angle>90)angle-=180;if(angle< -90)angle+=180;
+    const marker=L.marker(latlng(d.midpoint),{keyboard:true,icon:L.divIcon({className:"dimension-note",html:`<button type="button" aria-label="Edit dimension ${esc(P.dimensionLabel(d.length,f.properties))}" style="transform:translate(-50%,-50%) rotate(calc(${angle}deg + var(--counter-bearing,0deg)))">${esc(P.dimensionLabel(d.length,f.properties))}</button>`,iconSize:[0,0]})}).addTo(group);
+    group.on("click",e=>{
+      if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);
+      if(state.tool || state.routePick){if(e.latlng)onMapClick(e);return;}
+      selectFeature(f.id); openDrawer("selection",true);
+    });
+    state.layers.set(f.id,group);
+  }
   function render() {
     if (!state.map) return;
     state.group.clearLayers();
     state.layers.clear();
     state.editGroup.clearLayers();
     state.ohlSupportGroup.clearLayers();
+    for (const f of state.project.features) if(f.properties.dimension) {
+      f.geometry.coordinates = window.SAMIPlanning.resolveDimension(f,state.project.features);
+      f.properties.distance = G.length(f.geometry.coordinates);
+    }
     renderPlanBase();
     renderRoutes();
     let ohlMarkerCount = 0;
@@ -2076,6 +2116,7 @@
         continue;
       }
       if (!shown) continue;
+      if (f.properties.dimension) { renderDimensionView(f); continue; }
       const layer = L.geoJSON(shown, {
         style: () => featureStyle(f),
         pointToLayer: (ff, ll) => {
@@ -2130,15 +2171,15 @@
         },
       });
       layer.on("click", (e) => {
-        if (state.suppressMapClick > performance.now()) return;
+        if (state.suppressMapClick > performance.now() && !state.routePick) return;
         if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
         if (state.groupPick) {
           if (f.properties.locked) return;
           completeGroupPick(f);
           return;
         }
-        if (state.tool) {
-          if (e.latlng) onMapClick({ latlng: e.latlng });
+        if (state.tool || state.routePick) {
+          if (e.latlng) onMapClick({ latlng: e.latlng, originalEvent: e.originalEvent });
           return;
         }
         selectFeature(f.id);
@@ -2321,6 +2362,7 @@
   function restoreHistory(s) {
     state.project = JSON.parse(s);
     state.areaGeneration++;
+    state.planCaptureError = null;
     state.cache.clear();
     state.selected = null;
     $("#projectName").value = state.project.name;
@@ -2523,10 +2565,15 @@
       }
     }
     if (!corners.length || !prevPoint) return c;
+<<<<<<< HEAD
     const snapDistances = [10, 8, 6, 4, 2];
     const pr = G.projection(c);
     let bestSnap = null;
     let bestDist = Infinity;
+=======
+    const snapDistances = [5, 4, 3, 2];
+    const pr = G.projection(c);
+>>>>>>> origin/main
     for (const snapDist of snapDistances) {
       const snapThresholdDeg = (snapDist / 111000) * 1.5;
       for (const corner of corners) {
@@ -2545,6 +2592,7 @@
         const mag2 = Math.hypot(outgoingDx, outgoingDy);
         if (mag1 > 0 && mag2 > 0) {
           const cosAngle = dotProduct / (mag1 * mag2);
+<<<<<<< HEAD
           if (cosAngle < -0.3 && dist < bestDist) {
             bestSnap = corner;
             bestDist = dist;
@@ -2552,13 +2600,20 @@
         }
       }
       if (bestSnap) return bestSnap;
+=======
+          if (cosAngle < -0.5) {
+            return corner;
+          }
+        }
+      }
+>>>>>>> origin/main
     }
     return c;
   }
   function onMapClick(e) {
     const raw = coord(e.latlng);
     if (state.routePick) {
-      const which = state.routePick;
+      const which = state.routePick, project = state.project;
       state.routePick = null;
       state.project.hgv = {
         ...state.project.hgv,
@@ -2575,6 +2630,7 @@
           " selected · looking up address / what3words…",
       );
       routePointDetails(raw).then((details) => {
+        if (state.project !== project) return;
         const current = state.project.hgv?.[which];
         if (!current || G.distance(current, raw) > 0.2) return;
         const text = details.what3words || details.address || coordLabel(raw);
@@ -3043,11 +3099,10 @@
           toast("This Trakway layout contains no panels.");
           return;
         }
-        state.selected = null;
-        snapshot();
-        render();
-        renderDraft();
-        saveSoon();
+        cancelDraw();
+        state.selected = ids[0];
+        commit();
+        toast("Layout placed · Select mode.");
         return;
       }
       f = feature(
@@ -3061,12 +3116,10 @@
         },
       );
       state.project.features.push(f);
-      state.options.placedIds = [...(state.options.placedIds || []), f.id];
-      state.selected = null;
-      snapshot();
-      render();
-      renderDraft();
-      saveSoon();
+      cancelDraw();
+      state.selected = f.id;
+      commit();
+      toast("Item placed · Select mode.");
       return;
     }
     f = feature(
@@ -3091,6 +3144,7 @@
     }
     abortLayerRequest();
     state.areaGeneration++;
+    state.planCaptureError = null;
     state.cache.clear();
     state.project.area = b;
     if (Array.isArray(frame) && frame.length === 4 && frame.every(G.validCoord))
@@ -3103,7 +3157,8 @@
         [b[0], b[3]],
       ];
     }
-    if (planView) state.project.planView = copy(planView);
+    state.project.planView = planView ? copy(planView) : null;
+    state.areaViewPending = true;
     state.project.planBaseMeta = {
       ...(state.project.planBaseMeta || {}),
       stale: true,
@@ -3541,7 +3596,11 @@
   }
   function areaHTML() {
     const b = state.project.area,
+<<<<<<< HEAD
       bleed = Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
+=======
+      bleed = +state.project.planBleed || PLAN_BLEED_DEFAULT,
+>>>>>>> origin/main
       meta = state.project.planBaseMeta,
       detail = planDetailLevel();
     return (
@@ -4152,7 +4211,7 @@
       ].forEach((id) => {
         const el = $("#" + id);
         if (el)
-          el.onchange = () => {
+          el.oninput = () => {
             try {
               readHgvOptions();
               state.project.hgv.stale = !!state.project.routes.length;
@@ -4445,10 +4504,7 @@
         toast("Mapping reset to overhead lines only.");
         return;
       }
-      if (action === "showServiceMapping") {
-        showSelectedServiceMapping();
-        return;
-      }
+      if (action === "showServiceMapping") return showSelectedServiceMapping();
       if (
         action === "manualServicePoint" ||
         action === "manualServiceFreehand"
@@ -4479,10 +4535,7 @@
         );
         return;
       }
-      if (action === "planHgv") {
-        planHgvRoute();
-        return;
-      }
+      if (action === "planHgv") return planHgvRoute();
       if (action === "routeHandoff") {
         openRouteHandoff();
         return;
@@ -5685,6 +5738,18 @@
       }
     }
     for (const f of features) {
+      if (f.properties.guideHidden || (f.properties.autoAnnotation && !state.project.showAutoMeasurements)) continue;
+      if (f.properties.dimension) {
+        const d = window.SAMIPlanning.dimensionGeometry(f,state.project.features);
+        if (!d) continue;
+        [...d.extensions,d.line].forEach(coordinates=>geom({type:"LineString",coordinates},"DIMENSIONS"));
+        const [a,b]=d.line.map(pr.xy),mid=pr.xy(d.midpoint);
+        let angle=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;
+        if (angle>90 || angle< -90) angle+=180;
+        const label=window.SAMIPlanning.dimensionLabel(d.length,f.properties);
+        out += "0\nTEXT\n100\nAcDbEntity\n8\nDIMENSIONS\n100\nAcDbText\n10\n"+mid[0].toFixed(3)+"\n20\n"+mid[1].toFixed(3)+"\n30\n0\n40\n0.35\n1\n"+label+"\n50\n"+angle.toFixed(2)+"\n72\n1\n11\n"+mid[0].toFixed(3)+"\n21\n"+mid[1].toFixed(3)+"\n31\n0\n";
+        continue;
+      }
       let g = f.geometry;
       if (state.project.area) {
         try {
@@ -5879,9 +5944,42 @@
       throw Error(
         "Define the Site Drawing area before issuing the Site Drawing sheet.",
       );
+<<<<<<< HEAD
     if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail(planDetailLevel());
+=======
+    if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail();
+>>>>>>> origin/main
     saveDocumentIssueMeta(opt);
-    return await window.SAMIDocumentEngine.generate(copy(state.project), opt);
+    return await window.SAMIDocumentEngine.generate(copy(state.project), { ...opt, onProgress: updateExportStep });
+  }
+  function showExportLoading(step = "Initializing…") {
+    const loadingHTML =
+      '<div class="export-loading">' +
+      '<div class="export-loading-content">' +
+      '<div class="export-logo-container">' +
+      '<img alt="" class="export-logo-pulse" src="sami-badge.png" />' +
+      "</div>" +
+      '<div class="export-status">' +
+      '<h3>Site Logistics Pack</h3>' +
+      '<p class="export-step" id="exportStep">' +
+      step +
+      "</p>" +
+      '<div class="export-progress">' +
+      '<div class="export-progress-bar"></div>' +
+      "</div>" +
+      "</div>" +
+      "</div>" +
+      "</div>";
+    showModal("EXPORTING", loadingHTML);
+    document.body.classList.add("export-loading-active");
+  }
+  function updateExportStep(step) {
+    const el = $("#exportStep");
+    if (el) el.textContent = step;
+  }
+  function closeExportLoading() {
+    document.body.classList.remove("export-loading-active");
+    closeModal();
   }
   function showExportLoading(step = "Initializing…") {
     const loadingHTML =
@@ -5913,6 +6011,7 @@
     closeModal();
   }
   async function issueSiteLogisticsPack(action) {
+    if (state.exportBusy) return;
     let opt;
     try {
       opt = readDocumentOptions();
@@ -5921,7 +6020,13 @@
       return;
     }
     closeModal();
+<<<<<<< HEAD
+    state.exportBusy = true;
     showExportLoading("Preparing document…");
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+=======
+    showExportLoading("Preparing document…");
+>>>>>>> origin/main
     try {
       updateExportStep("Processing site drawing…");
       const blob = await buildSiteLogisticsPDF(opt),
@@ -5932,6 +6037,10 @@
           ".pdf";
       closeExportLoading();
       if (action === "preview") {
+<<<<<<< HEAD
+        closeExportLoading();
+=======
+>>>>>>> origin/main
         updateExportStep("Building PDF preview…");
         const url = URL.createObjectURL(blob),
           w = window.open(url, "_blank", "noopener");
@@ -5966,6 +6075,12 @@
       console.error(e);
       closeExportLoading();
       toast("PDF: " + (e.message || "Document generation failed."));
+<<<<<<< HEAD
+    } finally {
+      state.exportBusy = false;
+      document.body.classList.remove("export-loading-active");
+=======
+>>>>>>> origin/main
     }
   }
   let toastTimer;
@@ -6186,7 +6301,11 @@
       '<div class="route-endpoint"><div>' +
       field(
         "routeStart",
+<<<<<<< HEAD
+        "Start · address, postcode or coordinates",
+=======
         "Address · postcode · ///what3words · lat,lng",
+>>>>>>> origin/main
         h.startText || "",
       ) +
       '<div class="subtle">' +
@@ -6202,7 +6321,11 @@
       '<div class="route-endpoint"><div>' +
       field(
         "routeEnd",
+<<<<<<< HEAD
+        "Destination · site entrance",
+=======
         "Address · postcode · ///what3words · lat,lng",
+>>>>>>> origin/main
         h.endText || "",
       ) +
       '<div class="subtle">' +
@@ -6251,7 +6374,7 @@
       ) +
       "</div></div></details>" +
       button(
-        last ? "Re-check / refresh HGV route" : "Plan HGV route to site",
+        state.routeBusy ? "Planning route…" : last ? "Plan another route" : "Plan route",
         "planHgv",
         true,
       ) +
@@ -6355,27 +6478,23 @@
     };
   }
   function readHgvOptions() {
-    const h = state.project.hgv,
-      profile = $("#hgvProfile")?.value || h.profile,
-      startText = $("#routeStart")?.value.trim() || "",
-      endText = $("#routeEnd")?.value.trim() || "",
-      o = {
-        profile,
-        weight: +$("#hgvWeight").value,
-        height: +$("#hgvHeight").value,
-        width: +$("#hgvWidth").value,
-        length: +$("#hgvLength").value,
-        axles: HGV_PROFILES[profile]?.axles || 3,
-        startText,
-        endText,
-        start: startText === h.startText ? h.start : null,
-        end: endText === h.endText ? h.end : null,
-      };
-    if (!(o.weight > 0 && o.height > 0 && o.width > 0 && o.length > 0))
+    const h = state.project.hgv || fresh().hgv;
+    const value = (id, fallback) => $("#" + id)?.value ?? fallback;
+    const profile = value("hgvProfile", h.profile);
+    const startText = String(value("routeStart", h.startText || "")).trim();
+    const endText = String(value("routeEnd", h.endText || "")).trim();
+    const o = {profile, startText, endText,
+      weight:Number(value("hgvWeight", h.weight)), height:Number(value("hgvHeight", h.height)),
+      width:Number(value("hgvWidth", h.width)), length:Number(value("hgvLength", h.length)),
+      axles:HGV_PROFILES[profile]?.axles || 3,
+      start:startText === h.startText ? h.start : null,
+      end:endText === h.endText ? h.end : null};
+    if (![o.weight,o.height,o.width,o.length].every(n => Number.isFinite(n) && n > 0))
       throw Error("Enter the vehicle weight, height, width and length.");
-    state.project.hgv = { ...h, ...o };
+    state.project.hgv = {...h,...o};
     return o;
   }
+
   function decodePolyline(str, precision = 6) {
     let index = 0,
       lat = 0,
@@ -6387,6 +6506,7 @@
         shift = 0,
         result = 0;
       do {
+        if (index >= str.length || shift > 30) throw Error("Invalid route geometry returned by routing service.");
         b = str.charCodeAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
@@ -6395,6 +6515,7 @@
       shift = 0;
       result = 0;
       do {
+        if (index >= str.length || shift > 30) throw Error("Invalid route geometry returned by routing service.");
         b = str.charCodeAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
@@ -6405,6 +6526,7 @@
     return out;
   }
   async function planHgvRoute() {
+    if (state.routeBusy) return;
     const project = state.project, request = state.routeRequest = (state.routeRequest || 0) + 1;
     let o;
     try {
@@ -6413,6 +6535,7 @@
       toast(e.message);
       return;
     }
+    state.routeBusy = true;
     state.lastRouteStatus = "Resolving locations…";
     renderDrawer("routeToSite");
     try {
@@ -6430,6 +6553,10 @@
         startText: a.label,
         endText: b.label,
       };
+      if (!G.validCoord(a.coord) || !G.validCoord(b.coord)) throw Error("A route point is invalid. Choose it again.");
+      if (G.distance(a.coord,b.coord) < 5) throw Error("Choose a start at least 5 metres from the destination.");
+      state.lastRouteStatus = "Finding a truck route…";
+      renderDrawer("routeToSite");
       let result,
         provider,
         warning,
@@ -6457,7 +6584,7 @@
           signal: AbortSignal.timeout(25000),
         });
         const d = await boundedJSON(r, 2 * 1024 * 1024);
-        if (!Array.isArray(d.geometry) || d.geometry.length < 2)
+        if (!Array.isArray(d.geometry) || d.geometry.length < 2 || !d.geometry.every(G.validCoord))
           throw Error(
             "Configured HGV route service returned no usable geometry.",
           );
@@ -6504,14 +6631,13 @@
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Client-Id": "SAMI-JWEDS-prototype",
             },
             body: JSON.stringify(payload),
             signal: AbortSignal.timeout(30000),
           },
         );
         const d = await boundedJSON(r, 4 * 1024 * 1024);
-        if (!d?.trip?.legs?.length) throw Error("No HGV route was returned.");
+        if (!d?.trip?.legs?.length) throw Error(d?.error || "No truck route was returned for these points.");
         const geometry = [];
         for (const leg of d.trip.legs) {
           const pts = decodePolyline(leg.shape, 6);
@@ -6524,6 +6650,7 @@
             pts.shift();
           geometry.push(...pts);
         }
+        if (geometry.length < 2 || !geometry.every(G.validCoord)) throw Error("Routing returned invalid coordinates. Your saved routes are unchanged.");
         result = {
           geometry,
           distanceKm: +d.trip.summary?.length || G.length(geometry) / 1000,
@@ -6578,19 +6705,25 @@
       state.lastRouteStatus = e.message;
       renderDrawer("routeToSite");
       toast("Route: " + e.message);
+    } finally {
+      if (state.project === project && request === state.routeRequest) {
+        state.routeBusy = false;
+        if (state.drawer === "routeToSite") renderDrawer("routeToSite");
+      }
     }
   }
   function pickRoutePoint(which) {
+    if (!["start", "end"].includes(which)) return;
+    try { readHgvOptions(); } catch {}
+    cancelDraw();
+    if (state.mode !== "route") setMode("route");
     state.routePick = which;
     state.suppressMapClick = 0;
-    closeDrawer();
-    if (state.mode === "plan") setMode("map");
-    toast(
-      "Tap the map to set the route " +
-        (which === "start" ? "start" : "destination") +
-        ".",
-    );
+    closeDrawer(true);
+    updateLock();
+    toast("Tap the map to set the route " + (which === "start" ? "start" : "destination") + ".");
   }
+
   function openRouteHandoff() {
     const r = state.project.routes.at(-1);
     if (!r) return;
@@ -6754,19 +6887,19 @@
       ),
       out = [];
     for (const w of (data.elements || []).filter(
-      (x) => x.type === "way" && Array.isArray(x.nodes),
-    )) {
+      (x) => x.type === "way" && (Array.isArray(x.nodes) || Array.isArray(x.geometry)),
+    ).flatMap(w => Array.isArray(w.geometry)
+      ? window.SAMIPlanning.waySegments(w.geometry).map((geometry,i)=>({...w,id:w.id+"-"+i,geometry})) : [w])) {
       const tags = w.tags || {},
         cls = planBaseClass(tags),
-        coords = w.nodes
-          .map((id) => nodes.get(id))
-          .filter(Boolean)
-          .map((n) => [n[0], n[1]]);
+        coords = Array.isArray(w.geometry)
+          ? w.geometry.filter(n => n && Number.isFinite(n.lon) && Number.isFinite(n.lat)).map(n => [n.lon,n.lat])
+          : (w.nodes || []).map(id => nodes.get(id)).filter(Boolean).map(n => [n[0],n[1]]);
       if (!cls || coords.length < 2) continue;
       if (powerAsService && cls === "power") {
         const supports = {},
           supportPoints = [];
-        for (const id of w.nodes) {
+        for (const id of w.nodes || []) {
           const n = nodes.get(id);
           if (n?.[2]?.power === "pole") {
             supports[supportKey(n)] = "pole";
@@ -6798,7 +6931,7 @@
         );
         continue;
       }
-      const closed = coords.length > 3 && w.nodes[0] === w.nodes.at(-1),
+      const closed = coords.length > 3 && coords[0][0] === coords.at(-1)[0] && coords[0][1] === coords.at(-1)[1],
         poly = closed && ["building", "water", "land"].includes(cls),
         props = {
           baseClass: cls,
@@ -6886,7 +7019,7 @@
     let empty = null;
     for (const endpoint of overpassEndpoints()) {
       const ctl = new AbortController(),
-        timer = setTimeout(() => ctl.abort(), 24000);
+        timer = setTimeout(() => ctl.abort(), 38000);
       try {
         const r = await fetch(endpoint, {
             method: "POST",
@@ -6900,6 +7033,7 @@
             credentials: "omit",
           }),
           data = await boundedJSON(r, max);
+        if (data?.remark && /runtime error|timed out|out of memory/i.test(data.remark)) throw Error(data.remark);
         if (!data || !Array.isArray(data.elements))
           throw Error("Invalid Overpass response");
         if (opts.preferNonEmpty && !data.elements.length) {
@@ -6965,6 +7099,33 @@
     $$('[data-base="drawing"], [data-action="capturePlanBase"]').forEach(
       (b) => b.classList.toggle("cad-processing", active),
     );
+<<<<<<< HEAD
+    window.dispatchEvent(new Event("sami:cadstatus"));
+  }
+  function planBaseNeedsCapture(requiredDetail) {
+    return window.SAMIPlanning.needsCapture(state.project, requiredDetail || planDetailLevel());
+  }
+
+  async function ensureExportCadDetail(requiredDetail = planDetailLevel()) {
+    if (!state.project.area) return;
+    if (requiredDetail === "simple") requiredDetail = "low";
+    if (state.planCapturePromise) await state.planCapturePromise;
+    if (planBaseNeedsCapture(requiredDetail)) await capturePlanBase(true, requiredDetail);
+    if (planBaseNeedsCapture(requiredDetail))
+      toast("CAD background is incomplete or out of date. Your drawn objects are retained; check before issue.");
+  }
+  function capturePlanBase(silent = false, detailOverride = null) {
+    const owner = state.project, generation = state.areaGeneration;
+    if (state.planCapturePromise && state.planCaptureOwner === owner && state.planCaptureGeneration === generation)
+      return state.planCapturePromise;
+    state.planCaptureOwner = owner;
+    state.planCaptureGeneration = generation;
+    const task = capturePlanBaseWork(silent, detailOverride);
+    state.planCapturePromise = task;
+    return task.finally(() => { if (state.planCapturePromise === task) state.planCapturePromise = null; });
+  }
+  async function capturePlanBaseWork(silent = false, detailOverride = null) {
+=======
   }
   function planBaseNeedsCapture(requiredDetail) {
     if (!state.project.area) return false;
@@ -6977,27 +7138,20 @@
       (PLAN_DETAIL_RANK[meta.detail] || 0) < (PLAN_DETAIL_RANK[need] || 0)
     );
   }
-  async function ensureExportCadDetail(requiredDetail = planDetailLevel()) {
+  async function ensureExportCadDetail() {
     if (!state.project.area) return;
-    if (requiredDetail === "simple") requiredDetail = "low";
-    if (state.planCapturePromise) await state.planCapturePromise;
-    if (planBaseNeedsCapture(requiredDetail)) await capturePlanBase(true, requiredDetail);
-    if (planBaseNeedsCapture(requiredDetail))
-      toast("CAD background is incomplete or out of date. Your drawn objects are retained; check before issue.");
+    if (planBaseNeedsCapture("high")) await capturePlanBase(true, "high");
   }
-  function capturePlanBase(silent = false, detailOverride = null) {
-    if (state.planCapturePromise) return state.planCapturePromise;
-    const task = capturePlanBaseWork(silent, detailOverride);
-    state.planCapturePromise = task;
-    return task.finally(() => { if (state.planCapturePromise === task) state.planCapturePromise = null; });
-  }
-  async function capturePlanBaseWork(silent = false, detailOverride = null) {
+  async function capturePlanBase(silent = false, detailOverride = null) {
+>>>>>>> origin/main
     if (!state.project.area) {
       if (!silent) openDrawer("area");
       return;
     }
-    const b = planBounds(),
-      a = G.area(b),
+    let b;
+    try { b = window.SAMIPlanning.captureBounds(state.project); }
+    catch (e) { state.planCaptureError = e.message; toast(e.message); updateCadProcessingUI(false); return; }
+    const a = G.area(b),
       captureGeneration = state.areaGeneration,
       captureProject = state.project,
       detail = detailOverride || planDetailLevel();
@@ -7008,8 +7162,15 @@
         );
       return;
     }
+<<<<<<< HEAD
+    state.planCaptureError = null;
     state.planCapturing = true;
     updateCadProcessingUI(true);
+    window.dispatchEvent(new Event("sami:cadstatus"));
+=======
+    state.planCapturing = true;
+    updateCadProcessingUI(true);
+>>>>>>> origin/main
     if (!silent)
       toast(
         "Capturing " +
@@ -7022,7 +7183,11 @@
         q =
           "[out:json][timeout:30];(" +
           tags.map((t) => t + "(" + bbox + ");").join("") +
+<<<<<<< HEAD
+          ");out body geom(" + bbox + ");";
+=======
           ");(._;>;);out body;";
+>>>>>>> origin/main
       const data = await overpassQuery(q);
       if (
         captureProject !== state.project ||
@@ -7049,18 +7214,24 @@
           }
         : null;
       if (!features.length && state.project.planBase?.length) {
-        toast("No new CAD features returned. The last stored drawing background has been kept.");
+        state.planCaptureError = "No replacement detail returned. Existing background kept; choose Refresh to retry.";
+        toast(state.planCaptureError);
         return;
       }
       state.project.planBase = features;
       state.project.planBaseMeta = {
         capturedAt: new Date().toISOString(),
         source: "Stored OpenStreetMap vector snapshot · bounded site capture",
+<<<<<<< HEAD
         bleed: Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
+=======
+        bleed: +state.project.planBleed || PLAN_BLEED_DEFAULT,
+>>>>>>> origin/main
         detail,
         bbox: boundsText(b),
         featureCount: features.length,
         stale: false,
+        captureKey: window.SAMIPlanning.captureKey(captureProject, detail),
         previous,
       };
       commit();
@@ -7073,64 +7244,66 @@
             "-detail map features stored. Roads use metre-width geometry where available / inferred.",
         );
     } catch (e) {
+<<<<<<< HEAD
+      if (captureProject === state.project && captureGeneration === state.areaGeneration) {
+        state.planCaptureError = e.message;
+        toast("CAD detail unavailable. Existing drawing retained. " + e.message);
+      }
+    } finally {
+      if (captureProject === state.project && captureGeneration === state.areaGeneration) {
+        state.planCapturing = false;
+        updateCadProcessingUI(false);
+        window.dispatchEvent(new Event("sami:cadstatus"));
+      }
+=======
       if (!silent) toast("Detailed plan capture: " + e.message);
       else console.warn(e);
     } finally {
       state.planCapturing = false;
       updateCadProcessingUI(false);
+>>>>>>> origin/main
     }
   }
+  const serviceRefreshes = new Map();
+  async function runServiceRefresh(key, work) {
+    const project = state.project, generation = state.areaGeneration;
+    if (!project.area) { openDrawer("area", true); return {status:"error",message:"Define the site area first."}; }
+    const requestKey = project.id + ":" + generation + ":" + key;
+    if (serviceRefreshes.has(requestKey)) return serviceRefreshes.get(requestKey);
+    const task = (async () => {
+      project.serviceStatus ??= {};
+      project.serviceStatus[key] = {status:"loading", message:"Checking source…"};
+      if (state.drawer === "services") renderDrawer("services");
+      let result;
+      try { result = await work(); }
+      catch(e) { result = {status:"error", message:e.message || "Source unavailable"}; }
+      if (state.project !== project || state.areaGeneration !== generation) return {status:"cancelled"};
+      result ??= {status:"retained", message:"Existing records retained."};
+      project.serviceStatus[key] = {...result, checkedAt:new Date().toISOString()};
+      saveSoon();
+      if (state.drawer === "services") renderDrawer("services");
+      return result;
+    })();
+    serviceRefreshes.set(requestKey, task);
+    try { return await task; } finally { serviceRefreshes.delete(requestKey); }
+  }
   async function showSelectedServiceMapping() {
-    if (!state.project.area) {
-      openDrawer("area");
-      return;
-    }
-    const on = Object.keys(SERVICES).filter(
-      (k) => state.project.serviceVisibility[k] === true,
-    );
-    if (!on.length) {
-      toast("Select at least one service or constraint layer.");
-      return;
-    }
-    state.project.hiddenTypes = state.project.hiddenTypes.filter(
-      (t) => t !== "service",
-    );
+    if (!state.project.area) { openDrawer("area", true); return; }
+    const project = state.project, generation = state.areaGeneration;
+    const on = Object.keys(SERVICES).filter(k => project.serviceVisibility[k] === true);
+    if (!on.length) { toast("Select at least one service or constraint."); return; }
+    project.hiddenTypes = project.hiddenTypes.filter(t => t !== "service");
     commit();
-    const needOhl = on.includes("ohl"),
-      needUtil = on.some((k) =>
-        ["electric", "gas", "water", "drainage", "telecom"].includes(k),
-      ),
-      needPlan = on.some((k) =>
-        [
-          "ecology",
-          "sssi",
-          "tpo",
-          "heritage",
-          "archaeology",
-          "flood",
-          "conservation",
-        ].includes(k),
-      );
-    toast("Showing selected mapping…");
-    try {
-      if (needOhl) await refreshOhlSnapshot();
-      if (needUtil) await refreshPublicUtilities();
-      if (needPlan) await refreshPlanningConstraints();
-      const b = needOhl ? ohlSearchBounds() : serviceBounds();
-      if (b)
-        state.map.fitBounds(
-          [
-            [b[1], b[0]],
-            [b[3], b[2]],
-          ],
-          { padding: [70, 70], maxZoom: 19 },
-        );
-      toast(
-        "Selected service mapping shown. Public/reference layers remain planning information only.",
-      );
-    } catch (e) {
-      toast(e.message);
-    }
+    const results = [];
+    if (on.includes("ohl")) results.push(await refreshOhlSnapshot());
+    if (state.project !== project || generation !== state.areaGeneration) return;
+    if (on.some(k => ["electric","gas","water","drainage","telecom"].includes(k))) results.push(await refreshPublicUtilities());
+    if (state.project !== project || generation !== state.areaGeneration) return;
+    if (on.some(k => ["ecology","sssi","tpo","heritage","archaeology","flood","conservation"].includes(k))) results.push(await refreshPlanningConstraints());
+    if (state.project !== project || generation !== state.areaGeneration) return;
+    const failed = results.filter(r => r?.status === "error" || r?.status === "retained").length;
+    toast(failed ? "Some sources could not be updated. See source status; saved records are retained." : "Source checks complete. See the record counts and coverage in Services.");
+    if (state.drawer === "services") renderDrawer("services");
   }
   async function refreshOhlSnapshot() {
     if (!state.project.area) {
@@ -7253,7 +7426,7 @@
       stamp = new Date().toISOString(),
       sourceId = "builtin:osm-public-utilities";
     for (const w of elements.filter(
-      (x) => x.type === "way" && Array.isArray(x.nodes),
+      (x) => x.type === "way" && (Array.isArray(x.nodes) || Array.isArray(x.geometry)),
     )) {
       const tags = w.tags || {},
         type = publicUtilityType(tags),
@@ -7352,7 +7525,10 @@
     }
     return out;
   }
-  async function refreshPublicUtilities() {
+  function refreshPublicUtilities() {
+    return runServiceRefresh("utilities", refreshPublicUtilitiesWork);
+  }
+  async function refreshPublicUtilitiesWork() {
     const project = state.project, generation = state.areaGeneration;
     if (!state.project.area) {
       openDrawer("area");
@@ -7414,6 +7590,7 @@
           })
           .filter(Boolean)
           .slice(0, 5000);
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
       const previousCount = state.project.features.filter(
         (feature) =>
           feature.properties.sourceId === "builtin:osm-public-utilities",
@@ -7422,7 +7599,7 @@
         toast(
           "No new public utility records were returned. The last stored snapshot has been kept.",
         );
-        return;
+        return {status:"retained",count:previousCount,message:"No replacement records; previous snapshot kept."};
       }
       await replaceSourceFeatures(
         "builtin:osm-public-utilities",
@@ -7438,7 +7615,9 @@
           : "No mapped public utility records were returned for this bounded area. SAMI has not invented any.",
       );
       if (state.drawer === "services") renderDrawer("services");
+      return {status:features.length ? "ready" : "empty",count:features.length,message:features.length ? "Public mapped references loaded." : "No public mapped records returned. Coverage is incomplete."};
     } catch (e) {
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
       const kept = state.project.features.some(
         (feature) =>
           feature.properties.sourceId === "builtin:osm-public-utilities",
@@ -7448,6 +7627,7 @@
           e.message +
           (kept ? " The last stored snapshot is still available." : ""),
       );
+      return {status:"error",message:e.message + (kept ? " Previous snapshot kept." : "")};
     }
   }
   const PLANNING_DATASETS = {
@@ -7538,7 +7718,10 @@
     }
     return out;
   }
-  async function refreshPlanningConstraints() {
+  function refreshPlanningConstraints() {
+    return runServiceRefresh("constraints", refreshPlanningConstraintsWork);
+  }
+  async function refreshPlanningConstraintsWork() {
     const project = state.project, generation = state.areaGeneration;
     if (!state.project.area) {
       openDrawer("area");
@@ -7549,6 +7732,10 @@
     try {
       const rows = await planningDataGeoJSON(b),
         features = planningConstraintFeatures(rows, b).slice(0, 5000);
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
+      const previousCount = project.features.filter(f => f.properties.sourceId === "builtin:planning-data-constraints").length;
+      if (!features.length && previousCount)
+        return {status:"retained",count:previousCount,message:"No replacement records; previous planning snapshot kept."};
       await replaceSourceFeatures(
         "builtin:planning-data-constraints",
         features,
@@ -7563,8 +7750,11 @@
           : "No Planning Data constraint records were returned for this area. Coverage varies, so this is not proof that no constraint exists.",
       );
       if (state.drawer === "services") renderDrawer("services");
+      return {status:features.length ? "ready" : "empty",count:features.length,message:features.length ? "Planning records loaded." : "No records returned. England coverage varies."};
     } catch (e) {
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
       toast("Planning constraints: " + e.message);
+      return {status:"error",message:e.message + " Existing records kept."};
     }
   }
   let archiveDbPromise;
@@ -8129,12 +8319,15 @@
         : $("#askInput").value.trim()
           ? "Send request"
           : "Ask SAMI";
+<<<<<<< HEAD
     const aiConfigured = !!samiAiEndpoint(),
       capability = $("#assistantCapability");
     if (capability)
       capability.textContent = aiConfigured
         ? "AI endpoint configured · availability not verified"
         : "Local commands · AI not connected";
+=======
+>>>>>>> origin/main
     const ariaLabel = active
       ? "Stop listening"
       : $("#askInput").value.trim()
@@ -9936,6 +10129,8 @@
       setArea: (...args) => setArea(...args),
       snapshot: (...args) => snapshot(...args),
       resolveLocationText: (...args) => resolveLocationText(...args),
+      readHgvOptions: (...args) => readHgvOptions(...args),
+      runServiceRefresh: (...args) => runServiceRefresh(...args),
     },
     {
       fresh,

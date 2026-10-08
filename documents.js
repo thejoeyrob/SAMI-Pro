@@ -1976,6 +1976,7 @@
   }
   function activeFeature(f, project, opt) {
     const m = f.properties || {};
+    if (m.autoAnnotation && !project.showAutoMeasurements) return false;
     if (["note", "photo"].includes(m.type) && m.includeOnDrawing === false)
       return false;
     return (
@@ -1990,6 +1991,18 @@
     );
   }
   function drawMeasurementAnnotations(page, f, tr) {
+    if (f.properties.dimension) {
+      const P=window.SAMIPlanning,d=P.dimensionGeometry(f); if(!d)return;
+      const color=f.properties.styleColor || "#35434b";
+      const line=points=>page.poly(points.map(tr.point),color,null,.22);
+      d.extensions.forEach(line); line(d.line);
+      const [a,b]=d.line.map(tr.point),dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+      for(const p of [a,b])page.line(p[0]-.9*(ux-uy),p[1]-.9*(uy+ux),p[0]+.9*(ux-uy),p[1]+.9*(uy+ux),color,.3);
+      const mid=tr.point(d.midpoint),label=P.dimensionLabel(d.length,f.properties),w=label.length*1.22+2;
+      page.rect(mid[0]-w/2,mid[1]-2.1,w,4.2,"#ffffff","#ffffff",.1);
+      page.text(label,mid[0]-w/2+1,mid[1]+.8,7,false,color);
+      return;
+    }
     const m = f.properties || {},
       g = f.geometry;
     if (
@@ -2022,6 +2035,7 @@
         "#263238",
       );
     }
+    if (cs.length < 3) return;
     const p = tr.point(cs[Math.floor(cs.length / 2)]),
       offset = getPerpOffset(cs[0], cs[cs.length - 1]);
     page.text(
@@ -2148,6 +2162,7 @@
       const m = f.properties || {};
       let st = featureStyle(f);
       if (!G.clipGeometry(f.geometry, tr.bounds)) continue;
+      if (m.dimension) { drawMeasurementAnnotations(page,f,tr); continue; }
       let runIdx = 0,
         runSuffix = "";
       if (
@@ -2833,6 +2848,8 @@
         .map((f) => f.properties.imageData)
         .filter(Boolean),
     ]);
+    opt.onProgress?.("Preparing images and drawing sheets…");
+    await new Promise(resolve=>setTimeout(resolve,0));
     for (const d of data) {
       const im = await preparedImage(d);
       if (im) options._images.set(d, im);
@@ -3164,6 +3181,7 @@
   }
   generate = async function (project, opt = {}) {
     if (!project) throw Error("No project supplied.");
+    for(const f of project.features || [])if(f.properties.dimension)f.geometry.coordinates=window.SAMIPlanning.resolveDimension(f,project.features);
     const options = {
         ...opt,
         detailLevel: opt.detailLevel === "simple" ? "simple" : "high",
@@ -3179,6 +3197,8 @@
           .map((f) => f.properties.imageData)
           .filter(Boolean),
       ]);
+    opt.onProgress?.("Preparing images and drawing sheets…");
+    await new Promise(resolve=>setTimeout(resolve,0));
     for (const d of data) {
       const im = await preparedImage(d);
       if (im) options._images.set(d, im);
@@ -3204,8 +3224,10 @@
       total = sitePages + routeRecords.length + details.length;
     options.hasDetails = details.length > 0;
     let n = 1;
-    if (sitePages) await renderSitePage(pdf, project, options, n++, total);
+    if (sitePages) { opt.onProgress?.("Rendering the site drawing…"); await new Promise(resolve=>setTimeout(resolve,0)); await renderSitePage(pdf, project, options, n++, total); }
     for (const r of routeRecords) {
+      opt.onProgress?.("Building route sheet " + n + " of " + total + "…");
+      await new Promise(resolve=>setTimeout(resolve,0));
       const routeProject = { ...project, routes: [r] };
       await renderRoutePage(pdf, routeProject, options, n++, total);
     }

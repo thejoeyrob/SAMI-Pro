@@ -88,7 +88,9 @@
     sparks = [],
     seed = 170926,
     suspendedAt = 0,
-    filmFallback = false;
+    filmFallback = false,
+    mediaDriven = true,
+    audioAttempt = 0;
   const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)),
     lerp = (a, b, t) => a + (b - a) * t,
     smooth = (t) => {
@@ -102,19 +104,19 @@
   const ENERGY_Y = -0.285,
     ENERGY_ORIGIN = [0, ENERGY_Y, 0];
   const PROMO_DURATION = 73.15,
-    VOICE_START = 6.85,
-    FRAGMENT_FAIL = 30.75,
-    CLEAN_START = 34.1,
-    CAD_RETRACT = 59.45,
-    CAD_END = 63.0,
-    WORK_SMARTER = 64.1,
-    TIME_TO = 66.0,
-    ASK_SAMI = 67.15,
-    LOGO_MORPH = 68.25,
+    VOICE_START = 4.48,
+    FRAGMENT_FAIL = 25.15,
+    CLEAN_START = 27.0,
+    CAD_RETRACT = 60.65,
+    CAD_END = 63.7,
+    WORK_SMARTER = 61.64,
+    TIME_TO = 64.34,
+    ASK_SAMI = 66.18,
+    LOGO_MORPH = 67.8,
     SIGNATURE_START = 69.35,
     SIGNATURE_END = 71.4,
-    TEXT_LEAD = 0.9,
-    TAIL_TEXT_LEAD = 1.5;
+    TEXT_LEAD = 0,
+    TAIL_TEXT_LEAD = 0;
   const rnd = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
@@ -1161,14 +1163,7 @@
   }
   function prepareWords() {
     words.replaceChildren();
-    const timed = [
-      [6.95, 2.7, "BUILDING A SITE PLAN"],
-      [10.1, 2.3, "MULTIPLE SOURCES"],
-      [12.8, 2.15, "CHASING INFORMATION"],
-      [15.2, 2.15, "WAITING FOR ANSWERS"],
-      [17.8, 2.55, "EVERY DELAY COSTS TIME"],
-      [21.0, 2.75, "EVERY DELAY COSTS MONEY"],
-    ];
+    const timed = window.SAMIStoryTiming.process;
     timed.forEach(([at, d, text], i) => {
       const el = document.createElement("div");
       el.className = "process-word";
@@ -1201,31 +1196,11 @@
   }
   function propositions(t) {
     if (mode !== "sales") return;
-    const items = [
-      [26.0, 30.15, "WHAT IF EVERYTHING YOU NEED WAS IN ONE PLACE?"],
-      [34.3, 36.1, "INTRODUCING SAMI"],
-      [36.15, 38.75, "SPATIAL ANALYSIS · MAPPING INTELLIGENCE"],
-      [39.0, 40.55, "FIND YOUR SITE"],
-      [40.75, 42.55, "DEFINE YOUR WORKING AREA"],
-      [42.75, 45.05, "BUILD TRUE-SCALE SITE PLANS"],
-      [45.15, 46.35, "ADD ASSETS"],
-      [46.45, 48.1, "ASSESS CONSTRAINTS"],
-      [48.2, 49.45, "PLAN ACCESS"],
-      [49.55, 50.95, "HGV ROUTES"],
-      [51.05, 53.2, "ALL WITHIN ONE WORKSPACE"],
-      [53.35, 55.15, "VOICE OR TEXT"],
-      [55.25, 58.8, "ASK SAMI TO MAKE THE CHANGES FOR YOU"],
-      [WORK_SMARTER, 65.7, "IT’S TIME TO WORK SMARTER"],
-    ];
-    const x = items.find(([a, b]) => {
-      const lead = a >= 48.2 ? TAIL_TEXT_LEAD : TEXT_LEAD;
-      return t >= a - lead && t < b - lead;
-    });
+    const items = window.SAMIStoryTiming.sentences;
+    const x = items.find(([a, b]) => t >= a && t < b);
     if (x) {
       const [a, b, text] = x;
-      const lead = a >= 48.2 ? TAIL_TEXT_LEAD : TEXT_LEAD,
-        aa = a - lead,
-        bb = b - lead;
+      const aa = a, bb = b;
       setSentence(
         text,
         smooth((t - aa) / 0.3) * (1 - smooth((t - bb + 0.27) / 0.27)),
@@ -1237,8 +1212,8 @@
     const selectedPhrase = "…ASK SAMI",
       selected = [5, 6, 7, 8],
       centres = [0.153, 0.413, 0.724, 0.942],
-      pauseEnd = 66.78 - TAIL_TEXT_LEAD,
-      pauseFade = 66.66 - TAIL_TEXT_LEAD,
+      pauseEnd = 66.02,
+      pauseFade = 65.88,
       askAt = ASK_SAMI - TAIL_TEXT_LEAD,
       morphAt = LOGO_MORPH - TAIL_TEXT_LEAD;
     if (t < pauseEnd) {
@@ -1442,9 +1417,7 @@
   }
   function frame(now) {
     if (!running) return;
-    const t = mode === "sales" && salesAudio && !salesAudio.paused
-      ? Math.max(0, salesAudio.currentTime)
-      : (now - start) / 1000,
+    const t = window.SAMIStoryTiming.currentTime(salesAudio, mode === "sales" && mediaDriven, now, start),
       cam = cameraFor(t);
     drawGround(cam, t);
     if (mode === "sales") {
@@ -1468,7 +1441,7 @@
     brandProgress(t);
     if (
       (mode === "welcome" && t < 6) ||
-      (mode === "sales" && t < PROMO_DURATION)
+      (mode === "sales" && t < PROMO_DURATION && !salesAudio.ended)
     )
       raf = requestAnimationFrame(frame);
     else if (mode === "welcome") completeQuickLaunch();
@@ -1508,19 +1481,27 @@
       } catch {}
     }
   }
+  function resumeSalesAudio() {
+    const attempt = ++audioAttempt;
+    if (!mediaDriven) salesAudio.currentTime = Math.max(0, (performance.now() - start) / 1000);
+    mediaDriven = true;
+    const playback = salesAudio.play();
+    playback?.catch(() => {
+      if (attempt !== audioAttempt || !running || mode !== "sales") return;
+      // Silent playback can still tell the story if audio is blocked/offline.
+      start = performance.now() - salesAudio.currentTime * 1000;
+      mediaDriven = false;
+      status.textContent = "Soundtrack unavailable. Tap Sound to retry.";
+    });
+  }
   function playAudio(which) {
     if (which !== "sales") return;
     stopAudio();
     salesAudio.currentTime = 0;
+    mediaDriven = true;
     salesAudio.muted = !sound;
     salesAudio.volume = 1;
-    const bp = salesAudio.play();
-    if (bp?.catch)
-      bp.catch(() => {
-        if (sound)
-          status.textContent =
-            "Cinematic soundtrack could not start. Tap Sound to retry.";
-      });
+    resumeSalesAudio();
     if (sound) status.textContent = "Why SAMI soundtrack enabled";
   }
   async function playWelcomeFilm() {
@@ -1834,11 +1815,8 @@
     sound = !sound;
     $("#launchSoundBtn").textContent = sound ? "Sound on" : "Sound off";
     salesAudio.muted = !sound;
-    if (sound) {
-      salesAudio.play().catch(() => {});
-    } else {
-      salesAudio.pause();
-    }
+    // Muting keeps the narration clock moving so sound can be re-enabled in sync.
+    if (running && mode === "sales" && (salesAudio.paused || !mediaDriven)) resumeSalesAudio();
   };
   if (film) {
     film.addEventListener("ended", () => {
@@ -1894,12 +1872,7 @@
         film.play().catch(() => {});
       } else {
         start += pausedFor;
-        const elapsed = (performance.now() - start) / 1000;
-        salesAudio.currentTime = Math.min(
-          elapsed,
-          Number.isFinite(salesAudio.duration) ? salesAudio.duration : elapsed,
-        );
-        salesAudio.play().catch(() => {});
+        if (mode === "sales") resumeSalesAudio();
         raf = requestAnimationFrame(frame);
       }
     }
