@@ -1121,7 +1121,11 @@
       state.project[state.mode === "plan" ? "planBaseStyle" : "exploreBase"] = base;
       saveSoon();
     }
+<<<<<<< HEAD
     if (base === "drawing" && planBaseNeedsCapture() && !state.planCaptureError)
+=======
+    if (base === "drawing" && planBaseNeedsCapture())
+>>>>>>> origin/main
       queueMicrotask(() => capturePlanBase(true));
     render();
   }
@@ -2561,10 +2565,15 @@
       }
     }
     if (!corners.length || !prevPoint) return c;
+<<<<<<< HEAD
     const snapDistances = [10, 8, 6, 4, 2];
     const pr = G.projection(c);
     let bestSnap = null;
     let bestDist = Infinity;
+=======
+    const snapDistances = [5, 4, 3, 2];
+    const pr = G.projection(c);
+>>>>>>> origin/main
     for (const snapDist of snapDistances) {
       const snapThresholdDeg = (snapDist / 111000) * 1.5;
       for (const corner of corners) {
@@ -2583,6 +2592,7 @@
         const mag2 = Math.hypot(outgoingDx, outgoingDy);
         if (mag1 > 0 && mag2 > 0) {
           const cosAngle = dotProduct / (mag1 * mag2);
+<<<<<<< HEAD
           if (cosAngle < -0.3 && dist < bestDist) {
             bestSnap = corner;
             bestDist = dist;
@@ -2590,6 +2600,13 @@
         }
       }
       if (bestSnap) return bestSnap;
+=======
+          if (cosAngle < -0.5) {
+            return corner;
+          }
+        }
+      }
+>>>>>>> origin/main
     }
     return c;
   }
@@ -3579,7 +3596,11 @@
   }
   function areaHTML() {
     const b = state.project.area,
+<<<<<<< HEAD
       bleed = Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
+=======
+      bleed = +state.project.planBleed || PLAN_BLEED_DEFAULT,
+>>>>>>> origin/main
       meta = state.project.planBaseMeta,
       detail = planDetailLevel();
     return (
@@ -5923,7 +5944,11 @@
       throw Error(
         "Define the Site Drawing area before issuing the Site Drawing sheet.",
       );
+<<<<<<< HEAD
     if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail(planDetailLevel());
+=======
+    if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail();
+>>>>>>> origin/main
     saveDocumentIssueMeta(opt);
     return await window.SAMIDocumentEngine.generate(copy(state.project), { ...opt, onProgress: updateExportStep });
   }
@@ -5933,6 +5958,35 @@
       '<div class="export-loading-content">' +
       '<div class="export-logo-container">' +
       '<img alt="" class="export-logo-pulse" src="sami-badge.png" />' +
+      "</div>" +
+      '<div class="export-status">' +
+      '<h3>Site Logistics Pack</h3>' +
+      '<p class="export-step" id="exportStep">' +
+      step +
+      "</p>" +
+      '<div class="export-progress">' +
+      '<div class="export-progress-bar"></div>' +
+      "</div>" +
+      "</div>" +
+      "</div>" +
+      "</div>";
+    showModal("EXPORTING", loadingHTML);
+    document.body.classList.add("export-loading-active");
+  }
+  function updateExportStep(step) {
+    const el = $("#exportStep");
+    if (el) el.textContent = step;
+  }
+  function closeExportLoading() {
+    document.body.classList.remove("export-loading-active");
+    closeModal();
+  }
+  function showExportLoading(step = "Initializing…") {
+    const loadingHTML =
+      '<div class="export-loading">' +
+      '<div class="export-loading-content">' +
+      '<div class="export-logo-container">' +
+      '<img alt="" class="export-logo-pulse" src="sami-badge.png?v=2.7.21" />' +
       "</div>" +
       '<div class="export-status">' +
       '<h3>Site Logistics Pack</h3>' +
@@ -5966,9 +6020,13 @@
       return;
     }
     closeModal();
+<<<<<<< HEAD
     state.exportBusy = true;
     showExportLoading("Preparing document…");
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+=======
+    showExportLoading("Preparing document…");
+>>>>>>> origin/main
     try {
       updateExportStep("Processing site drawing…");
       const blob = await buildSiteLogisticsPDF(opt),
@@ -5977,8 +6035,12 @@
           "_Site_Logistics_Pack_" +
           (opt.revision || "Rev0") +
           ".pdf";
+      closeExportLoading();
       if (action === "preview") {
+<<<<<<< HEAD
         closeExportLoading();
+=======
+>>>>>>> origin/main
         updateExportStep("Building PDF preview…");
         const url = URL.createObjectURL(blob),
           w = window.open(url, "_blank", "noopener");
@@ -6013,9 +6075,12 @@
       console.error(e);
       closeExportLoading();
       toast("PDF: " + (e.message || "Document generation failed."));
+<<<<<<< HEAD
     } finally {
       state.exportBusy = false;
       document.body.classList.remove("export-loading-active");
+=======
+>>>>>>> origin/main
     }
   }
   let toastTimer;
@@ -6236,7 +6301,11 @@
       '<div class="route-endpoint"><div>' +
       field(
         "routeStart",
+<<<<<<< HEAD
         "Start · address, postcode or coordinates",
+=======
+        "Address · postcode · ///what3words · lat,lng",
+>>>>>>> origin/main
         h.startText || "",
       ) +
       '<div class="subtle">' +
@@ -6252,7 +6321,11 @@
       '<div class="route-endpoint"><div>' +
       field(
         "routeEnd",
+<<<<<<< HEAD
         "Destination · site entrance",
+=======
+        "Address · postcode · ///what3words · lat,lng",
+>>>>>>> origin/main
         h.endText || "",
       ) +
       '<div class="subtle">' +
@@ -7026,6 +7099,7 @@
     $$('[data-base="drawing"], [data-action="capturePlanBase"]').forEach(
       (b) => b.classList.toggle("cad-processing", active),
     );
+<<<<<<< HEAD
     window.dispatchEvent(new Event("sami:cadstatus"));
   }
   function planBaseNeedsCapture(requiredDetail) {
@@ -7051,6 +7125,25 @@
     return task.finally(() => { if (state.planCapturePromise === task) state.planCapturePromise = null; });
   }
   async function capturePlanBaseWork(silent = false, detailOverride = null) {
+=======
+  }
+  function planBaseNeedsCapture(requiredDetail) {
+    if (!state.project.area) return false;
+    const meta = state.project.planBaseMeta,
+      need = requiredDetail || planDetailLevel();
+    return (
+      !state.project.planBase?.length ||
+      !meta ||
+      meta.stale ||
+      (PLAN_DETAIL_RANK[meta.detail] || 0) < (PLAN_DETAIL_RANK[need] || 0)
+    );
+  }
+  async function ensureExportCadDetail() {
+    if (!state.project.area) return;
+    if (planBaseNeedsCapture("high")) await capturePlanBase(true, "high");
+  }
+  async function capturePlanBase(silent = false, detailOverride = null) {
+>>>>>>> origin/main
     if (!state.project.area) {
       if (!silent) openDrawer("area");
       return;
@@ -7069,10 +7162,15 @@
         );
       return;
     }
+<<<<<<< HEAD
     state.planCaptureError = null;
     state.planCapturing = true;
     updateCadProcessingUI(true);
     window.dispatchEvent(new Event("sami:cadstatus"));
+=======
+    state.planCapturing = true;
+    updateCadProcessingUI(true);
+>>>>>>> origin/main
     if (!silent)
       toast(
         "Capturing " +
@@ -7085,7 +7183,11 @@
         q =
           "[out:json][timeout:30];(" +
           tags.map((t) => t + "(" + bbox + ");").join("") +
+<<<<<<< HEAD
           ");out body geom(" + bbox + ");";
+=======
+          ");(._;>;);out body;";
+>>>>>>> origin/main
       const data = await overpassQuery(q);
       if (
         captureProject !== state.project ||
@@ -7120,7 +7222,11 @@
       state.project.planBaseMeta = {
         capturedAt: new Date().toISOString(),
         source: "Stored OpenStreetMap vector snapshot · bounded site capture",
+<<<<<<< HEAD
         bleed: Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
+=======
+        bleed: +state.project.planBleed || PLAN_BLEED_DEFAULT,
+>>>>>>> origin/main
         detail,
         bbox: boundsText(b),
         featureCount: features.length,
@@ -7138,6 +7244,7 @@
             "-detail map features stored. Roads use metre-width geometry where available / inferred.",
         );
     } catch (e) {
+<<<<<<< HEAD
       if (captureProject === state.project && captureGeneration === state.areaGeneration) {
         state.planCaptureError = e.message;
         toast("CAD detail unavailable. Existing drawing retained. " + e.message);
@@ -7148,6 +7255,13 @@
         updateCadProcessingUI(false);
         window.dispatchEvent(new Event("sami:cadstatus"));
       }
+=======
+      if (!silent) toast("Detailed plan capture: " + e.message);
+      else console.warn(e);
+    } finally {
+      state.planCapturing = false;
+      updateCadProcessingUI(false);
+>>>>>>> origin/main
     }
   }
   const serviceRefreshes = new Map();
@@ -8205,12 +8319,15 @@
         : $("#askInput").value.trim()
           ? "Send request"
           : "Ask SAMI";
+<<<<<<< HEAD
     const aiConfigured = !!samiAiEndpoint(),
       capability = $("#assistantCapability");
     if (capability)
       capability.textContent = aiConfigured
         ? "AI endpoint configured · availability not verified"
         : "Local commands · AI not connected";
+=======
+>>>>>>> origin/main
     const ariaLabel = active
       ? "Stop listening"
       : $("#askInput").value.trim()
