@@ -66,7 +66,12 @@
     if (m.symbolPartsJSON) {
       try {
         const p = JSON.parse(m.symbolPartsJSON);
-        if (validParts(p)) return p;
+        if (validParts(p)) {
+          // Older CAD/Visio imports were letterboxed inside a square, then
+          // stretched again by the real footprint. Remove that letterbox once.
+          return m.symbolSpace !== "footprint" && /^(Visio|DXF|SVG)/i.test(m.sourceFormat || "")
+            ? footprintParts(p) : p;
+        }
       } catch {}
     }
     if (kind?.startsWith("panel_") || m.type === "panel")
@@ -407,8 +412,25 @@
       })
       .join("");
   }
-  function svg(kind, m = {}) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -3 106 106" aria-hidden="true">${svgParts(parts(kind, m), m)}</svg>`;
+  function partBounds(ps) {
+    const points=ps.flatMap(p=>p.type === "poly" ? p.points : p.type === "line" ? [[p.x,p.y],[p.x2,p.y2]] : [[p.x,p.y],[p.x+p.w,p.y+p.h]]);
+    if(!points.length)return [0,0,100,100];
+    return [Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];
   }
-  root.SAMISymbols = { parts, validParts, color, svgParts, svg, P };
+  function footprintParts(ps) {
+    const b=partBounds(ps),sx=100/Math.max(.0001,b[2]-b[0]),sy=100/Math.max(.0001,b[3]-b[1]);
+    return ps.map(p=>{
+      if(p.type === "poly")return {...p,points:p.points.map(([x,y])=>[(x-b[0])*sx,(y-b[1])*sy])};
+      const q={...p,x:(p.x-b[0])*sx,y:(p.y-b[1])*sy};
+      if(p.type === "line")Object.assign(q,{x2:(p.x2-b[0])*sx,y2:(p.y2-b[1])*sy});
+      else Object.assign(q,{w:p.w*sx,h:p.h*sy});
+      return q;
+    });
+  }
+  function svg(kind, m = {}) {
+    const ps=parts(kind,m), ratio=Math.max(.0001,Math.min(10000,(+m.length || 1)/(+m.width || 1))), b=partBounds(ps), pad=4;
+    const vb=[(b[0]-pad)*ratio,b[1]-pad,Math.max(1,b[2]-b[0]+pad*2)*ratio,Math.max(1,b[3]-b[1]+pad*2)];
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(" ")}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g transform="scale(${ratio} 1)">${svgParts(ps,m)}</g></svg>`;
+  }
+  root.SAMISymbols = { parts, validParts, partBounds, footprintParts, color, svgParts, svg, P };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -32,8 +32,11 @@
         if (!db.objectStoreNames.contains("profiles"))
           db.createObjectStore("profiles", { keyPath: "id" });
       };
-      r.onsuccess = () => resolve(r.result);
-      r.onerror = () => reject(r.error);
+      r.onsuccess = () => {
+        r.result.onversionchange = () => { r.result.close(); database = null; };
+        resolve(r.result);
+      };
+      r.onerror = () => { database = null; reject(r.error); };
       r.onblocked = () =>
         notice("warning", "Close other SAMI tabs so device storage can open.");
     });
@@ -89,6 +92,7 @@
     const p = clone(project);
     p.id ||= id();
     p.savedAt = new Date().toISOString();
+    p.storageRevision = 1;
     journal(p);
     const work = async () => {
       const old = await get("projects", p.id);
@@ -96,7 +100,7 @@
         if (
           checkpoint ||
           !old ||
-          Date.parse(p.savedAt) - Date.parse(old.checkpointAt || 0) > 60000
+          Date.parse(p.savedAt) - (Date.parse(old.checkpointAt || "") || 0) > 60000
         ) {
           tx.objectStore("versions").put({
             key: p.id + ":" + Date.now() + ":" + id(),
@@ -126,23 +130,16 @@
       .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
   }
   async function recover() {
-    let draft, legacy;
-    try {
-      draft = JSON.parse(localStorage.getItem(JOURNAL) || "null");
-      legacy = JSON.parse(localStorage.getItem(LEGACY) || "null");
-    } catch {}
-    const active = localStorage.getItem(ACTIVE);
-    let stored;
-    try {
-      stored = active ? await get("projects", active) : null;
-    } catch {}
-    if (
-      draft &&
-      (!stored ||
-        Date.parse(draft.savedAt || 0) >= Date.parse(stored.savedAt || 0))
-    )
-      return draft;
-    return stored || legacy || null;
+    const read = key => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } };
+    const draft = read(JOURNAL), legacy = read(LEGACY);
+    let active, stored;
+    try { active = localStorage.getItem(ACTIVE); stored = active ? await get("projects", active) : null; } catch {}
+    // Legacy edits did not update savedAt: prefer that copy on a migration tie.
+    const recovered = root.SAMIProjectData.recover([legacy, draft, stored], active);
+    if (recovered === legacy && stored && JSON.stringify(legacy) !== JSON.stringify(stored)) {
+      try { await save(stored, {checkpoint:true,label:"Recovery copy before storage migration"}); } catch {}
+    }
+    return recovered;
   }
   async function list() {
     return (await all("projects")).sort((a, b) =>

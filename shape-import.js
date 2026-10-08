@@ -102,50 +102,15 @@
       b = [b[0], b[1] - pad / 2, b[2], b[3] + pad / 2];
       bh = pad;
     }
-    const sx = 100 / bw,
-      sy = 100 / bh,
-      s = Math.min(sx, sy),
-      ox = (100 - bw * s) / 2 - b[0] * s,
-      oy = (100 - bh * s) / 2 - b[1] * s,
-      cv = (n) => clamp(n * s, -100, 200),
-      out = raw.map((p) => {
-        if (p.type === "line")
-          return {
-            type: "line",
-            x: cv(p.x) + ox,
-            y: cv(p.y) + oy,
-            x2: cv(p.x2) + ox,
-            y2: cv(p.y2) + oy,
-            stroke: p.stroke || "ink",
-          };
-        if (p.type === "poly")
-          return {
-            type: "poly",
-            points: p.points
-              .slice(0, 300)
-              .map(([x, y]) => [cv(x) + ox, cv(y) + oy]),
-            fill: p.fill || "paper",
-            stroke: p.stroke || "ink",
-          };
-        if (p.type === "ellipse")
-          return {
-            type: "ellipse",
-            x: cv(p.x) + ox,
-            y: cv(p.y) + oy,
-            w: Math.max(0.01, cv(p.w)),
-            h: Math.max(0.01, cv(p.h)),
-            fill: p.fill || "paper",
-            stroke: p.stroke || "ink",
-          };
-        return {
-          type: "rect",
-          x: cv(p.x) + ox,
-          y: cv(p.y) + oy,
-          w: Math.max(0.01, cv(p.w)),
-          h: Math.max(0.01, cv(p.h)),
-          fill: p.fill || "paper",
-          stroke: p.stroke || "ink",
-        };
+    // Coordinates occupy the full 0..100 footprint. Physical length/width
+    // provide the aspect ratio when rendered on the map, in previews and PDFs.
+    const sx = 100 / bw, sy = 100 / bh,
+      x = n => clamp((n-b[0])*sx,0,100), y = n => clamp((n-b[1])*sy,0,100),
+      out = raw.map(p => {
+        const style={fill:p.fill || "paper",stroke:p.stroke || "ink"};
+        if(p.type === "line")return {type:"line",x:x(p.x),y:y(p.y),x2:x(p.x2),y2:y(p.y2),stroke:style.stroke};
+        if(p.type === "poly")return {type:"poly",points:p.points.slice(0,300).map(([a,b])=>[x(a),y(b)]),...style};
+        return {type:p.type === "ellipse" ? "ellipse" : "rect",x:x(p.x),y:y(p.y),w:Math.max(.01,p.w*sx),h:Math.max(.01,p.h*sy),...style};
       });
     const aspect = bw / bh;
     let length = opts.length,
@@ -166,6 +131,7 @@
       length: +length,
       width: +width,
       needsScale,
+      symbolSpace: "footprint",
       parts: out,
       sourceFormat: opts.sourceFormat || "",
       sourceName: opts.sourceName || "",
@@ -579,8 +545,7 @@
       )) {
         if ((cell(section, "NoShow", 0) || 0) > 0.5) continue;
         let path = [],
-          cur = null,
-          start = null;
+          cur = null;
         const flush = (close = false) => {
           if (path.length > 1) {
             if (
@@ -595,7 +560,6 @@
           }
           path = [];
           cur = null;
-          start = null;
         };
         for (const row of directChildren(section, "Row")) {
           if (parts.length >= MAX_PARTS) break;
@@ -614,7 +578,6 @@
               y *= H;
             }
             cur = [x, y];
-            start = cur.slice();
             path = [pt(m, cur)];
           } else if (
             t === "lineto" ||
@@ -960,7 +923,8 @@
         length: clamp(+x.length || 1, 0.1, 500),
         width: clamp(+x.width || 1, 0.1, 500),
         needsScale: !!x.needsScale,
-        parts,
+        parts: root.SAMISymbols.parts("", {...x,symbolPartsJSON:JSON.stringify(parts)}),
+        symbolSpace: "footprint",
         sourceFormat: "SAMI shape pack",
         sourceName: name,
       };
@@ -997,7 +961,8 @@
           length: a.length,
           width: a.width,
           needsScale: !!a.needsScale,
-          parts: JSON.parse(a.symbolPartsJSON || "[]"),
+          parts: root.SAMISymbols.parts(a.kind,a),
+          symbolSpace: "footprint",
         })),
       },
       null,

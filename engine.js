@@ -23,8 +23,8 @@
       Date.now().toString(36) +
       "-" +
       Math.random().toString(36).slice(2);
-  const SERVICE_BUFFER_M = 402.336,
-    PLAN_BLEED_DEFAULT = 60;
+  const SERVICE_BUFFER_M = 160.9344,
+    PLAN_BLEED_DEFAULT = 10;
   const SERVICES = {
     electric: { name: "Underground electricity", color: "#df4141" },
     gas: { name: "Gas", color: "#ce9b00" },
@@ -120,7 +120,7 @@
       source:
         "OpenStreetMap power=cable / man_made=pipeline / utility features",
       status: "Built-in bounded snapshot",
-      note: "Gas, water, sewer/drainage, electricity and telecom references where mapped. Coverage is incomplete and this is never a safe-dig record.",
+      note: "Sparse contributor-mapped gas, water, sewer/drainage, electricity and telecom references only. No complete openly licensed UK-wide mains dataset is connected; this is never a safe-dig record.",
     },
     {
       id: "planning-data-constraints",
@@ -502,6 +502,7 @@
     note: "Site note",
     photo: "Site photo",
     panel: "Trakway panel",
+    trakway: "Trakway barrier",
     asset: "Site asset",
     "hazard-marker": "Concern",
     shape: "Drawing shape",
@@ -545,6 +546,7 @@
     routePick: null,
     vertexEditId: null,
     groupPick: null,
+    multiSelection: new Set(),
     serviceScreen: "home",
     project: null,
   };
@@ -563,6 +565,7 @@
       areaAspectLocked: false,
       areaPaperRatio: 420 / 297,
       planBleed: PLAN_BLEED_DEFAULT,
+      planDetail: "low",
       planBase: [],
       planBaseMeta: null,
       features: [],
@@ -674,6 +677,9 @@
       return x;
     });
     if (["street", "satellite", "drawing"].includes(p.base)) n.base = p.base;
+    n.storageRevision = p.storageRevision || 0;
+    n.planBaseStyle = ["street", "satellite", "drawing"].includes(p.planBaseStyle) ? p.planBaseStyle : n.base;
+    n.exploreBase = ["street", "satellite"].includes(p.exploreBase) ? p.exploreBase : n.base === "drawing" ? "satellite" : n.base;
     if (G.validCoord([p.map?.center?.lng, p.map?.center?.lat]))
       n.map = {
         center: { lat: p.map.center.lat, lng: p.map.center.lng },
@@ -719,6 +725,8 @@
     if (SERVICES[p.serviceType]) n.serviceType = p.serviceType;
     if (Number.isFinite(+p.planBleed))
       n.planBleed = Math.max(0, Math.min(200, +p.planBleed));
+    if (["low", "medium", "high"].includes(p.planDetail))
+      n.planDetail = p.planDetail;
     if (Array.isArray(p.planBase))
       n.planBase = p.planBase
         .filter(G.validateFeature)
@@ -790,6 +798,10 @@
       markerZoomAnimation: false,
       zoomAnimation: true,
     }).setView(state.project.map.center, state.project.map.zoom);
+    requestAnimationFrame(() => {
+      state.map.invalidateSize();
+      state.map.setView(state.project.map.center, state.project.map.zoom);
+    });
     const tilePerf = {
       maxNativeZoom: 19,
       maxZoom: 23,
@@ -835,6 +847,14 @@
       }
     });
     state.map.on("zoomend", renderAssetIllustrations);
+    state.map.on("zoomend bearingchange", () => {
+      for (const f of state.project.features) if (f.properties.dimension) {
+        const old = state.layers.get(f.id);
+        if (old) state.group.removeLayer(old);
+        state.layers.delete(f.id);
+        if (visibleFeature(f)) renderDimensionView(f);
+      }
+    });
     for (const b of Object.values(state.bases)) {
       let warned = false;
       b.on("tileerror", () => {
@@ -918,6 +938,7 @@
     };
     $("#dismissWelcome").onclick = dismissWelcome;
     $("#sendBtn").onclick = handleAskButton;
+    if ($("#headerAskBtn")) $("#headerAskBtn").onclick = handleAskButton;
     $("#askInput").onkeydown = (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -925,6 +946,7 @@
       }
     };
     $("#askInput").oninput = updateAskLabel;
+    window.addEventListener("sami:assistant-config", updateAskLabel);
     $("#closeSami").onclick = () => $("#samiPanel").classList.remove("open");
     $("#muteSami").onclick = () => {
       setPref(
@@ -1043,15 +1065,33 @@
       plan: "Draw directly over Map, Satellite or CAD",
       library: "Trakway, assets and your project items",
     }[mode];
+    const drawingBtn = $('[data-base="drawing"]');
+    if (drawingBtn) {
+      drawingBtn.hidden = mode !== "plan";
+      drawingBtn.disabled = !state.project.area;
+      drawingBtn.setAttribute("aria-disabled", String(!state.project.area));
+      drawingBtn.title = state.project.area
+        ? "CAD site drawing"
+        : "Define a site area to enable CAD";
+    }
   }
   function switchBase(base, save = true) {
+    const exploreBase = ["street", "satellite"].includes(
+      state.project.exploreBase,
+    )
+      ? state.project.exploreBase
+      : "satellite";
+    if (base === "drawing" && state.mode !== "plan") base = exploreBase;
     if (!["street", "satellite", "drawing"].includes(base)) return;
     if (base === "drawing" && !state.project.area) {
-      openDrawer("area");
-      toast(
-        "Define the site drawing area before creating the bounded CAD view.",
-      );
-      return;
+      if (save) {
+        openDrawer("area");
+        toast(
+          "Define the site drawing area before creating the bounded CAD view.",
+        );
+        return;
+      }
+      base = exploreBase;
     }
     Object.values(state.bases).forEach((l) => {
       if (state.map.hasLayer(l)) state.map.removeLayer(l);
@@ -1064,7 +1104,8 @@
       const on = b.dataset.base === base;
       b.classList.toggle("active", on);
       b.setAttribute("aria-pressed", String(on));
-      b.disabled = false;
+      b.disabled = b.dataset.base === "drawing" && !state.project.area;
+      b.setAttribute("aria-disabled", String(b.disabled));
     });
     $("#sourceChip").textContent =
       base === "drawing"
@@ -1077,12 +1118,10 @@
         : { street: "OpenStreetMap", satellite: "Esri imagery" }[base];
     if (save) {
       state.project.base = base;
+      state.project[state.mode === "plan" ? "planBaseStyle" : "exploreBase"] = base;
       saveSoon();
     }
-    if (
-      base === "drawing" &&
-      (!state.project.planBase?.length || state.project.planBaseMeta?.stale)
-    )
+    if (base === "drawing" && planBaseNeedsCapture() && !state.planCaptureError)
       queueMicrotask(() => capturePlanBase(true));
     render();
   }
@@ -1134,7 +1173,7 @@
           state.project.area,
           Math.max(
             0,
-            Math.min(200, +state.project.planBleed || PLAN_BLEED_DEFAULT),
+            Math.min(200, Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT)),
           ),
         )
       : null;
@@ -1248,6 +1287,15 @@
     }
     state.groupPick = { groupId: gid, originId: f.id, before };
     closeDrawer();
+    const ob = G.boundsOf(f.geometry);
+    if (ob)
+      state.map.fitBounds(
+        [
+          [ob[1], ob[0]],
+          [ob[3], ob[2]],
+        ],
+        { maxZoom: 21, padding: [140, 140] },
+      );
     render();
     toast("Group selection: tap items to add or remove them, then press Done.");
   }
@@ -1349,6 +1397,33 @@
     openDrawer("selection");
     toast("Group separated into individual items.");
   }
+  function groupMultiSelection() {
+    if (state.multiSelection.size < 2) {
+      toast("Select at least two items to create a group.");
+      return;
+    }
+    const groupId = uid();
+    let count = 0,
+      firstGroupedId = null;
+    for (const id of state.multiSelection) {
+      const f = state.project.features.find((x) => x.id === id);
+      if (f && !f.properties.locked) {
+        f.properties.groupId = groupId;
+        f.properties.groupUngrouped = false;
+        firstGroupedId ??= id;
+        count++;
+      }
+    }
+    if (count < 2) {
+      toast("At least two items must not be locked to create a group.");
+      return;
+    }
+    state.multiSelection.clear();
+    state.selected = firstGroupedId;
+    commit();
+    openDrawer("selection");
+    toast(count + " items grouped.");
+  }
   function duplicateSelected() {
     const f = selectedFeature();
     if (!f) return;
@@ -1423,12 +1498,24 @@
     if (!state.project.area) return;
     abortLayerRequest();
     state.areaGeneration++;
+    state.planCaptureError = null;
     state.cache.clear();
     state.project.area = null;
     state.project.planBase = [];
     state.project.planBaseMeta = null;
     state.selected = null;
     cancelDraw();
+    if (state.base === "drawing") {
+      const fallback = ["street", "satellite"].includes(
+        state.project.exploreBase,
+      )
+        ? state.project.exploreBase
+        : "satellite";
+      state.project.planBaseStyle = fallback;
+      state.project.base = fallback;
+      switchBase(fallback, false);
+    }
+    if (state.mode === "plan") setMode("map");
     commit();
     openDrawer("area");
     toast(
@@ -1600,7 +1687,7 @@
           !G.inside(next, serviceBounds())
         ) {
           f.geometry = old;
-          toast("Keep service points inside the site area + 0.25 mile buffer.");
+          toast("Keep service points inside the site area + 0.1 mile buffer.");
           render();
           return;
         }
@@ -1637,7 +1724,7 @@
   }
   function visibleFeature(f) {
     const m = f.properties;
-    if (m.guideHidden) return null;
+    if (m.guideHidden || (m.autoAnnotation && !state.project.showAutoMeasurements)) return null;
     if (state.project.hiddenTypes.includes(m.type)) return null;
     if (
       m.type === "service" &&
@@ -1676,6 +1763,15 @@
         weight: 1,
         fillColor: PRODUCTS[m.product]?.color || "#9fbfa9",
         fillOpacity: 0.6,
+      };
+    if (t === "trakway")
+      style = {
+        color: m.trakwayKind === "area" ? "#3a8b77" : "#2a7864",
+        weight: m.trakwayKind === "area" ? 2.5 : 4,
+        fillColor: "#5fb393",
+        fillOpacity: m.trakwayKind === "area" ? 0.35 : 0,
+        dashArray: m.trakwayKind === "area" ? null : "8 6",
+        opacity: 0.95,
       };
     if (t === "asset")
       style = {
@@ -1741,7 +1837,7 @@
     if (Number.isFinite(+m.styleFillOpacity))
       style.fillOpacity = Math.max(0, Math.min(1, +m.styleFillOpacity));
     const gid = selectedGroupId();
-    if (f.id === state.selected || (gid && m.groupId === gid))
+    if (f.id === state.selected || (gid && m.groupId === gid) || state.multiSelection.has(f.id))
       style = {
         ...style,
         color: "#00a885",
@@ -1904,7 +2000,7 @@
           }).addTo(state.planBaseGroup);
         continue;
       }
-      const layer = L.geoJSON(
+      L.geoJSON(
         { ...f, geometry: g },
         {
           style: () => baseStyle({ ...f, geometry: g }),
@@ -1972,12 +2068,39 @@
       }).addTo(state.routeGroup);
     }
   }
+  function renderDimensionView(f) {
+    const P=window.SAMIPlanning, d=P.dimensionGeometry(f,state.project.features);
+    if(!d) return;
+    const selected=state.selected===f.id, color=selected ? "#18a976" : state.base === "drawing" ? "#384951" : "#edf5f0";
+    const group=L.featureGroup().addTo(state.group);
+    const line=points=>L.polyline(points.map(latlng),{color,weight:selected?1.8:1.15,interactive:true}).addTo(group);
+    d.extensions.forEach(line); line(d.line);
+    const a=state.map.latLngToContainerPoint(latlng(d.line[0])),b=state.map.latLngToContainerPoint(latlng(d.line[1]));
+    const dx=b.x-a.x,dy=b.y-a.y,n=Math.hypot(dx,dy)||1,ux=dx/n,uy=dy/n;
+    for(const pt of [a,b]) {
+      const corners=[L.point(pt.x-4*(ux-uy),pt.y-4*(uy+ux)),L.point(pt.x+4*(ux-uy),pt.y+4*(uy+ux))];
+      line(corners.map(p=>coord(state.map.containerPointToLatLng(p))));
+    }
+    let angle=Math.atan2(dy,dx)*180/Math.PI+(state.map.getBearing?.()||0);
+    angle=((angle+180)%360+360)%360-180;if(angle>90)angle-=180;if(angle< -90)angle+=180;
+    const marker=L.marker(latlng(d.midpoint),{keyboard:true,icon:L.divIcon({className:"dimension-note",html:`<button type="button" aria-label="Edit dimension ${esc(P.dimensionLabel(d.length,f.properties))}" style="transform:translate(-50%,-50%) rotate(calc(${angle}deg + var(--counter-bearing,0deg)))">${esc(P.dimensionLabel(d.length,f.properties))}</button>`,iconSize:[0,0]})}).addTo(group);
+    group.on("click",e=>{
+      if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);
+      if(state.tool || state.routePick){if(e.latlng)onMapClick(e);return;}
+      selectFeature(f.id); openDrawer("selection",true);
+    });
+    state.layers.set(f.id,group);
+  }
   function render() {
     if (!state.map) return;
     state.group.clearLayers();
     state.layers.clear();
     state.editGroup.clearLayers();
     state.ohlSupportGroup.clearLayers();
+    for (const f of state.project.features) if(f.properties.dimension) {
+      f.geometry.coordinates = window.SAMIPlanning.resolveDimension(f,state.project.features);
+      f.properties.distance = G.length(f.geometry.coordinates);
+    }
     renderPlanBase();
     renderRoutes();
     let ohlMarkerCount = 0;
@@ -1989,6 +2112,7 @@
         continue;
       }
       if (!shown) continue;
+      if (f.properties.dimension) { renderDimensionView(f); continue; }
       const layer = L.geoJSON(shown, {
         style: () => featureStyle(f),
         pointToLayer: (ff, ll) => {
@@ -2043,14 +2167,15 @@
         },
       });
       layer.on("click", (e) => {
+        if (state.suppressMapClick > performance.now() && !state.routePick) return;
         if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
         if (state.groupPick) {
           if (f.properties.locked) return;
           completeGroupPick(f);
           return;
         }
-        if (state.tool) {
-          if (e.latlng) onMapClick({ latlng: e.latlng });
+        if (state.tool || state.routePick) {
+          if (e.latlng) onMapClick({ latlng: e.latlng, originalEvent: e.originalEvent });
           return;
         }
         selectFeature(f.id);
@@ -2233,6 +2358,7 @@
   function restoreHistory(s) {
     state.project = JSON.parse(s);
     state.areaGeneration++;
+    state.planCaptureError = null;
     state.cache.clear();
     state.selected = null;
     $("#projectName").value = state.project.name;
@@ -2249,6 +2375,7 @@
   }
   function saveNow() {
     clearTimeout(saveTimer);
+    if (window.SAMIWorkspace) return window.SAMIWorkspace.save();
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(state.project));
       $("#saveState").textContent = "Saved on this device";
@@ -2287,6 +2414,7 @@
     state.tool = tool;
     state.options = copy(options);
     state.points = [];
+    $("#map").classList.add("drawing-active");
     $("#drawStatus").hidden = false;
     const names = {
       planArea: "Site frame · two corners",
@@ -2295,6 +2423,8 @@
       panelRoute: "Trakway · touch line",
       panelFreehand: "Trakway · freehand run",
       panelAreaFreehand: "Trakway · fill area",
+      trakwayLine: "Trakway line · no grid",
+      trakwayArea: "Trakway area · no grid",
       singlePanel: "Place a panel",
       asset: "Place " + (options.label || "asset"),
       serviceFreehand: "Draw service",
@@ -2322,6 +2452,7 @@
     state.tool = null;
     state.points = [];
     state.options = {};
+    $("#map").classList.remove("drawing-active");
     state.freehandActive = false;
     state.vertexEditId = null;
     state.groupPick = null;
@@ -2408,10 +2539,64 @@
     }
     return null;
   }
+  function snapToCorner(c, prevPoint) {
+    const corners = [];
+    for (const f of state.project.features) {
+      if (f.properties.hidden || f.properties.guideHidden) continue;
+      const g = f.geometry;
+      if (g.type === "Point") {
+        corners.push(g.coordinates);
+      } else if (g.type === "LineString") {
+        g.coordinates.forEach((coord) => corners.push(coord));
+      } else if (g.type === "MultiLineString") {
+        g.coordinates.forEach((line) =>
+          line.forEach((coord) => corners.push(coord))
+        );
+      } else if (g.type === "Polygon") {
+        g.coordinates[0].forEach((coord) => corners.push(coord));
+      } else if (g.type === "MultiPolygon") {
+        g.coordinates.forEach((poly) =>
+          poly[0].forEach((coord) => corners.push(coord))
+        );
+      }
+    }
+    if (!corners.length || !prevPoint) return c;
+    const snapDistances = [10, 8, 6, 4, 2];
+    const pr = G.projection(c);
+    let bestSnap = null;
+    let bestDist = Infinity;
+    for (const snapDist of snapDistances) {
+      const snapThresholdDeg = (snapDist / 111000) * 1.5;
+      for (const corner of corners) {
+        const dist = G.distance(c, corner);
+        if (dist > snapThresholdDeg) continue;
+        const prevXY = pr.xy(prevPoint);
+        const cornerXY = pr.xy(corner);
+        const currentXY = pr.xy(c);
+        const incomingDx = cornerXY[0] - prevXY[0];
+        const incomingDy = cornerXY[1] - prevXY[1];
+        const outgoingDx = currentXY[0] - cornerXY[0];
+        const outgoingDy = currentXY[1] - cornerXY[1];
+        const dotProduct =
+          incomingDx * outgoingDx + incomingDy * outgoingDy;
+        const mag1 = Math.hypot(incomingDx, incomingDy);
+        const mag2 = Math.hypot(outgoingDx, outgoingDy);
+        if (mag1 > 0 && mag2 > 0) {
+          const cosAngle = dotProduct / (mag1 * mag2);
+          if (cosAngle < -0.3 && dist < bestDist) {
+            bestSnap = corner;
+            bestDist = dist;
+          }
+        }
+      }
+      if (bestSnap) return bestSnap;
+    }
+    return c;
+  }
   function onMapClick(e) {
     const raw = coord(e.latlng);
     if (state.routePick) {
-      const which = state.routePick;
+      const which = state.routePick, project = state.project;
       state.routePick = null;
       state.project.hgv = {
         ...state.project.hgv,
@@ -2428,6 +2613,7 @@
           " selected · looking up address / what3words…",
       );
       routePointDetails(raw).then((details) => {
+        if (state.project !== project) return;
         const current = state.project.hgv?.[which];
         if (!current || G.distance(current, raw) > 0.2) return;
         const text = details.what3words || details.address || coordLabel(raw);
@@ -2447,10 +2633,25 @@
     if (!state.tool) {
       const hit = hitFeatureAt(raw);
       if (hit) {
+        const isCtrlClick = e.originalEvent?.ctrlKey || e.originalEvent?.metaKey;
+        if (isCtrlClick) {
+          if (state.multiSelection.has(hit.id)) {
+            state.multiSelection.delete(hit.id);
+          } else {
+            state.multiSelection.add(hit.id);
+          }
+          state.selected = null;
+          render();
+          return;
+        }
+        if (state.multiSelection.size > 0) {
+          state.multiSelection.clear();
+        }
         selectFeature(hit.id, false);
         return;
       }
       state.selected = null;
+      state.multiSelection.clear();
       render();
       return;
     }
@@ -2471,7 +2672,7 @@
       state.project.area &&
       !G.inside(c, serviceBounds())
     ) {
-      toast("Service information is limited to the site area plus 0.25 mile.");
+      toast("Service information is limited to the site area plus 0.1 mile.");
       return;
     }
     if (
@@ -2501,7 +2702,6 @@
     state.draftGroup.clearLayers();
     if (!state.tool) return;
     const ps = state.points,
-      base = baseToolName(state.tool),
       polygon =
         [
           "area",
@@ -2558,6 +2758,16 @@
           }),
         }).addTo(state.draftGroup),
       );
+    if (state.snapPoint)
+      L.marker(latlng(state.snapPoint), {
+        interactive: false,
+        icon: L.divIcon({
+          className: "",
+          html: '<div class="draft-snap-point"></div>',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        }),
+      }).addTo(state.draftGroup);
     const repeatPlace = ["asset", "singlePanel"].includes(state.tool),
       single = ["note", "photo", "hazard-marker", "textBox"].includes(
         state.tool,
@@ -2651,6 +2861,44 @@
         addPanelFill(ps, opt);
         return;
       }
+      if (tool === "trakwayLine") {
+        if (ps.length < 2) return;
+        const clean = simplifyLine(ps, 0.3),
+          geom = { type: "LineString", coordinates: clean },
+          added = feature("trakway", geom, {
+            ...opt,
+            label: opt.label || "Trakway line",
+            trakwayKind: "line",
+            includeLegend: true,
+          });
+        state.project.features.push(added);
+        cancelDraw();
+        state.selected = null;
+        commit();
+        toast("Trakway line created · Select mode.");
+        return;
+      }
+      if (tool === "trakwayArea") {
+        if (ps.length < 3) return;
+        const clean = simplifyLine(ps, 0.45);
+        if (clean.length < 3) throw Error("Sketch a larger trakway area.");
+        const geom = {
+            type: "Polygon",
+            coordinates: [[...clean, clean[0].slice()]],
+          },
+          added = feature("trakway", geom, {
+            ...opt,
+            label: opt.label || "Trakway area",
+            trakwayKind: "area",
+            includeLegend: true,
+          });
+        state.project.features.push(added);
+        cancelDraw();
+        state.selected = null;
+        commit();
+        toast("Trakway area created · Select mode.");
+        return;
+      }
       if (tool === "contribution") {
         if (finishContribution(ps, opt)) return;
       }
@@ -2724,7 +2972,7 @@
         geom = G.clipGeometry(geom, serviceBounds());
         if (!geom)
           throw Error(
-            "No service geometry falls inside the site area + 0.25 mile service buffer.",
+            "No service geometry falls inside the site area + 0.1 mile service buffer.",
           );
       }
       const type =
@@ -2834,11 +3082,10 @@
           toast("This Trakway layout contains no panels.");
           return;
         }
-        state.selected = null;
-        snapshot();
-        render();
-        renderDraft();
-        saveSoon();
+        cancelDraw();
+        state.selected = ids[0];
+        commit();
+        toast("Layout placed · Select mode.");
         return;
       }
       f = feature(
@@ -2852,12 +3099,10 @@
         },
       );
       state.project.features.push(f);
-      state.options.placedIds = [...(state.options.placedIds || []), f.id];
-      state.selected = null;
-      snapshot();
-      render();
-      renderDraft();
-      saveSoon();
+      cancelDraw();
+      state.selected = f.id;
+      commit();
+      toast("Item placed · Select mode.");
       return;
     }
     f = feature(
@@ -2882,11 +3127,12 @@
     }
     abortLayerRequest();
     state.areaGeneration++;
+    state.planCaptureError = null;
     state.cache.clear();
     state.project.area = b;
     if (Array.isArray(frame) && frame.length === 4 && frame.every(G.validCoord))
       state.project.planFrame = frame.map(copy);
-    else if (!state.project.planFrame) {
+    else {
       state.project.planFrame = [
         [b[0], b[1]],
         [b[2], b[1]],
@@ -2894,7 +3140,8 @@
         [b[0], b[3]],
       ];
     }
-    if (planView) state.project.planView = copy(planView);
+    state.project.planView = planView ? copy(planView) : null;
+    state.areaViewPending = true;
     state.project.planBaseMeta = {
       ...(state.project.planBaseMeta || {}),
       stale: true,
@@ -2904,8 +3151,8 @@
     state.project.meta.ohlStale = true;
     cancelDraw();
     commit();
-    openDrawer("area");
-    toast("Site Plan frame saved from the current view.");
+    setMode("plan");
+    toast("Site area saved. Draw and place assets in Site Plan.");
     clearTimeout(state._ohlAutoRefresh);
     if (state.project.serviceVisibility?.ohl !== false)
       state._ohlAutoRefresh = setTimeout(() => {
@@ -3040,6 +3287,7 @@
       search: "Find your site",
       help: "Find your tools",
       selection: "Edit item",
+      appearance: "Appearance & brand",
     };
     $("#drawerTitle").textContent = title[kind] || "SAMI";
     const box = $("#drawerContent");
@@ -3057,6 +3305,7 @@
         search: searchHTML,
         help: helpHTML,
         selection: selectionHTML,
+        appearance: appearanceHTML,
       }[kind] || helpHTML
     )();
     box.onclick = (e) => {
@@ -3064,6 +3313,62 @@
       if (b) runAction(b.dataset.action, b);
     };
     bindDrawer(kind);
+  }
+  function appearanceHTML() {
+    const themes = {
+      graphite: "Graphite (dark, default)",
+      obsidian: "Obsidian (darker)",
+      carbon: "Carbon (high contrast)",
+      midnight: "Midnight (cool dark)",
+      titanium: "Titanium (neutral dark)",
+      blackout: "Blackout (pure black)",
+      navy: "Navy (blue dark)",
+      slate: "Slate (gray dark)",
+      sandstone: "Sandstone (warm dark)",
+      arctic: "Arctic (cool light)",
+      studioLight: "Studio light (bright)",
+      paper: "Paper (clean light)",
+      arcticLight: "Arctic light (soft light)",
+    };
+    const current =
+      localStorage.getItem("sami.appearance") || "graphite";
+    return (
+      '<div class="card"><span class="tag">USER INTERFACE</span><h3>Choose your appearance</h3><p class="subtle">Select a color theme for the SAMI interface. Your choice is saved automatically.</p></div>' +
+      '<div class="appearance-grid">' +
+      Object.entries(themes)
+        .map(
+          ([key, label]) =>
+            '<button class="appearance-btn' +
+            (key === current ? " active" : "") +
+            '" data-appearance="' +
+            key +
+            '" title="' +
+            label +
+            '">' +
+            '<span class="appearance-preview" data-theme="' +
+            key +
+            '"></span>' +
+            "<span>" +
+            label +
+            "</span>" +
+            "</button>",
+        )
+        .join("") +
+      "</div>" +
+      '<div class="card"><span class="tag">BRAND CUSTOMIZATION</span><h3>Customize brand colors</h3><p class="subtle">Define custom brand colors for your organization. Colors apply to accents and highlights throughout the interface.</p></div>' +
+      '<div class="brand-customization">' +
+      field("brandPrimary", "Primary accent",
+        localStorage.getItem("sami.brandPrimary") || "#00a885",
+        "color") +
+      field("brandSecondary", "Secondary accent",
+        localStorage.getItem("sami.brandSecondary") || "#00a481",
+        "color") +
+      '</div>' +
+      '<div class="compact-tools">' +
+      button("Apply brand colors", "applyBrandColors") +
+      button("Reset to defaults", "resetBrandColors") +
+      "</div>"
+    );
   }
   function drawHTML() {
     const card = (title, desc, methods) =>
@@ -3139,7 +3444,11 @@
     return (
       '<div class="card trakway-simple"><span class="tag">TRAKWAY</span><h3>Draw it the way you would mark it on a plan</h3><p class="subtle">Choose the panel once, then either tap a route, draw it freehand, or sketch an area and let SAMI fill it with panels.</p></div>' +
       choice("panelProduct", "Panel type", PRODUCTS, r.product) +
-      '<div class="trakway-draw-modes"><button class="hero-tool" data-action="panelRoute"><strong>Touch line</strong><small>Tap route points · Finish</small></button><button class="hero-tool" data-action="panelFreehand"><strong>Freehand run</strong><small>Draw continuously with one finger</small></button><button class="hero-tool" data-action="panelAreaFill"><strong>Fill area</strong><small>Sketch the footprint to panelise</small></button></div><details class="advanced-settings"><summary>Panel setup / joints</summary><div class="row equal"><div>' +
+      '<div class="trakway-draw-modes"><button class="hero-tool" data-action="panelRoute"><strong>Touch line</strong><small>Tap route points · Finish</small></button><button class="hero-tool" data-action="panelFreehand"><strong>Freehand run</strong><small>Draw continuously with one finger</small></button><button class="hero-tool" data-action="panelAreaFill"><strong>Fill area</strong><small>Sketch the footprint to panelise</small></button></div>' +
+      '<details class="compact-section"><summary>Trakway line & area tools</summary>' +
+      '<div class="row equal"><button data-action="trakwayLine"><strong>Trakway line</strong><small>Linear barrier · no grid</small></button><button data-action="trakwayArea"><strong>Trakway area</strong><small>Bounded region · no grid</small></button></div>' +
+      '</details>' +
+      '<details class="advanced-settings"><summary>Panel setup / joints</summary><div class="row equal"><div>' +
       field(
         "panelLength",
         "Along run (m)",
@@ -3270,8 +3579,9 @@
   }
   function areaHTML() {
     const b = state.project.area,
-      bleed = +state.project.planBleed || PLAN_BLEED_DEFAULT,
-      meta = state.project.planBaseMeta;
+      bleed = Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
+      meta = state.project.planBaseMeta,
+      detail = planDetailLevel();
     return (
       '<div class="card"><span class="tag">SITE DRAWING FRAME</span><h3>Define the current view</h3><p class="subtle">Use the visible map as the Site Plan frame. SAMI applies the A3/A4 landscape paper ratio automatically while retaining the current bearing.</p>' +
       button(
@@ -3286,9 +3596,22 @@
           '</h3><div class="subtle">Landscape paper ratio · view orientation retained.</div></div>'
         : "") +
       '<details class="compact-section"><summary>Manual / irregular area tools</summary><div class="area-method-grid"><button data-action="defineAreaFreehand"><strong>Freehand extent</strong><small>Sketch an irregular extent</small></button><button data-action="defineAreaPoints"><strong>Point boundary</strong><small>Drop points, then Close shape</small></button><button data-action="defineArea"><strong>Two corners</strong><small>Define a rectangular extent manually</small></button></div></details>' +
-      (b
+      (b && state.mode === "plan"
         ? button("Clear defined site area", "clearArea") +
-          section("CAD drawing background") +
+          '<details class="compact-section" open><summary>CAD drawing background</summary>' +
+          '<p class="subtle">Site Plan only draws the defined area + bleed - not the wider map. Low detail keeps things fast while drawing; switch up for a detailed preview.</p>' +
+          '<div class="radio-cards compact">' +
+          [
+            ["low", "Low", "Fastest · roads & buildings"],
+            ["medium", "Medium", "+ rail, water, landuse, power lines"],
+            ["high", "High", "Full detail · trees, barriers, amenities"],
+          ]
+            .map(
+              ([v, label, small]) =>
+                `<label><input type="radio" name="planDetail" value="${v}"${detail === v ? " checked" : ""}><span><strong>${label}</strong><small>${small}</small></span></label>`,
+            )
+            .join("") +
+          "</div>" +
           field(
             "planBleed",
             "CAD bleed outside boundary (m)",
@@ -3302,7 +3625,9 @@
               esc(new Date(meta.capturedAt).toLocaleString()) +
               " · " +
               (meta.featureCount || 0) +
-              " features" +
+              " features · " +
+              (meta.detail || "low") +
+              " detail" +
               (meta.stale ? " · <strong>refresh required</strong>" : "")
             : "Not captured yet.") +
           "</p></div>" +
@@ -3315,7 +3640,8 @@
           ) +
           button("Open CAD drawing background", "cadMode") +
           button("Fit site frame to screen", "fitArea") +
-          button("Services · site + 0.25 mile", "open:services")
+          button("Services · site + 0.1 mile", "open:services") +
+          '</details>'
         : "") +
       '<p class="subtle">Issued A3/A4 drawings use the same √2 landscape ratio.</p>'
     );
@@ -3332,7 +3658,7 @@
       });
     if (!has)
       return (
-        '<div class="card"><span class="tag">SERVICES & CONSTRAINTS</span><h3>Define the site frame first</h3><p class="subtle">SAMI keeps service searches bounded to the site plus 0.25 mile.</p></div>' +
+        '<div class="card"><span class="tag">SERVICES & CONSTRAINTS</span><h3>Define the site frame first</h3><p class="subtle">SAMI keeps service searches bounded to the site plus 0.1 mile.</p></div>' +
         button("Define site frame", "open:area", true)
       );
     if (state.serviceScreen === "mapping") return serviceMappingHTML(counts);
@@ -3493,13 +3819,15 @@
       ) +
       field("siteRef", "Site reference", m.siteRef || "") +
       field("clientName", "Client / contractor", m.clientName || "") +
+      '<details class="compact-section"><summary>Drawing / issue metadata</summary>' +
       '<div class="row equal"><div>' +
       field("creator", "Created by", m.creator || "") +
       "</div><div>" +
       field("drawingNo", "Drawing no.", m.drawingNo || "") +
       "</div></div>" +
       field("revision", "Revision", m.revision || "") +
-      section("Driver / delivery issue information") +
+      '</details>' +
+      '<details class="compact-section" open><summary>Driver / delivery information</summary>' +
       '<div class="row equal"><div>' +
       field("siteContact", "Site contact", m.siteContact || "") +
       "</div><div>" +
@@ -3512,13 +3840,14 @@
       esc(m.driverNotes || "") +
       '</textarea><label class="field-label" for="siteNotes">Site / drawing notes</label><textarea class="field" id="siteNotes" rows="3">' +
       esc(m.siteNotes || "") +
-      "</textarea>" +
-      section("Project files") +
+      "</textarea></details>" +
+      '<details class="compact-section"><summary>Project files</summary>' +
       button("Save on this device", "save") +
       button("Export editable backup", "backup") +
       button("Restore a SAMI backup", "restore") +
       button("New project", "new") +
-      section("Location integration") +
+      '</details>' +
+      '<details class="compact-section"><summary>Location integration & voice</summary>' +
       field(
         "w3wApiKey",
         "what3words API key",
@@ -3527,7 +3856,6 @@
         'placeholder="Needed for ///three.word.address lookup"',
       ) +
       '<p class="subtle">what3words requires its API. Coordinates and normal addresses work without this key.</p>' +
-      section("Ask SAMI voice") +
       checkedRow(
         "Talk-back using an available device voice",
         'id="voiceOutput"',
@@ -3536,17 +3864,19 @@
       '<label class="field-label" for="samiVoiceSelect">Spoken voice</label><select class="field" id="samiVoiceSelect"></select>' +
       button("Test SAMI voice", "testVoice") +
       '<p class="subtle">Tap the single Ask SAMI control to capture speech when the text box is empty; typed text uses the same button.</p>' +
-      button("Reset toolbar position", "resetRail")
+      button("Reset toolbar position", "resetRail") +
+      '</details>'
     );
   }
   function searchHTML() {
     return (
       '<p class="subtle">Search by address, postcode, ///what3words or coordinates. A map point can also be selected directly when setting HGV route endpoints.</p><label class="field-label" for="placeQuery">Address · postcode · ///what3words · lat,lng</label><div class="row"><input class="field" id="placeQuery" placeholder="e.g. WV1 1AA · ///filled.count.soap · 52.58,-2.12"><button class="mini-btn" data-action="search">Find</button></div><div id="placeResults"></div>' +
       button("Use my current location", "locate") +
-      section("Coordinates") +
+      '<details class="compact-section"><summary>Coordinates</summary>' +
       field("latInput", "Latitude", "", "number", 'step="any"') +
       field("lngInput", "Longitude", "", "number", 'step="any"') +
-      button("Go to coordinates", "coords")
+      button("Go to coordinates", "coords") +
+      '</details>'
     );
   }
   function helpHTML() {
@@ -3652,6 +3982,8 @@
         : "") +
       '<button data-action="editStyle">◐ <span>Style</span></button><details class="selection-more"><summary>•••<span>More</span></summary><div>' +
       button("Duplicate", "editDuplicate") +
+      button("Bring to front", "editBringFront") +
+      button("Send to back", "editSendBack") +
       (grouped
         ? button("Add another item to group", "editGroup") +
           button("Ungroup", "editUngroup")
@@ -3753,10 +4085,14 @@
         : "";
     showModal(
       svc.name,
-      `<div class="service-info-panel"><div class="service-info-badge"><i style="background:${esc(svc.color || "#73808b")}"></i><div><small>SERVICE / CONSTRAINT</small><strong>${esc(m.label || svc.name)}</strong></div></div><dl class="service-info-list">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(String(v))}</dd></div>`).join("")}${sourceRef ? `<div><dt>Source record</dt><dd>${esc(sourceRef)}</dd></div>` : ""}</dl><p class="service-guidance">Service information is planning/reference information and must be verified against appropriate records, surveys and safe-dig procedures before work.</p><div class="button-pair">${button("Services", "serviceInfoServices")}${button("Edit " + esc(svc.name) + " style", "serviceInfoStyle", true)}</div></div>`,
+      `<div class="service-info-panel"><div class="service-info-badge"><i style="background:${esc(svc.color || "#73808b")}"></i><div><small>SERVICE / CONSTRAINT</small><strong>${esc(m.label || svc.name)}</strong></div></div><dl class="service-info-list">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(String(v))}</dd></div>`).join("")}${sourceRef ? `<div><dt>Source record</dt><dd>${esc(sourceRef)}</dd></div>` : ""}</dl><p class="service-guidance">Service information is planning/reference information and must be verified against appropriate records, surveys and safe-dig procedures before work.</p>${m.serviceType === "ohl" ? (m.planCommitted ? '<div class="inline-note">Added to CAD · saved with this project</div>' : button("Add OHL", "serviceInfoAddOhl", true)) : ""}<div class="button-pair">${button("Services", "serviceInfoServices")}${button("Edit " + esc(svc.name) + " style", "serviceInfoStyle", true)}</div></div>`,
     );
     $("#modalBody").onclick = (e) => {
       const a = e.target.closest("[data-action]")?.dataset.action;
+      if (a === "serviceInfoAddOhl") {
+        window.SAMIWorkspace?.runAction?.("addOhlToPlan:" + f.id);
+        return;
+      }
       if (a === "serviceInfoServices") {
         closeModal();
         window.SAMIWorkspace?.runAction?.("open:services");
@@ -3814,6 +4150,19 @@
     $("#newNote").focus();
   }
   function bindDrawer(kind) {
+    if (kind === "appearance") {
+      $$("[data-appearance]").forEach((btn) => {
+        btn.onclick = (e) => {
+          const theme = btn.dataset.appearance;
+          document.documentElement.dataset.theme = theme;
+          localStorage.setItem("sami.appearance", theme);
+          $$("[data-appearance]").forEach((b) =>
+            b.classList.toggle("active", b.dataset.appearance === theme)
+          );
+          e.stopPropagation();
+        };
+      });
+    }
     if (kind === "routeToSite") {
       $("#hgvProfile").onchange = () => {
         const k = $("#hgvProfile").value,
@@ -3841,7 +4190,7 @@
       ].forEach((id) => {
         const el = $("#" + id);
         if (el)
-          el.onchange = () => {
+          el.oninput = () => {
             try {
               readHgvOptions();
               state.project.hgv.stale = !!state.project.routes.length;
@@ -3878,6 +4227,15 @@
       queueMicrotask(bindAssetPaletteDrag);
     }
     if (kind === "area") {
+      $$('input[name="planDetail"]').forEach((r) =>
+        r.addEventListener("change", () => {
+          if (!r.checked) return;
+          state.project.planDetail = r.value;
+          commit();
+          renderDrawer("area");
+          if (planBaseNeedsCapture()) capturePlanBase(true);
+        }),
+      );
       $("#planBleed")?.addEventListener("change", () => {
         state.project.planBleed = Math.max(
           0,
@@ -4125,10 +4483,7 @@
         toast("Mapping reset to overhead lines only.");
         return;
       }
-      if (action === "showServiceMapping") {
-        showSelectedServiceMapping();
-        return;
-      }
+      if (action === "showServiceMapping") return showSelectedServiceMapping();
       if (
         action === "manualServicePoint" ||
         action === "manualServiceFreehand"
@@ -4159,10 +4514,7 @@
         );
         return;
       }
-      if (action === "planHgv") {
-        planHgvRoute();
-        return;
-      }
+      if (action === "planHgv") return planHgvRoute();
       if (action === "routeHandoff") {
         openRouteHandoff();
         return;
@@ -4185,6 +4537,22 @@
       }
       if (action === "panelAreaFill") {
         startTool("panelAreaFreehand", readPanelOptions());
+        return;
+      }
+      if (action === "trakwayLine") {
+        startTool("trakwayLine", {
+          label: "Trakway line",
+          includeLegend: true,
+          showArrow: false,
+        });
+        return;
+      }
+      if (action === "trakwayArea") {
+        startTool("trakwayArea", {
+          label: "Trakway area",
+          includeLegend: true,
+          showArrow: false,
+        });
         return;
       }
       if (action === "singlePanel") {
@@ -4267,6 +4635,25 @@
       }
       if (action === "archives") {
         openArchiveManager();
+        return;
+      }
+      if (action === "applyBrandColors") {
+        const primary = $("#brandPrimary")?.value;
+        const secondary = $("#brandSecondary")?.value;
+        if (primary) localStorage.setItem("sami.brandPrimary", primary);
+        if (secondary) localStorage.setItem("sami.brandSecondary", secondary);
+        document.documentElement.style.setProperty("--accent", primary);
+        document.documentElement.style.setProperty("--secondary-accent", secondary);
+        toast("Brand colors applied successfully.");
+        return;
+      }
+      if (action === "resetBrandColors") {
+        localStorage.removeItem("sami.brandPrimary");
+        localStorage.removeItem("sami.brandSecondary");
+        document.documentElement.style.removeProperty("--accent");
+        document.documentElement.style.removeProperty("--secondary-accent");
+        renderDrawer("appearance");
+        toast("Brand colors reset to defaults.");
         return;
       }
       if (action === "defineArea") {
@@ -4461,6 +4848,10 @@
       cancelGroupPick();
       return;
     }
+    if (action === "groupMultiSelection") {
+      groupMultiSelection();
+      return;
+    }
     if (action === "editUngroup") {
       ungroupSelected();
       return;
@@ -4529,6 +4920,30 @@
         toast((members.length > 1 ? "Group" : "Item") + " moved.");
       });
       toast("Drag the white handle, then release.");
+    }
+    if (action === "editBringFront") {
+      const members = groupMembers(f);
+      for (const x of members.filter((x) => !x.properties.guideHidden)) {
+        x.properties.zIndex = (x.properties.zIndex || 0) + 1000;
+      }
+      commit();
+      renderDrawer("selection");
+      toast(
+        "Brought to front" + (members.length > 1 ? " (group)" : "") + ".",
+      );
+      return;
+    }
+    if (action === "editSendBack") {
+      const members = groupMembers(f);
+      for (const x of members.filter((x) => !x.properties.guideHidden)) {
+        x.properties.zIndex = (x.properties.zIndex || 0) - 1000;
+      }
+      commit();
+      renderDrawer("selection");
+      toast(
+        "Sent to back" + (members.length > 1 ? " (group)" : "") + ".",
+      );
+      return;
     }
   }
   function editMarker(p) {
@@ -4904,15 +5319,10 @@
       results.forEach((f) => {
         f.properties.sourceId = sourceId;
       });
-      await archiveActiveSource(sourceId, "Previous import · " + file.name);
-      state.project.features = state.project.features.filter(
-        (f) => f.properties.sourceId !== sourceId,
-      );
-      state.project.features.push(...results);
-      commit();
+      await replaceSourceFeatures(sourceId, results, "Previous import · " + file.name);
       state.lastLoad =
         results.length +
-        " records imported into site + 0.25 mile service buffer. " +
+        " records imported into site + 0.1 mile service buffer. " +
         skipped.outside +
         " outside, " +
         skipped.hidden +
@@ -4964,6 +5374,7 @@
     return JSON.parse(new TextDecoder().decode(bytes));
   }
   async function loadServices() {
+    const project = state.project;
     const area = state.project.area,
       selected = Object.keys(SERVICES).filter(
         (k) => state.project.serviceVisibility[k],
@@ -4993,7 +5404,7 @@
       b = serviceBounds(),
       bbox = b.join(","),
       captured = JSON.stringify(selected);
-    state.lastLoad = "Loading records only inside the site + 0.25 mile buffer…";
+    state.lastLoad = "Loading records only inside the site + 0.1 mile buffer…";
     renderDrawer("services");
     const pending = [],
       errors = [];
@@ -5042,6 +5453,7 @@
       }
       if (
         controller.signal.aborted ||
+        project !== state.project ||
         generation !== state.areaGeneration ||
         bbox !== serviceBounds()?.join(",") ||
         captured !==
@@ -5054,28 +5466,18 @@
         state.lastLoad = "Load stopped. Run refresh for the current site area.";
         return;
       }
-      let next = state.project.features;
       for (const batch of pending) {
-        await archiveActiveSource(
-          batch.sourceId,
-          "Previous snapshot · " + batch.label,
-        );
-        next = next
-          .filter((f) => f.properties.sourceId !== batch.sourceId)
-          .concat(batch.features);
+        await replaceSourceFeatures(batch.sourceId, batch.features,
+          "Previous snapshot · " + batch.label, project, generation);
       }
-      if (next.length > 12000)
-        throw Error(
-          "Too many records for this project. Use a smaller site area.",
-        );
-      state.project.features = next;
+      if (project !== state.project || generation !== state.areaGeneration) return;
       state.project.hiddenTypes = state.project.hiddenTypes.filter(
         (t) => t !== "service",
       );
       commit();
       state.lastLoad =
         pending.reduce((n, b) => n + b.features.length, 0) +
-        " records refreshed in site + 0.25 mile buffer; previous source snapshots archived." +
+        " records refreshed in site + 0.1 mile buffer; previous source snapshots archived." +
         (errors.length ? " " + errors.join(" ") : "");
     } catch (e) {
       state.lastLoad = e.message;
@@ -5253,7 +5655,8 @@
       "application/vnd.google-earth.kml+xml",
     );
   }
-  function exportDXF() {
+  async function exportDXF() {
+    await ensureExportCadDetail();
     const features = projectGeoJSON().features.concat(
         copy(state.project.planBase || []).map((f) => ({
           ...f,
@@ -5270,23 +5673,23 @@
       origin[0] +
       " latitude " +
       origin[1] +
-      "\n0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n6\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n";
+      "\n0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1015\n9\n$MEASUREMENT\n70\n1\n9\n$INSUNITS\n70\n6\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n";
     function geom(g, layer) {
       if (g.type === "Point") {
         const [x, y] = pr.xy(g.coordinates);
         out +=
-          "0\nPOINT\n8\n" +
+          "0\nPOINT\n100\nAcDbEntity\n8\n" +
           layer +
-          "\n10\n" +
+          "\n100\nAcDbPoint\n10\n" +
           x.toFixed(3) +
           "\n20\n" +
           y.toFixed(3) +
           "\n30\n0\n";
       } else if (g.type === "LineString") {
         out +=
-          "0\nLWPOLYLINE\n8\n" +
+          "0\nLWPOLYLINE\n100\nAcDbEntity\n8\n" +
           layer +
-          "\n90\n" +
+          "\n100\nAcDbPolyline\n90\n" +
           g.coordinates.length +
           "\n70\n0\n";
         g.coordinates.forEach((c) => {
@@ -5296,7 +5699,7 @@
       } else if (g.type === "Polygon")
         g.coordinates.forEach((r, i) => {
           out +=
-            "0\nLWPOLYLINE\n8\n" + layer + "\n90\n" + r.length + "\n70\n1\n";
+            "0\nLWPOLYLINE\n100\nAcDbEntity\n8\n" + layer + "\n100\nAcDbPolyline\n90\n" + r.length + "\n70\n1\n";
           r.forEach((c) => {
             const [x, y] = pr.xy(c);
             out += "10\n" + x.toFixed(3) + "\n20\n" + y.toFixed(3) + "\n";
@@ -5314,10 +5717,22 @@
       }
     }
     for (const f of features) {
+      if (f.properties.guideHidden || (f.properties.autoAnnotation && !state.project.showAutoMeasurements)) continue;
+      if (f.properties.dimension) {
+        const d = window.SAMIPlanning.dimensionGeometry(f,state.project.features);
+        if (!d) continue;
+        [...d.extensions,d.line].forEach(coordinates=>geom({type:"LineString",coordinates},"DIMENSIONS"));
+        const [a,b]=d.line.map(pr.xy),mid=pr.xy(d.midpoint);
+        let angle=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;
+        if (angle>90 || angle< -90) angle+=180;
+        const label=window.SAMIPlanning.dimensionLabel(d.length,f.properties);
+        out += "0\nTEXT\n100\nAcDbEntity\n8\nDIMENSIONS\n100\nAcDbText\n10\n"+mid[0].toFixed(3)+"\n20\n"+mid[1].toFixed(3)+"\n30\n0\n40\n0.35\n1\n"+label+"\n50\n"+angle.toFixed(2)+"\n72\n1\n11\n"+mid[0].toFixed(3)+"\n21\n"+mid[1].toFixed(3)+"\n31\n0\n";
+        continue;
+      }
       let g = f.geometry;
       if (state.project.area) {
         try {
-          g = G.clipGeometry(g, serviceBounds());
+          g = G.clipGeometry(g, planBounds());
         } catch {}
       }
       if (!g) continue;
@@ -5329,6 +5744,14 @@
         .replace(/[^a-z0-9_-]/gi, "_")
         .toUpperCase();
       geom(g, layer);
+      if (f.properties.type === "measure" && g.type === "LineString") {
+        for (let i=1;i<g.coordinates.length;i++) {
+          const a=g.coordinates[i-1],b=g.coordinates[i],pa=pr.xy(a),pb=pr.xy(b);
+          let angle=Math.atan2(pb[1]-pa[1],pb[0]-pa[0])*180/Math.PI;
+          if (angle>90 || angle < -90) angle+=180;
+          out += "0\nTEXT\n100\nAcDbEntity\n8\nDIMENSIONS\n100\nAcDbText\n10\n" + ((pa[0]+pb[0])/2).toFixed(3) + "\n20\n" + ((pa[1]+pb[1])/2+0.3).toFixed(3) + "\n30\n0\n40\n0.35\n1\n" + G.distance(a,b).toFixed(2) + " m\n50\n" + angle.toFixed(2) + "\n";
+        }
+      }
     }
     out += "0\nENDSEC\n0\nEOF\n";
     download(safeName() + "_SAMI_true_scale.dxf", out, "application/dxf");
@@ -5358,7 +5781,7 @@
       ) +
       section("Drawing style") +
       '<div class="radio-cards"><label><input type="radio" name="docStyle" value="cad" checked><span><strong>CAD</strong><small>Simplified bounded vector plan</small></span></label><label><input type="radio" name="docStyle" value="map"><span><strong>Map</strong><small>Map context + SAMI vectors</small></span></label><label><input type="radio" name="docStyle" value="satellite"><span><strong>Satellite</strong><small>Imagery context + SAMI vectors</small></span></label></div>' +
-      section("Detail level") +
+      section("Sheet annotations") +
       '<div class="radio-cards compact"><label><input type="radio" name="docDetail" value="high" checked><span><strong>High detail</strong><small>Full annotations, coordinates, key + notes</small></span></label><label><input type="radio" name="docDetail" value="simple"><span><strong>Simple</strong><small>Condensed - fewer annotations, faster to read</small></span></label></div>' +
       section("Paper") +
       '<div class="radio-cards compact"><label><input type="radio" name="docPaper" value="a3" checked><span><strong>A3 Landscape</strong><small>Default issue sheet</small></span></label><label><input type="radio" name="docPaper" value="a4"><span><strong>A4 Landscape</strong><small>Scaled alternative</small></span></label></div>' +
@@ -5438,7 +5861,7 @@
       }
       const k = e.target.closest("[data-action]")?.dataset.action;
       if (!k) return;
-      ({
+      await ({
         backup: exportProjectJSON,
         geojson: exportGeoJSON,
         dxf: exportDXF,
@@ -5500,10 +5923,41 @@
       throw Error(
         "Define the Site Drawing area before issuing the Site Drawing sheet.",
       );
+    if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail(planDetailLevel());
     saveDocumentIssueMeta(opt);
-    return await window.SAMIDocumentEngine.generate(copy(state.project), opt);
+    return await window.SAMIDocumentEngine.generate(copy(state.project), { ...opt, onProgress: updateExportStep });
+  }
+  function showExportLoading(step = "Initializing…") {
+    const loadingHTML =
+      '<div class="export-loading">' +
+      '<div class="export-loading-content">' +
+      '<div class="export-logo-container">' +
+      '<img alt="" class="export-logo-pulse" src="sami-badge.png" />' +
+      "</div>" +
+      '<div class="export-status">' +
+      '<h3>Site Logistics Pack</h3>' +
+      '<p class="export-step" id="exportStep">' +
+      step +
+      "</p>" +
+      '<div class="export-progress">' +
+      '<div class="export-progress-bar"></div>' +
+      "</div>" +
+      "</div>" +
+      "</div>" +
+      "</div>";
+    showModal("EXPORTING", loadingHTML);
+    document.body.classList.add("export-loading-active");
+  }
+  function updateExportStep(step) {
+    const el = $("#exportStep");
+    if (el) el.textContent = step;
+  }
+  function closeExportLoading() {
+    document.body.classList.remove("export-loading-active");
+    closeModal();
   }
   async function issueSiteLogisticsPack(action) {
+    if (state.exportBusy) return;
     let opt;
     try {
       opt = readDocumentOptions();
@@ -5511,13 +5965,12 @@
       toast(e.message);
       return;
     }
-    const btn = $(`[data-doc-action="${action}"]`);
-    if (btn) {
-      btn.disabled = true;
-      btn.dataset.oldText = btn.textContent;
-      btn.textContent = "GENERATING…";
-    }
+    closeModal();
+    state.exportBusy = true;
+    showExportLoading("Preparing document…");
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     try {
+      updateExportStep("Processing site drawing…");
       const blob = await buildSiteLogisticsPDF(opt),
         name =
           safeName() +
@@ -5525,6 +5978,8 @@
           (opt.revision || "Rev0") +
           ".pdf";
       if (action === "preview") {
+        closeExportLoading();
+        updateExportStep("Building PDF preview…");
         const url = URL.createObjectURL(blob),
           w = window.open(url, "_blank", "noopener");
         if (!w) {
@@ -5537,9 +5992,11 @@
         }
         setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
       } else if (action === "share") {
+        updateExportStep("Preparing to share…");
         const ok = await window.SAMIDocumentEngine.share(blob, name).catch(
           () => false,
         );
+        closeExportLoading();
         if (!ok) {
           downloadBlob(name, blob);
           toast(
@@ -5547,17 +6004,18 @@
           );
         }
       } else {
+        updateExportStep("Finalizing…");
         downloadBlob(name, blob);
+        closeExportLoading();
         toast("SAMI Site Logistics Pack exported as PDF.");
       }
     } catch (e) {
       console.error(e);
+      closeExportLoading();
       toast("PDF: " + (e.message || "Document generation failed."));
     } finally {
-      if (btn && document.body.contains(btn)) {
-        btn.disabled = false;
-        btn.textContent = btn.dataset.oldText || action.toUpperCase();
-      }
+      state.exportBusy = false;
+      document.body.classList.remove("export-loading-active");
     }
   }
   let toastTimer;
@@ -5774,6 +6232,40 @@
       last = (state.project.routes || []).at(-1);
     return (
       '<p class="subtle">Plan the journey <strong>to the site</strong>, not a Trakway run. Vehicle dimensions are used by the HGV routing engine. Always confirm the actual vehicle / trailer dimensions before use.</p>' +
+      '<details class="compact-section" open><summary>Route endpoints</summary>' +
+      '<div class="route-endpoint"><div>' +
+      field(
+        "routeStart",
+        "Start · address, postcode or coordinates",
+        h.startText || "",
+      ) +
+      '<div class="subtle">' +
+      [
+        h.start ? "Map point: " + coordLabel(h.start) : "",
+        h.startW3w || "",
+        h.startAddress || "",
+      ]
+        .filter(Boolean)
+        .map(esc)
+        .join(" · ") +
+      '</div></div><button class="mini-btn" data-action="pickRoute:start" title="Pick start on map">◎</button></div>' +
+      '<div class="route-endpoint"><div>' +
+      field(
+        "routeEnd",
+        "Destination · site entrance",
+        h.endText || "",
+      ) +
+      '<div class="subtle">' +
+      [
+        h.end ? "Map point: " + coordLabel(h.end) : "",
+        h.endW3w || "",
+        h.endAddress || "",
+      ]
+        .filter(Boolean)
+        .map(esc)
+        .join(" · ") +
+      '</div></div><button class="mini-btn" data-action="pickRoute:end" title="Pick destination on map">◎</button></div></details>' +
+      '<details class="compact-section"><summary>Vehicle profile & dimensions</summary>' +
       choice("hgvProfile", "Vehicle profile", HGV_PROFILES, h.profile) +
       '<div class="row equal"><div>' +
       field(
@@ -5807,43 +6299,9 @@
         "number",
         'min="2" max="40" step="0.1"',
       ) +
-      "</div></div>" +
-      section("From") +
-      '<div class="route-endpoint"><div>' +
-      field(
-        "routeStart",
-        "Address · postcode · ///what3words · lat,lng",
-        h.startText || "",
-      ) +
-      '<div class="subtle">' +
-      [
-        h.start ? "Map point: " + coordLabel(h.start) : "",
-        h.startW3w || "",
-        h.startAddress || "",
-      ]
-        .filter(Boolean)
-        .map(esc)
-        .join(" · ") +
-      '</div></div><button class="mini-btn" data-action="pickRoute:start" title="Pick start on map">◎</button></div>' +
-      section("To") +
-      '<div class="route-endpoint"><div>' +
-      field(
-        "routeEnd",
-        "Address · postcode · ///what3words · lat,lng",
-        h.endText || "",
-      ) +
-      '<div class="subtle">' +
-      [
-        h.end ? "Map point: " + coordLabel(h.end) : "",
-        h.endW3w || "",
-        h.endAddress || "",
-      ]
-        .filter(Boolean)
-        .map(esc)
-        .join(" · ") +
-      '</div></div><button class="mini-btn" data-action="pickRoute:end" title="Pick destination on map">◎</button></div>' +
+      "</div></div></details>" +
       button(
-        last ? "Re-check / refresh HGV route" : "Plan HGV route to site",
+        state.routeBusy ? "Planning route…" : last ? "Plan another route" : "Plan route",
         "planHgv",
         true,
       ) +
@@ -5882,8 +6340,8 @@
           button("Delete latest route", "deleteLatestRoute") +
           "</div>"
         : "") +
-      section("Routing data") +
-      '<div class="card warning-card"><strong>Production target: OS Routing & Asset Management Information</strong><p class="data-note">OS RAMI provides turn, time, height, weight and width restrictions and is updated monthly. This flat build uses the configured HGV endpoint when supplied; otherwise it uses an OpenStreetMap/Valhalla truck-route preview and labels it accordingly.</p></div>'
+      '<details class="compact-section"><summary>Routing data & sources</summary>' +
+      '<div class="card warning-card"><strong>Production target: OS Routing & Asset Management Information</strong><p class="data-note">OS RAMI provides turn, time, height, weight and width restrictions and is updated monthly. This flat build uses the configured HGV endpoint when supplied; otherwise it uses an OpenStreetMap/Valhalla truck-route preview and labels it accordingly.</p></div></details>'
     );
   }
   function parseCoordText(text) {
@@ -5947,27 +6405,23 @@
     };
   }
   function readHgvOptions() {
-    const h = state.project.hgv,
-      profile = $("#hgvProfile")?.value || h.profile,
-      startText = $("#routeStart")?.value.trim() || "",
-      endText = $("#routeEnd")?.value.trim() || "",
-      o = {
-        profile,
-        weight: +$("#hgvWeight").value,
-        height: +$("#hgvHeight").value,
-        width: +$("#hgvWidth").value,
-        length: +$("#hgvLength").value,
-        axles: HGV_PROFILES[profile]?.axles || 3,
-        startText,
-        endText,
-        start: startText === h.startText ? h.start : null,
-        end: endText === h.endText ? h.end : null,
-      };
-    if (!(o.weight > 0 && o.height > 0 && o.width > 0 && o.length > 0))
+    const h = state.project.hgv || fresh().hgv;
+    const value = (id, fallback) => $("#" + id)?.value ?? fallback;
+    const profile = value("hgvProfile", h.profile);
+    const startText = String(value("routeStart", h.startText || "")).trim();
+    const endText = String(value("routeEnd", h.endText || "")).trim();
+    const o = {profile, startText, endText,
+      weight:Number(value("hgvWeight", h.weight)), height:Number(value("hgvHeight", h.height)),
+      width:Number(value("hgvWidth", h.width)), length:Number(value("hgvLength", h.length)),
+      axles:HGV_PROFILES[profile]?.axles || 3,
+      start:startText === h.startText ? h.start : null,
+      end:endText === h.endText ? h.end : null};
+    if (![o.weight,o.height,o.width,o.length].every(n => Number.isFinite(n) && n > 0))
       throw Error("Enter the vehicle weight, height, width and length.");
-    state.project.hgv = { ...h, ...o };
+    state.project.hgv = {...h,...o};
     return o;
   }
+
   function decodePolyline(str, precision = 6) {
     let index = 0,
       lat = 0,
@@ -5979,6 +6433,7 @@
         shift = 0,
         result = 0;
       do {
+        if (index >= str.length || shift > 30) throw Error("Invalid route geometry returned by routing service.");
         b = str.charCodeAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
@@ -5987,6 +6442,7 @@
       shift = 0;
       result = 0;
       do {
+        if (index >= str.length || shift > 30) throw Error("Invalid route geometry returned by routing service.");
         b = str.charCodeAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
@@ -5997,6 +6453,8 @@
     return out;
   }
   async function planHgvRoute() {
+    if (state.routeBusy) return;
+    const project = state.project, request = state.routeRequest = (state.routeRequest || 0) + 1;
     let o;
     try {
       o = readHgvOptions();
@@ -6004,6 +6462,7 @@
       toast(e.message);
       return;
     }
+    state.routeBusy = true;
     state.lastRouteStatus = "Resolving locations…";
     renderDrawer("routeToSite");
     try {
@@ -6013,6 +6472,7 @@
         b = o.end
           ? { coord: o.end, label: o.endText || coordLabel(o.end) }
           : await resolveLocationText(o.endText);
+      if (state.project !== project || request !== state.routeRequest) return;
       state.project.hgv = {
         ...state.project.hgv,
         start: a.coord,
@@ -6020,6 +6480,10 @@
         startText: a.label,
         endText: b.label,
       };
+      if (!G.validCoord(a.coord) || !G.validCoord(b.coord)) throw Error("A route point is invalid. Choose it again.");
+      if (G.distance(a.coord,b.coord) < 5) throw Error("Choose a start at least 5 metres from the destination.");
+      state.lastRouteStatus = "Finding a truck route…";
+      renderDrawer("routeToSite");
       let result,
         provider,
         warning,
@@ -6047,7 +6511,7 @@
           signal: AbortSignal.timeout(25000),
         });
         const d = await boundedJSON(r, 2 * 1024 * 1024);
-        if (!Array.isArray(d.geometry) || d.geometry.length < 2)
+        if (!Array.isArray(d.geometry) || d.geometry.length < 2 || !d.geometry.every(G.validCoord))
           throw Error(
             "Configured HGV route service returned no usable geometry.",
           );
@@ -6094,14 +6558,13 @@
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Client-Id": "SAMI-JWEDS-prototype",
             },
             body: JSON.stringify(payload),
             signal: AbortSignal.timeout(30000),
           },
         );
         const d = await boundedJSON(r, 4 * 1024 * 1024);
-        if (!d?.trip?.legs?.length) throw Error("No HGV route was returned.");
+        if (!d?.trip?.legs?.length) throw Error(d?.error || "No truck route was returned for these points.");
         const geometry = [];
         for (const leg of d.trip.legs) {
           const pts = decodePolyline(leg.shape, 6);
@@ -6114,6 +6577,7 @@
             pts.shift();
           geometry.push(...pts);
         }
+        if (geometry.length < 2 || !geometry.every(G.validCoord)) throw Error("Routing returned invalid coordinates. Your saved routes are unchanged.");
         result = {
           geometry,
           distanceKm: +d.trip.summary?.length || G.length(geometry) / 1000,
@@ -6151,6 +6615,7 @@
         status,
         constraints: routeConstraints,
       };
+      if (state.project !== project || request !== state.routeRequest) return;
       state.project.hgv.stale = false;
       state.project.routes.push(rec);
       if (state.project.routes.length > 30) state.project.routes.shift();
@@ -6163,22 +6628,29 @@
       openDrawer("routeToSite");
       toast("HGV route planned and saved as a dated route record.");
     } catch (e) {
+      if (state.project !== project || request !== state.routeRequest) return;
       state.lastRouteStatus = e.message;
       renderDrawer("routeToSite");
       toast("Route: " + e.message);
+    } finally {
+      if (state.project === project && request === state.routeRequest) {
+        state.routeBusy = false;
+        if (state.drawer === "routeToSite") renderDrawer("routeToSite");
+      }
     }
   }
   function pickRoutePoint(which) {
+    if (!["start", "end"].includes(which)) return;
+    try { readHgvOptions(); } catch {}
+    cancelDraw();
+    if (state.mode !== "route") setMode("route");
     state.routePick = which;
     state.suppressMapClick = 0;
-    closeDrawer();
-    if (state.mode === "plan") setMode("map");
-    toast(
-      "Tap the map to set the route " +
-        (which === "start" ? "start" : "destination") +
-        ".",
-    );
+    closeDrawer(true);
+    updateLock();
+    toast("Tap the map to set the route " + (which === "start" ? "start" : "destination") + ".");
   }
+
   function openRouteHandoff() {
     const r = state.project.routes.at(-1);
     if (!r) return;
@@ -6342,19 +6814,19 @@
       ),
       out = [];
     for (const w of (data.elements || []).filter(
-      (x) => x.type === "way" && Array.isArray(x.nodes),
-    )) {
+      (x) => x.type === "way" && (Array.isArray(x.nodes) || Array.isArray(x.geometry)),
+    ).flatMap(w => Array.isArray(w.geometry)
+      ? window.SAMIPlanning.waySegments(w.geometry).map((geometry,i)=>({...w,id:w.id+"-"+i,geometry})) : [w])) {
       const tags = w.tags || {},
         cls = planBaseClass(tags),
-        coords = w.nodes
-          .map((id) => nodes.get(id))
-          .filter(Boolean)
-          .map((n) => [n[0], n[1]]);
+        coords = Array.isArray(w.geometry)
+          ? w.geometry.filter(n => n && Number.isFinite(n.lon) && Number.isFinite(n.lat)).map(n => [n.lon,n.lat])
+          : (w.nodes || []).map(id => nodes.get(id)).filter(Boolean).map(n => [n[0],n[1]]);
       if (!cls || coords.length < 2) continue;
       if (powerAsService && cls === "power") {
         const supports = {},
           supportPoints = [];
-        for (const id of w.nodes) {
+        for (const id of w.nodes || []) {
           const n = nodes.get(id);
           if (n?.[2]?.power === "pole") {
             supports[supportKey(n)] = "pole";
@@ -6386,7 +6858,7 @@
         );
         continue;
       }
-      const closed = coords.length > 3 && w.nodes[0] === w.nodes.at(-1),
+      const closed = coords.length > 3 && coords[0][0] === coords.at(-1)[0] && coords[0][1] === coords.at(-1)[1],
         poly = closed && ["building", "water", "land"].includes(cls),
         props = {
           baseClass: cls,
@@ -6474,7 +6946,7 @@
     let empty = null;
     for (const endpoint of overpassEndpoints()) {
       const ctl = new AbortController(),
-        timer = setTimeout(() => ctl.abort(), 24000);
+        timer = setTimeout(() => ctl.abort(), 38000);
       try {
         const r = await fetch(endpoint, {
             method: "POST",
@@ -6488,6 +6960,7 @@
             credentials: "omit",
           }),
           data = await boundedJSON(r, max);
+        if (data?.remark && /runtime error|timed out|out of memory/i.test(data.remark)) throw Error(data.remark);
         if (!data || !Array.isArray(data.elements))
           throw Error("Invalid Overpass response");
         if (opts.preferNonEmpty && !data.elements.length) {
@@ -6517,15 +6990,78 @@
         errors.join(" · "),
     );
   }
-  async function capturePlanBase(silent = false) {
+  const PLAN_DETAIL_TAGS = {
+    low: ['way["highway"]', 'way["building"]'],
+    medium: [
+      'way["highway"]',
+      'way["building"]',
+      'way["railway"]',
+      'way["waterway"]',
+      'way["natural"]',
+      'way["landuse"]',
+      'way["power"~"^(line|minor_line)$"]',
+    ],
+    high: [
+      'way["highway"]',
+      'way["building"]',
+      'way["railway"]',
+      'way["waterway"]',
+      'way["natural"]',
+      'node["natural"="tree"]',
+      'way["landuse"]',
+      'way["barrier"]',
+      'way["amenity"]',
+      'way["leisure"]',
+      'way["man_made"]',
+      'way["power"~"^(line|minor_line)$"]',
+    ],
+  };
+  const PLAN_DETAIL_RANK = { low: 1, medium: 2, high: 3 };
+  function planDetailLevel() {
+    return ["low", "medium", "high"].includes(state.project.planDetail)
+      ? state.project.planDetail
+      : "low";
+  }
+  function updateCadProcessingUI(active) {
+    $$('[data-base="drawing"], [data-action="capturePlanBase"]').forEach(
+      (b) => b.classList.toggle("cad-processing", active),
+    );
+    window.dispatchEvent(new Event("sami:cadstatus"));
+  }
+  function planBaseNeedsCapture(requiredDetail) {
+    return window.SAMIPlanning.needsCapture(state.project, requiredDetail || planDetailLevel());
+  }
+
+  async function ensureExportCadDetail(requiredDetail = planDetailLevel()) {
+    if (!state.project.area) return;
+    if (requiredDetail === "simple") requiredDetail = "low";
+    if (state.planCapturePromise) await state.planCapturePromise;
+    if (planBaseNeedsCapture(requiredDetail)) await capturePlanBase(true, requiredDetail);
+    if (planBaseNeedsCapture(requiredDetail))
+      toast("CAD background is incomplete or out of date. Your drawn objects are retained; check before issue.");
+  }
+  function capturePlanBase(silent = false, detailOverride = null) {
+    const owner = state.project, generation = state.areaGeneration;
+    if (state.planCapturePromise && state.planCaptureOwner === owner && state.planCaptureGeneration === generation)
+      return state.planCapturePromise;
+    state.planCaptureOwner = owner;
+    state.planCaptureGeneration = generation;
+    const task = capturePlanBaseWork(silent, detailOverride);
+    state.planCapturePromise = task;
+    return task.finally(() => { if (state.planCapturePromise === task) state.planCapturePromise = null; });
+  }
+  async function capturePlanBaseWork(silent = false, detailOverride = null) {
     if (!state.project.area) {
       if (!silent) openDrawer("area");
       return;
     }
-    const b = planBounds(),
-      a = G.area(b),
+    let b;
+    try { b = window.SAMIPlanning.captureBounds(state.project); }
+    catch (e) { state.planCaptureError = e.message; toast(e.message); updateCadProcessingUI(false); return; }
+    const a = G.area(b),
       captureGeneration = state.areaGeneration,
-      captureProject = state.project;
+      captureProject = state.project,
+      detail = detailOverride || planDetailLevel();
     if (a > 6000000) {
       if (!silent)
         toast(
@@ -6533,38 +7069,23 @@
         );
       return;
     }
+    state.planCaptureError = null;
+    state.planCapturing = true;
+    updateCadProcessingUI(true);
+    window.dispatchEvent(new Event("sami:cadstatus"));
     if (!silent)
       toast(
-        "Capturing detailed vector geometry for the defined site area + bleed…",
+        "Capturing " +
+          detail +
+          "-detail vector geometry for the defined site area + bleed…",
       );
     try {
       const bbox = [b[1], b[0], b[3], b[2]].join(","),
+        tags = PLAN_DETAIL_TAGS[detail] || PLAN_DETAIL_TAGS.low,
         q =
-          '[out:json][timeout:30];(way["highway"](' +
-          bbox +
-          ');way["building"](' +
-          bbox +
-          ');way["railway"](' +
-          bbox +
-          ');way["waterway"](' +
-          bbox +
-          ');way["natural"](' +
-          bbox +
-          ');node["natural"="tree"](' +
-          bbox +
-          ');way["landuse"](' +
-          bbox +
-          ');way["barrier"](' +
-          bbox +
-          ');way["amenity"](' +
-          bbox +
-          ');way["leisure"](' +
-          bbox +
-          ');way["man_made"](' +
-          bbox +
-          ');way["power"~"^(line|minor_line)$"](' +
-          bbox +
-          "););(._;>;);out body;";
+          "[out:json][timeout:30];(" +
+          tags.map((t) => t + "(" + bbox + ");").join("") +
+          ");out body geom(" + bbox + ");";
       const data = await overpassQuery(q);
       if (
         captureProject !== state.project ||
@@ -6590,14 +7111,21 @@
             featureCount: state.project.planBase.length,
           }
         : null;
+      if (!features.length && state.project.planBase?.length) {
+        state.planCaptureError = "No replacement detail returned. Existing background kept; choose Refresh to retry.";
+        toast(state.planCaptureError);
+        return;
+      }
       state.project.planBase = features;
       state.project.planBaseMeta = {
         capturedAt: new Date().toISOString(),
         source: "Stored OpenStreetMap vector snapshot · bounded site capture",
-        bleed: +state.project.planBleed || PLAN_BLEED_DEFAULT,
+        bleed: Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
+        detail,
         bbox: boundsText(b),
         featureCount: features.length,
         stale: false,
+        captureKey: window.SAMIPlanning.captureKey(captureProject, detail),
         previous,
       };
       commit();
@@ -6605,64 +7133,63 @@
       if (!silent)
         toast(
           features.length +
-            " detailed map features stored. Roads use metre-width geometry where available / inferred.",
+            " " +
+            detail +
+            "-detail map features stored. Roads use metre-width geometry where available / inferred.",
         );
     } catch (e) {
-      if (!silent) toast("Detailed plan capture: " + e.message);
-      else console.warn(e);
+      if (captureProject === state.project && captureGeneration === state.areaGeneration) {
+        state.planCaptureError = e.message;
+        toast("CAD detail unavailable. Existing drawing retained. " + e.message);
+      }
+    } finally {
+      if (captureProject === state.project && captureGeneration === state.areaGeneration) {
+        state.planCapturing = false;
+        updateCadProcessingUI(false);
+        window.dispatchEvent(new Event("sami:cadstatus"));
+      }
     }
   }
+  const serviceRefreshes = new Map();
+  async function runServiceRefresh(key, work) {
+    const project = state.project, generation = state.areaGeneration;
+    if (!project.area) { openDrawer("area", true); return {status:"error",message:"Define the site area first."}; }
+    const requestKey = project.id + ":" + generation + ":" + key;
+    if (serviceRefreshes.has(requestKey)) return serviceRefreshes.get(requestKey);
+    const task = (async () => {
+      project.serviceStatus ??= {};
+      project.serviceStatus[key] = {status:"loading", message:"Checking source…"};
+      if (state.drawer === "services") renderDrawer("services");
+      let result;
+      try { result = await work(); }
+      catch(e) { result = {status:"error", message:e.message || "Source unavailable"}; }
+      if (state.project !== project || state.areaGeneration !== generation) return {status:"cancelled"};
+      result ??= {status:"retained", message:"Existing records retained."};
+      project.serviceStatus[key] = {...result, checkedAt:new Date().toISOString()};
+      saveSoon();
+      if (state.drawer === "services") renderDrawer("services");
+      return result;
+    })();
+    serviceRefreshes.set(requestKey, task);
+    try { return await task; } finally { serviceRefreshes.delete(requestKey); }
+  }
   async function showSelectedServiceMapping() {
-    if (!state.project.area) {
-      openDrawer("area");
-      return;
-    }
-    const on = Object.keys(SERVICES).filter(
-      (k) => state.project.serviceVisibility[k] === true,
-    );
-    if (!on.length) {
-      toast("Select at least one service or constraint layer.");
-      return;
-    }
-    state.project.hiddenTypes = state.project.hiddenTypes.filter(
-      (t) => t !== "service",
-    );
+    if (!state.project.area) { openDrawer("area", true); return; }
+    const project = state.project, generation = state.areaGeneration;
+    const on = Object.keys(SERVICES).filter(k => project.serviceVisibility[k] === true);
+    if (!on.length) { toast("Select at least one service or constraint."); return; }
+    project.hiddenTypes = project.hiddenTypes.filter(t => t !== "service");
     commit();
-    const needOhl = on.includes("ohl"),
-      needUtil = on.some((k) =>
-        ["electric", "gas", "water", "drainage", "telecom"].includes(k),
-      ),
-      needPlan = on.some((k) =>
-        [
-          "ecology",
-          "sssi",
-          "tpo",
-          "heritage",
-          "archaeology",
-          "flood",
-          "conservation",
-        ].includes(k),
-      );
-    toast("Showing selected mapping…");
-    try {
-      if (needOhl) await refreshOhlSnapshot();
-      if (needUtil) await refreshPublicUtilities();
-      if (needPlan) await refreshPlanningConstraints();
-      const b = needOhl ? ohlSearchBounds() : serviceBounds();
-      if (b)
-        state.map.fitBounds(
-          [
-            [b[1], b[0]],
-            [b[3], b[2]],
-          ],
-          { padding: [70, 70], maxZoom: 19 },
-        );
-      toast(
-        "Selected service mapping shown. Public/reference layers remain planning information only.",
-      );
-    } catch (e) {
-      toast(e.message);
-    }
+    const results = [];
+    if (on.includes("ohl")) results.push(await refreshOhlSnapshot());
+    if (state.project !== project || generation !== state.areaGeneration) return;
+    if (on.some(k => ["electric","gas","water","drainage","telecom"].includes(k))) results.push(await refreshPublicUtilities());
+    if (state.project !== project || generation !== state.areaGeneration) return;
+    if (on.some(k => ["ecology","sssi","tpo","heritage","archaeology","flood","conservation"].includes(k))) results.push(await refreshPlanningConstraints());
+    if (state.project !== project || generation !== state.areaGeneration) return;
+    const failed = results.filter(r => r?.status === "error" || r?.status === "retained").length;
+    toast(failed ? "Some sources could not be updated. See source status; saved records are retained." : "Source checks complete. See the record counts and coverage in Services.");
+    if (state.drawer === "services") renderDrawer("services");
   }
   async function refreshOhlSnapshot() {
     if (!state.project.area) {
@@ -6785,7 +7312,7 @@
       stamp = new Date().toISOString(),
       sourceId = "builtin:osm-public-utilities";
     for (const w of elements.filter(
-      (x) => x.type === "way" && Array.isArray(x.nodes),
+      (x) => x.type === "way" && (Array.isArray(x.nodes) || Array.isArray(x.geometry)),
     )) {
       const tags = w.tags || {},
         type = publicUtilityType(tags),
@@ -6884,7 +7411,11 @@
     }
     return out;
   }
-  async function refreshPublicUtilities() {
+  function refreshPublicUtilities() {
+    return runServiceRefresh("utilities", refreshPublicUtilitiesWork);
+  }
+  async function refreshPublicUtilitiesWork() {
+    const project = state.project, generation = state.areaGeneration;
     if (!state.project.area) {
       openDrawer("area");
       return;
@@ -6945,6 +7476,7 @@
           })
           .filter(Boolean)
           .slice(0, 5000);
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
       const previousCount = state.project.features.filter(
         (feature) =>
           feature.properties.sourceId === "builtin:osm-public-utilities",
@@ -6953,13 +7485,14 @@
         toast(
           "No new public utility records were returned. The last stored snapshot has been kept.",
         );
-        return;
+        return {status:"retained",count:previousCount,message:"No replacement records; previous snapshot kept."};
       }
       await replaceSourceFeatures(
         "builtin:osm-public-utilities",
         features,
-        "Public mapped utilities · OpenStreetMap",
+        "Public mapped utilities · OpenStreetMap", project, generation,
       );
+      if (project !== state.project || generation !== state.areaGeneration) return;
       state.project.serviceVisibilityConfigured = true;
       toast(
         features.length
@@ -6968,7 +7501,9 @@
           : "No mapped public utility records were returned for this bounded area. SAMI has not invented any.",
       );
       if (state.drawer === "services") renderDrawer("services");
+      return {status:features.length ? "ready" : "empty",count:features.length,message:features.length ? "Public mapped references loaded." : "No public mapped records returned. Coverage is incomplete."};
     } catch (e) {
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
       const kept = state.project.features.some(
         (feature) =>
           feature.properties.sourceId === "builtin:osm-public-utilities",
@@ -6978,6 +7513,7 @@
           e.message +
           (kept ? " The last stored snapshot is still available." : ""),
       );
+      return {status:"error",message:e.message + (kept ? " Previous snapshot kept." : "")};
     }
   }
   const PLANNING_DATASETS = {
@@ -7068,7 +7604,11 @@
     }
     return out;
   }
-  async function refreshPlanningConstraints() {
+  function refreshPlanningConstraints() {
+    return runServiceRefresh("constraints", refreshPlanningConstraintsWork);
+  }
+  async function refreshPlanningConstraintsWork() {
+    const project = state.project, generation = state.areaGeneration;
     if (!state.project.area) {
       openDrawer("area");
       return;
@@ -7078,21 +7618,29 @@
     try {
       const rows = await planningDataGeoJSON(b),
         features = planningConstraintFeatures(rows, b).slice(0, 5000);
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
+      const previousCount = project.features.filter(f => f.properties.sourceId === "builtin:planning-data-constraints").length;
+      if (!features.length && previousCount)
+        return {status:"retained",count:previousCount,message:"No replacement records; previous planning snapshot kept."};
       await replaceSourceFeatures(
         "builtin:planning-data-constraints",
         features,
-        "Planning Data constraints · bounded snapshot",
+        "Planning Data constraints · bounded snapshot", project, generation,
       );
+      if (project !== state.project || generation !== state.areaGeneration) return;
       state.project.serviceVisibilityConfigured = true;
       toast(
         features.length
           ? features.length +
-              " planning constraint records stored for the site + 0.25 mile buffer."
+              " planning constraint records stored for the site + 0.1 mile buffer."
           : "No Planning Data constraint records were returned for this area. Coverage varies, so this is not proof that no constraint exists.",
       );
       if (state.drawer === "services") renderDrawer("services");
+      return {status:features.length ? "ready" : "empty",count:features.length,message:features.length ? "Planning records loaded." : "No records returned. England coverage varies."};
     } catch (e) {
+      if (project !== state.project || generation !== state.areaGeneration) return {status:"cancelled"};
       toast("Planning constraints: " + e.message);
+      return {status:"error",message:e.message + " Existing records kept."};
     }
   }
   let archiveDbPromise;
@@ -7113,8 +7661,8 @@
     });
     return archiveDbPromise;
   }
-  async function archiveActiveSource(sourceId, label) {
-    const fs = state.project.features.filter(
+  async function archiveActiveSource(sourceId, label, project = state.project) {
+    const fs = project.features.filter(
       (f) => f.properties.sourceId === sourceId,
     );
     if (!fs.length || !("indexedDB" in window)) return;
@@ -7123,7 +7671,8 @@
         rec = {
           id: uid(),
           sourceId,
-          project: state.project.name,
+          project: project.name,
+          projectId: project.id,
           label: label || sourceId,
           createdAt: new Date().toISOString(),
           area: serviceBounds(),
@@ -7137,16 +7686,21 @@
       });
     } catch {}
   }
-  async function replaceSourceFeatures(sourceId, features, label) {
-    await archiveActiveSource(sourceId, label);
-    state.project.features = state.project.features
-      .filter((f) => f.properties.sourceId !== sourceId)
-      .concat(features);
-    if (state.project.features.length > 12000)
-      throw Error(
-        "This data pack would exceed 12,000 active project records. Reduce the site area.",
-      );
+  async function replaceSourceFeatures(sourceId, features, label, project = state.project, generation = state.areaGeneration) {
+    if (project !== state.project || generation !== state.areaGeneration) return false;
+    const checked = features.filter(G.validateFeature);
+    if (checked.length !== features.length) throw Error("Source contains invalid geometry; existing records have been kept.");
+    let result = window.SAMIProjectData.mergeSource(project.features, checked, sourceId);
+    if (result.retained) {
+      toast("No replacement records returned. The last stored source snapshot has been kept.");
+      return false;
+    }
+    await archiveActiveSource(sourceId, label, project);
+    if (project !== state.project || generation !== state.areaGeneration) return false;
+    result = window.SAMIProjectData.mergeSource(project.features, checked, sourceId);
+    project.features = result.features;
     commit();
+    return true;
   }
   async function listArchives() {
     if (!("indexedDB" in window)) return [];
@@ -7158,7 +7712,7 @@
         r.onsuccess = () =>
           resolve(
             r.result
-              .filter((x) => x.project === state.project.name)
+              .filter((x) => x.projectId ? x.projectId === state.project.id : x.project === state.project.name)
               .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
               .slice(0, 30),
           );
@@ -7470,48 +8024,7 @@
         .join("");
     }
   }
-  function preparePrint() {
-    if (!state.project.area) {
-      toast("Define a site area before exporting a detailed site plan.");
-      return;
-    }
-    const m = state.project.meta;
-    showModal(
-      "Plan export details",
-      '<p class="subtle">SAMI will only put details on the plan that you enter or confirm here.</p>' +
-        field("expAddress", "Site address", m.siteAddress || "") +
-        field("expCreator", "Created by", m.creator || "") +
-        '<div class="row equal"><div>' +
-        field("expDrawing", "Drawing number", m.drawingNo || "") +
-        "</div><div>" +
-        field("expRev", "Revision", m.revision || "") +
-        "</div></div>" +
-        field("expClient", "Client / contractor", m.clientName || "") +
-        field("expSiteRef", "Site reference", m.siteRef || "") +
-        button("Create A3 plan / save PDF", "confirmPrint", true),
-    );
-    $("#modalBody").onclick = (e) => {
-      if (!e.target.closest('[data-action="confirmPrint"]')) return;
-      const meta = {
-        siteAddress: $("#expAddress").value.trim(),
-        creator: $("#expCreator").value.trim(),
-        drawingNo: $("#expDrawing").value.trim(),
-        revision: $("#expRev").value.trim(),
-        clientName: $("#expClient").value.trim(),
-        siteRef: $("#expSiteRef").value.trim(),
-      };
-      Object.assign(state.project.meta, meta);
-      commit();
-      closeModal();
-      closeDrawer();
-      state.mode = "plan";
-      setModeUI("plan");
-      switchBase("drawing", false);
-      fitArea();
-      buildPrintTemplate(meta);
-      requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
-    };
-  }
+
   function samiAiEndpoint() {
     return String(
       readPref("sami.ai.url") || window.SAMI_CONFIG?.aiEndpoint || "",
@@ -7655,19 +8168,7 @@
       window.speechSynthesis?.resume();
     } catch {}
   }
-  function preferredVoice() {
-    const vs = window.speechSynthesis?.getVoices() || state.voices;
-    return (
-      vs.find((v) => v.name === readPref("sami.voice.name")) ||
-      vs.find(
-        (v) =>
-          /^en-GB/i.test(v.lang) &&
-          /Natural|Enhanced|Premium|Daniel|Serena|Kate|Oliver/i.test(v.name),
-      ) ||
-      vs.find((v) => /^en-GB/i.test(v.lang)) ||
-      vs.find((v) => /^en/i.test(v.lang))
-    );
-  }
+
   function populateVoiceSelect() {
     const sel = $("#samiVoiceSelect");
     if (!sel) return;
@@ -7697,26 +8198,42 @@
   }
   function updateAskLabel() {
     const active = state.listening || state.voiceStarting;
-    $("#sendBtn").classList.toggle("listening", active);
-    $("#sendBtn").setAttribute("aria-pressed", String(active));
-    $("#sendBtn").setAttribute(
-      "aria-label",
-      active
-        ? "Stop listening"
-        : $("#askInput").value.trim()
-          ? "Send typed request"
-          : "Ask SAMI by voice",
-    );
-    $("#askButtonLabel").textContent = state.voiceStarting
+    const label = state.voiceStarting
       ? "Starting…"
       : state.listening
         ? "Listening…"
         : $("#askInput").value.trim()
           ? "Send request"
           : "Ask SAMI";
+    const aiConfigured = !!samiAiEndpoint(),
+      capability = $("#assistantCapability");
+    if (capability)
+      capability.textContent = aiConfigured
+        ? "AI endpoint configured · availability not verified"
+        : "Local commands · AI not connected";
+    const ariaLabel = active
+      ? "Stop listening"
+      : $("#askInput").value.trim()
+        ? "Send typed request"
+        : "Ask SAMI by voice";
+
+    $("#sendBtn").classList.toggle("listening", active);
+    $("#sendBtn").setAttribute("aria-pressed", String(active));
+    $("#sendBtn").setAttribute("aria-label", ariaLabel);
+    if ($("#headerAskBtn")) {
+      $("#headerAskBtn").classList.toggle("listening", active);
+      $("#headerAskBtn").setAttribute("aria-pressed", String(active));
+      $("#headerAskBtn").setAttribute("aria-label", ariaLabel);
+    }
+
+    $("#askButtonLabel").textContent = label;
+    if ($("#headerAskLabel")) $("#headerAskLabel").textContent = label;
+
     $("#voiceHint").textContent = active
       ? "Speak naturally · tap the same button to stop"
-      : "Tap Ask SAMI to speak · type and press Enter to send";
+      : aiConfigured
+        ? "Ask naturally · voice and typed requests use the configured AI endpoint"
+        : "Local commands work now · connect an HTTPS AI backend for open questions";
   }
   function handleAskButton() {
     primeSpeech();
@@ -7840,7 +8357,13 @@
     updateAskLabel();
     addMessage("user", q);
     $("#samiPanel").classList.add("open");
-    handleCommand(q);
+    void handleCommand(q).catch((error) => {
+      console.error("SAMI request failed", error);
+      samiSay(
+        "I couldn't complete that request. " +
+          String(error?.message || "Try a different command.").slice(0, 180),
+      );
+    });
   }
   function addMessage(who, text, source) {
     const d = document.createElement("div");
@@ -8145,9 +8668,62 @@
     }
     return false;
   }
+  function localProjectSummary() {
+    const project = state.project;
+    if (!project) return "No project is open.";
+    const features = (project.features || []).filter(
+        (f) => !f.properties?.guideHidden,
+      ),
+      counts = {};
+    for (const f of features) {
+      const type = f.properties?.type || "other";
+      counts[type] = (counts[type] || 0) + 1;
+    }
+    const lines = [
+      `${project.name || "Untitled site"}.`,
+      `Site area: ${project.area ? areaText() : "not defined"}.`,
+      `${features.length} project items total.`,
+    ];
+    if (counts.panel) lines.push(`${counts.panel} Trakway panels.`);
+    if (counts.asset) lines.push(`${counts.asset} site assets.`);
+    if (counts.service) lines.push(`${counts.service} service or constraint records.`);
+    if (project.routes?.length)
+      lines.push(`${project.routes.length} saved route${project.routes.length === 1 ? "" : "s"}.`);
+    return lines.join(" ");
+  }
+  function localAssistantHelp() {
+    const aiNote = samiAiEndpoint()
+      ? "An AI endpoint is configured, but SAMI cannot confirm it is reachable until it successfully answers a request."
+      : "Open-ended questions need a connected HTTPS AI backend; no OpenAI key belongs in this app.";
+    samiSay(
+      "I can run local workspace commands and report this project's contents. Try: open the site plan; open the route; show services; switch to satellite; define the site area; measure a line; add a note; create a 15 by 15 metre Lion pad; summarize this project; undo. " +
+        aiNote,
+    );
+  }
   async function handleCommand(q) {
     const n = q.toLowerCase().trim();
-    if (/^(undo|undo that|go back one)[.!]?$/.test(n)) {
+    if (/^(help|commands|what can you do|what can sami do)[.!?]?$/.test(n)) {
+      localAssistantHelp();
+      return;
+    }
+    if (
+      /\b(summarize|summary|project status|what(?:'s| is) in (?:the )?(?:project|site)|how many (?:items|objects|assets))\b/.test(n)
+    ) {
+      samiSay(localProjectSummary());
+      return;
+    }
+    if (/\b(open|show|switch to|use)\s+(?:the\s+)?cad\b/.test(n)) {
+      if (!state.project.area) {
+        openDrawer("area");
+        samiSay("Define a site area first. CAD will then show only that site area and its configured bleed.");
+        return;
+      }
+      setMode("plan");
+      switchBase("drawing");
+      samiSay("CAD site drawing opened for the selected site area only.");
+      return;
+    }
+    if (/^(undo|undo that|undo last (?:step|change)|go back one)[.!?]?$/.test(n)) {
       undo();
       samiSay("Undo requested.");
       return;
@@ -8174,7 +8750,7 @@
       );
       return;
     }
-    if (/site drawing|plan drawing|drawing view|open (the )?plan/.test(n)) {
+    if (/site drawing|site plan|plan drawing|drawing view|open (the )?plan|switch to (the )?plan/.test(n)) {
       setMode("plan");
       samiSay(
         "Site Drawing is open. Draw over Map, Satellite or switch separately to the CAD background.",
@@ -8189,7 +8765,8 @@
       return;
     }
     if (tryHandleIntelligentObject(q)) return;
-    if (/map view|street view/.test(n)) {
+    if (/map view|street view|open (the )?map|show (the )?map/.test(n)) {
+      setMode("map");
       switchBase("street");
       samiSay("Map background opened.");
       return;
@@ -8201,7 +8778,7 @@
       );
       return;
     }
-    if (/route to site|hgv route|lorry route|truck route/.test(n)) {
+    if (/route to site|hgv route|lorry route|truck route|open (the )?route/.test(n)) {
       setMode("route");
       samiSay(
         "Route to site is open. Choose the vehicle profile and enter or pick the two route endpoints.",
@@ -8219,7 +8796,7 @@
     ) {
       openDrawer("services");
       samiSay(
-        "Choose the types to display. Service data is limited to the site plus the quarter-mile buffer and should be verified before safety-critical use.",
+        "Choose the types to display. Public service data is limited to the site plus about 500 feet, may be incomplete, and must be checked against authoritative records before safety-critical use.",
       );
       return;
     }
@@ -8587,12 +9164,21 @@
         if (pointer !== e.pointerId || !state.freehandActive) return;
         const d = Math.hypot(e.clientX - lastPx.x, e.clientY - lastPx.y);
         if (d < 5) return;
-        const c = screenToCoord(e);
+        let c = screenToCoord(e);
         if (!freehandPointAllowed(c)) return;
         const prev = state.points.at(-1);
+        state.snapPoint = null;
+        if (prev && state.points.length > 1) {
+          const snapped = snapToCorner(c, state.points[state.points.length - 2]);
+          if (snapped !== c) {
+            state.snapPoint = snapped;
+            c = snapped;
+          }
+        }
         if (!prev || G.distance(prev, c) > 0.18) {
           state.points.push(c);
           lastPx = { x: e.clientX, y: e.clientY };
+          state.snapPoint = null;
           renderDraft();
         }
         e.preventDefault();
@@ -8749,6 +9335,7 @@
         dy = ring[1][1] - ring[0][1];
       ang = (Math.atan2(dx, dy) * 180) / Math.PI;
     }
+    if (typeof opt.padBearing === "number" && Number.isFinite(opt.padBearing)) ang = opt.padBearing;
     const a = (ang * Math.PI) / 180,
       u = [Math.sin(a), Math.cos(a)],
       v = [Math.cos(a), -Math.sin(a)],
@@ -9425,6 +10012,8 @@
       setArea: (...args) => setArea(...args),
       snapshot: (...args) => snapshot(...args),
       resolveLocationText: (...args) => resolveLocationText(...args),
+      readHgvOptions: (...args) => readHgvOptions(...args),
+      runServiceRefresh: (...args) => runServiceRefresh(...args),
     },
     {
       fresh,

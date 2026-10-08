@@ -6,7 +6,6 @@
     film = $("#introFilm"),
     ctx = canvas?.getContext("2d", { alpha: false }),
     gate = $("#launchStartGate"),
-    brand = $("#brandResolve"),
     logo = $("#finalWordmark"),
     wordmarkStage = $("#wordmarkStage"),
     welcomeUI = $(".welcome-ui"),
@@ -89,12 +88,11 @@
     sparks = [],
     seed = 170926,
     suspendedAt = 0,
-    filmUrl = "",
-    filmLoading = null,
-    filmFallback = false;
+    filmFallback = false,
+    mediaDriven = true,
+    audioAttempt = 0;
   const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)),
     lerp = (a, b, t) => a + (b - a) * t,
-    out = (t) => 1 - Math.pow(1 - clamp(t), 3),
     smooth = (t) => {
       t = clamp(t);
       return t * t * (3 - 2 * t);
@@ -106,19 +104,19 @@
   const ENERGY_Y = -0.285,
     ENERGY_ORIGIN = [0, ENERGY_Y, 0];
   const PROMO_DURATION = 73.15,
-    VOICE_START = 6.85,
-    FRAGMENT_FAIL = 30.75,
-    CLEAN_START = 34.1,
-    CAD_RETRACT = 59.45,
-    CAD_END = 63.0,
-    WORK_SMARTER = 64.1,
-    TIME_TO = 66.0,
-    ASK_SAMI = 67.15,
-    LOGO_MORPH = 68.25,
+    VOICE_START = 4.48,
+    FRAGMENT_FAIL = 25.15,
+    CLEAN_START = 27.0,
+    CAD_RETRACT = 60.65,
+    CAD_END = 63.7,
+    WORK_SMARTER = 61.64,
+    TIME_TO = 64.34,
+    ASK_SAMI = 66.18,
+    LOGO_MORPH = 67.8,
     SIGNATURE_START = 69.35,
     SIGNATURE_END = 71.4,
-    TEXT_LEAD = 0.9,
-    TAIL_TEXT_LEAD = 1.5;
+    TEXT_LEAD = 0,
+    TAIL_TEXT_LEAD = 0;
   const rnd = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
@@ -622,20 +620,7 @@
     }
     return ps;
   }
-  function roughCircleProjected(cam, r, y = -0.29, phase = 0, n = 52) {
-    const ps = [];
-    for (let i = 0; i <= n; i++) {
-      const a = (i / n) * Math.PI * 2,
-        noise =
-          1 +
-          0.09 * Math.sin(a * 7 + phase) +
-          0.045 * Math.sin(a * 13 - phase * 1.7),
-        rr = r * noise,
-        p = project(cam, [Math.cos(a) * rr, y, Math.sin(a) * rr]);
-      if (p) ps.push(p);
-    }
-    return ps;
-  }
+
   function drawCrater(cam, t, energy) {
     if (mode === "sales") return;
     const impact = 2.78;
@@ -861,38 +846,7 @@
     });
     ctx.restore();
   }
-  function irregularProgress(t) {
-    const keys = [
-      [0.8, 0],
-      [2, 0.06],
-      [3.2, 0.12],
-      [4.4, 0.19],
-      [5.8, 0.27],
-      [7.2, 0.34],
-      [8.6, 0.42],
-      [10, 0.5],
-      [11.4, 0.59],
-      [12.8, 0.68],
-      [14, 0.77],
-      [15.2, 0.85],
-      [16.2, 0.92],
-      [17.35, 1],
-    ];
-    if (t <= keys[0][0]) return 0;
-    for (let i = 1; i < keys.length; i++)
-      if (t <= keys[i][0]) {
-        const [a, x] = keys[i - 1],
-          [b, y] = keys[i];
-        return lerp(x, y, smooth((t - a) / (b - a)));
-      }
-    return 1;
-  }
-  function crackProgress(t) {
-    if (mode === "welcome") return 0;
-    if (t < 17.8) return irregularProgress(t);
-    if (t < 20.05) return 1 - ease((t - 17.8) / 2.25);
-    return 0;
-  }
+
   function partialPolyline(cam, pts, progress) {
     if (progress <= 0) return [];
     const segs = [];
@@ -944,142 +898,7 @@
     }
     return ps.at(-1);
   }
-  function drawCracks(cam, t) {
-    const base = crackProgress(t);
-    if (base <= 0) return;
-    const retract = mode === "welcome" ? t >= 7.6 : t >= 17.8;
-    const chaos = mode === "sales" && t < 20.2;
-    for (const c of cracks) {
-      const p = clamp((base - c.delay) / (1 - c.delay)),
-        ps = partialPolyline(cam, c.pts, p);
-      if (ps.length < 2) continue;
-      ctx.save();
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      const pulse = 0.55 + 0.45 * Math.sin(t * 6.2 + c.seed * 0.91),
-        flicker = chaos
-          ? 0.72 +
-            0.28 *
-              Math.sin(t * 17 + c.flicker * 11) *
-              Math.sin(t * 4.6 + c.seed * 0.21)
-          : 1;
-      if (chaos) {
-        ctx.strokeStyle = `rgba(2,6,5,${0.82})`;
-        ctx.lineWidth = c.branch ? 4.6 : 7.4;
-        ctx.shadowBlur = 0;
-        path(ps);
-        ctx.stroke();
-        ctx.globalCompositeOperation = "screen";
-        if (c.broken) {
-          ctx.setLineDash(c.branch ? [10, 8, 2, 10] : [18, 12, 4, 12]);
-          ctx.lineDashOffset = -(t * (c.branch ? 46 : 66) + c.seed * 9) % 60;
-        }
-        ctx.strokeStyle = `rgba(61,255,123,${(0.06 + 0.05 * pulse) * flicker})`;
-        ctx.lineWidth = c.branch ? 8.5 : 14.5;
-        ctx.shadowColor = "rgba(53,255,122,.98)";
-        ctx.shadowBlur = c.branch ? 20 : 34;
-        path(ps);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(140,255,136,${(0.09 + 0.09 * pulse) * flicker})`;
-        ctx.lineWidth = c.branch ? 3.2 : 5.8;
-        ctx.shadowColor = "rgba(114,255,128,.92)";
-        ctx.shadowBlur = 12;
-        path(ps);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.strokeStyle = `rgba(248,255,220,${(0.22 + 0.3 * pulse) * flicker})`;
-        ctx.lineWidth = c.branch ? 0.9 : 1.25;
-        ctx.shadowBlur = 3;
-        path(ps);
-        ctx.stroke();
-      } else {
-        ctx.strokeStyle = `rgba(21,255,122,${0.028 + 0.042 * pulse})`;
-        ctx.lineWidth = c.branch ? 7 : 12;
-        ctx.shadowColor = "#1fff77";
-        ctx.shadowBlur = c.branch ? 18 : 28;
-        path(ps);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(39,226,127,${0.1 + 0.1 * pulse})`;
-        ctx.lineWidth = c.branch ? 2.5 : 4.2;
-        ctx.shadowBlur = 8;
-        path(ps);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(195,255,218,${0.32 + 0.38 * pulse})`;
-        ctx.lineWidth = c.branch ? 0.55 : 0.82;
-        ctx.shadowBlur = 2;
-        path(ps);
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-      const travel = retract
-          ? 1 - ((t * 1.45 + c.seed * 0.031) % 1)
-          : (t * 0.82 + c.seed * 0.019) % 1,
-        bead = pointAlong(ps, travel);
-      if (bead) {
-        const radius = chaos ? (c.branch ? 10 : 14) : c.branch ? 8 : 12,
-          gr = ctx.createRadialGradient(
-            bead.x,
-            bead.y,
-            0,
-            bead.x,
-            bead.y,
-            radius,
-          );
-        gr.addColorStop(0, "rgba(245,255,246,.95)");
-        gr.addColorStop(
-          0.18,
-          chaos ? "rgba(179,255,123,.75)" : "rgba(93,255,163,.55)",
-        );
-        gr.addColorStop(1, chaos ? "rgba(64,255,137,0)" : "rgba(45,255,137,0)");
-        ctx.fillStyle = gr;
-        ctx.beginPath();
-        ctx.arc(bead.x, bead.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
-  function drawBlocks(cam, t) {
-    if (mode !== "sales" || t < 1 || t > 20.1) return;
-    const f = irregularProgress(t),
-      collapse = smooth((t - 17.8) / 2.25);
-    for (const b of blocks) {
-      const q = clamp((f - (b.seed % 8) * 0.012) / 0.72),
-        dr = b.r1 * (0.25 + 0.75 * q) * (1 - 0.5 * collapse);
-      const jitter =
-          (0.02 + 0.045 * Math.sin(t * 3.7 + b.seed)) * q * (1 - collapse),
-        a = b.a + b.tilt * q + jitter;
-      const lift =
-        (0.02 + b.lift * 0.12) *
-        Math.sin(Math.PI * clamp((t - 1) / 6)) *
-        q *
-        (1 - collapse);
-      const pts = [
-        [
-          Math.cos(a - b.span) * b.r0,
-          -0.29 + lift,
-          Math.sin(a - b.span) * b.r0,
-        ],
-        [Math.cos(a - b.span) * dr, -0.285 + lift, Math.sin(a - b.span) * dr],
-        [Math.cos(a + b.span) * dr, -0.29 + lift, Math.sin(a + b.span) * dr],
-        [
-          Math.cos(a + b.span) * b.r0,
-          -0.29 + lift,
-          Math.sin(a + b.span) * b.r0,
-        ],
-      ]
-        .map((p) => project(cam, p))
-        .filter(Boolean);
-      if (pts.length === 4) {
-        ctx.fillStyle = `rgba(${5 + (b.seed % 4)},${10 + (b.seed % 7)},${8 + (b.seed % 5)},${0.54 - collapse * 0.46})`;
-        path(pts);
-        ctx.fill();
-        ctx.strokeStyle = `rgba(84,248,151,${0.045 * q * (1 - collapse)})`;
-        ctx.lineWidth = 0.55;
-        ctx.stroke();
-      }
-    }
-  }
+
   function drawImpactDebris(cam, t) {
     return;
   }
@@ -1344,14 +1163,7 @@
   }
   function prepareWords() {
     words.replaceChildren();
-    const timed = [
-      [6.95, 2.7, "BUILDING A SITE PLAN"],
-      [10.1, 2.3, "MULTIPLE SOURCES"],
-      [12.8, 2.15, "CHASING INFORMATION"],
-      [15.2, 2.15, "WAITING FOR ANSWERS"],
-      [17.8, 2.55, "EVERY DELAY COSTS TIME"],
-      [21.0, 2.75, "EVERY DELAY COSTS MONEY"],
-    ];
+    const timed = window.SAMIStoryTiming.process;
     timed.forEach(([at, d, text], i) => {
       const el = document.createElement("div");
       el.className = "process-word";
@@ -1384,31 +1196,11 @@
   }
   function propositions(t) {
     if (mode !== "sales") return;
-    const items = [
-      [26.0, 30.15, "WHAT IF EVERYTHING YOU NEED WAS IN ONE PLACE?"],
-      [34.3, 36.1, "INTRODUCING SAMI"],
-      [36.15, 38.75, "SPATIAL ANALYSIS · MAPPING INTELLIGENCE"],
-      [39.0, 40.55, "FIND YOUR SITE"],
-      [40.75, 42.55, "DEFINE YOUR WORKING AREA"],
-      [42.75, 45.05, "BUILD TRUE-SCALE SITE PLANS"],
-      [45.15, 46.35, "ADD ASSETS"],
-      [46.45, 48.1, "ASSESS CONSTRAINTS"],
-      [48.2, 49.45, "PLAN ACCESS"],
-      [49.55, 50.95, "HGV ROUTES"],
-      [51.05, 53.2, "ALL WITHIN ONE WORKSPACE"],
-      [53.35, 55.15, "VOICE OR TEXT"],
-      [55.25, 58.8, "ASK SAMI TO MAKE THE CHANGES FOR YOU"],
-      [WORK_SMARTER, 65.7, "IT’S TIME TO WORK SMARTER"],
-    ];
-    const x = items.find(([a, b]) => {
-      const lead = a >= 48.2 ? TAIL_TEXT_LEAD : TEXT_LEAD;
-      return t >= a - lead && t < b - lead;
-    });
+    const items = window.SAMIStoryTiming.sentences;
+    const x = items.find(([a, b]) => t >= a && t < b);
     if (x) {
       const [a, b, text] = x;
-      const lead = a >= 48.2 ? TAIL_TEXT_LEAD : TEXT_LEAD,
-        aa = a - lead,
-        bb = b - lead;
+      const aa = a, bb = b;
       setSentence(
         text,
         smooth((t - aa) / 0.3) * (1 - smooth((t - bb + 0.27) / 0.27)),
@@ -1420,8 +1212,8 @@
     const selectedPhrase = "…ASK SAMI",
       selected = [5, 6, 7, 8],
       centres = [0.153, 0.413, 0.724, 0.942],
-      pauseEnd = 66.78 - TAIL_TEXT_LEAD,
-      pauseFade = 66.66 - TAIL_TEXT_LEAD,
+      pauseEnd = 66.02,
+      pauseFade = 65.88,
       askAt = ASK_SAMI - TAIL_TEXT_LEAD,
       morphAt = LOGO_MORPH - TAIL_TEXT_LEAD;
     if (t < pauseEnd) {
@@ -1625,7 +1417,7 @@
   }
   function frame(now) {
     if (!running) return;
-    const t = (now - start) / 1000,
+    const t = window.SAMIStoryTiming.currentTime(salesAudio, mode === "sales" && mediaDriven, now, start),
       cam = cameraFor(t);
     drawGround(cam, t);
     if (mode === "sales") {
@@ -1649,7 +1441,7 @@
     brandProgress(t);
     if (
       (mode === "welcome" && t < 6) ||
-      (mode === "sales" && t < PROMO_DURATION)
+      (mode === "sales" && t < PROMO_DURATION && !salesAudio.ended)
     )
       raf = requestAnimationFrame(frame);
     else if (mode === "welcome") completeQuickLaunch();
@@ -1689,19 +1481,27 @@
       } catch {}
     }
   }
+  function resumeSalesAudio() {
+    const attempt = ++audioAttempt;
+    if (!mediaDriven) salesAudio.currentTime = Math.max(0, (performance.now() - start) / 1000);
+    mediaDriven = true;
+    const playback = salesAudio.play();
+    playback?.catch(() => {
+      if (attempt !== audioAttempt || !running || mode !== "sales") return;
+      // Silent playback can still tell the story if audio is blocked/offline.
+      start = performance.now() - salesAudio.currentTime * 1000;
+      mediaDriven = false;
+      status.textContent = "Soundtrack unavailable. Tap Sound to retry.";
+    });
+  }
   function playAudio(which) {
     if (which !== "sales") return;
     stopAudio();
     salesAudio.currentTime = 0;
+    mediaDriven = true;
     salesAudio.muted = !sound;
     salesAudio.volume = 1;
-    const bp = salesAudio.play();
-    if (bp?.catch)
-      bp.catch(() => {
-        if (sound)
-          status.textContent =
-            "Cinematic soundtrack could not start. Tap Sound to retry.";
-      });
+    resumeSalesAudio();
     if (sound) status.textContent = "Why SAMI soundtrack enabled";
   }
   async function playWelcomeFilm() {
@@ -1770,6 +1570,10 @@
       return;
     }
     finishAtWelcome(false);
+    if (welcomeExit === "auto") {
+      await new Promise((r) => setTimeout(r, 500));
+      enter({ requestPermissions: true });
+    }
   }
   function finishAtWelcome(fromFilm = false) {
     cancelAnimationFrame(raf);
@@ -1937,7 +1741,9 @@
             ? "<li>Copy this page address.</li><li>Open it in <b>Chrome</b> or <b>Microsoft Edge</b>.</li><li>Choose <b>Install SAMI</b> from that browser’s address bar or menu.</li>"
             : macSafari
               ? "<li>Open Safari’s <b>File</b> menu.</li><li>Choose <b>Add to Dock</b>.</li><li>Confirm the SAMI name and choose <b>Add</b>.</li>"
-              : "<li>Open your browser menu.</li><li>Choose <b>Install app</b> or <b>Add to Home Screen</b>.</li><li>Confirm the installation and open SAMI from its new app icon.</li>";
+              : android
+                ? "<li>Open your browser menu.</li><li>Choose <b>Install app</b> or <b>Add to Home Screen</b>.</li><li>Confirm the installation and open SAMI from its new app icon.</li>"
+                : "<li>Click the <b>Install</b> icon at the right-hand end of the address bar, if one is shown.</li><li>Otherwise open the browser menu: Chrome &rarr; <b>Cast, save and share &rarr; Install page as app</b>; Edge &rarr; <b>Apps &rarr; Install this site as an app</b>.</li><li>Confirm, then open SAMI from its new app window. You can also choose <b>Continue in browser</b>.</li>";
       help.scrollIntoView({ behavior: "smooth", block: "nearest" });
     };
     if (close)
@@ -2009,11 +1815,8 @@
     sound = !sound;
     $("#launchSoundBtn").textContent = sound ? "Sound on" : "Sound off";
     salesAudio.muted = !sound;
-    if (sound) {
-      salesAudio.play().catch(() => {});
-    } else {
-      salesAudio.pause();
-    }
+    // Muting keeps the narration clock moving so sound can be re-enabled in sync.
+    if (running && mode === "sales" && (salesAudio.paused || !mediaDriven)) resumeSalesAudio();
   };
   if (film) {
     film.addEventListener("ended", () => {
@@ -2069,12 +1872,7 @@
         film.play().catch(() => {});
       } else {
         start += pausedFor;
-        const elapsed = (performance.now() - start) / 1000;
-        salesAudio.currentTime = Math.min(
-          elapsed,
-          Number.isFinite(salesAudio.duration) ? salesAudio.duration : elapsed,
-        );
-        salesAudio.play().catch(() => {});
+        if (mode === "sales") resumeSalesAudio();
         raf = requestAnimationFrame(frame);
       }
     }

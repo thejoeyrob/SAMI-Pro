@@ -101,7 +101,6 @@ window.SAMIStudioEngine = function (C, O) {
   };
   let symbolLayer = null,
     selectionBox = null,
-    selectionGroup = null,
     voiceAudio = null,
     voiceController = null,
     voiceSeq = 0,
@@ -419,11 +418,7 @@ window.SAMIStudioEngine = function (C, O) {
   }
   function renderOhl() {
     S.ohlSupportGroup.clearLayers();
-    if (
-      !S.project.serviceVisibility.ohl ||
-      S.project.hiddenTypes.includes("service")
-    )
-      return;
+    // Each feature decides visibility; committed OHL survives reference-layer toggles.
     const seen = new Set(),
       view = S.map.getBounds();
     let count = 0;
@@ -1067,6 +1062,9 @@ window.SAMIStudioEngine = function (C, O) {
     if (S.tool === "accessPoint") {
       const c = C.coord(e.latlng);
       C.cancelDraw();
+      // Overlapping canvas features can deliver the same tap more than once.
+      // Keep the entrance dialog from being replaced by a feature-info dialog.
+      S.suppressMapClick = performance.now() + 350;
       editAccessPoint(null, c);
       return;
     }
@@ -1497,7 +1495,8 @@ window.SAMIStudioEngine = function (C, O) {
         C.closeModal();
         S.selected = f.id;
         C.commit();
-        C.openDrawer("access");
+        if (S.mode === "route") chooseAccessRoute(f.id);
+        else C.openDrawer("access");
       }
     };
   }
@@ -1540,10 +1539,10 @@ window.SAMIStudioEngine = function (C, O) {
     C.openDrawer("routeToSite");
   }
   async function planHgvRoute() {
-    const before = S.project.routes.length,
+    const project = S.project, before = S.project.routes.length,
       id = S.project.hgv.accessPointId;
     await O.planHgvRoute();
-    if (S.project.routes.length > before && id) {
+    if (S.project === project && S.project.routes.length > before && id) {
       const f = accessPoints().find((f) => f.id === id);
       if (f) {
         Object.assign(S.project.routes.at(-1), {
@@ -1604,7 +1603,7 @@ window.SAMIStudioEngine = function (C, O) {
       ) +
       '<p class="subtle">Normal operation uses bundled recordings offline. If an answer is not covered, SAMI uses the generic recorded response unless live fallback is explicitly enabled.</p><div class="section-title">SAMI AI</div><div class="card"><strong>' +
       (ai ? "Connected endpoint configured" : "Local command engine only") +
-      '</strong><p class="subtle">The local engine can operate SAMI tools. A connected AI endpoint adds natural questions, project-aware answers and source-grounded UK construction guidance. The OpenAI API key must stay on the server, never in this PWA.</p></div>' +
+      '</strong><p class="subtle">Speech recognition turns your voice into a request. Local commands work on-device; open-ended questions need a reachable HTTPS AI backend. This endpoint can connect an OpenAI-compatible service, but its API key must stay on that server. Enter the endpoint URL here, never the provider key.</p></div>' +
       F(
         "connectedAiUrl",
         "SAMI AI HTTPS endpoint",
@@ -2163,6 +2162,7 @@ window.SAMIStudioEngine = function (C, O) {
             throw Error("Use an HTTPS endpoint.");
           C.setPref(key, value);
         }
+        window.dispatchEvent(new Event("sami:assistant-config"));
         C.toast("Connections saved.");
         return;
       }
@@ -2229,7 +2229,7 @@ window.SAMIStudioEngine = function (C, O) {
         );
         return;
       }
-      O.runAction(action, b);
+      return O.runAction(action, b);
     } catch (e) {
       C.toast(e.message);
     }
@@ -2744,7 +2744,10 @@ window.SAMIStudioEngine = function (C, O) {
     }
     return out;
   }
-  async function refreshOhlSnapshot(opts = {}) {
+  function refreshOhlSnapshot(opts = {}) {
+    return C.runServiceRefresh("ohl", () => refreshOhlSnapshotWork(opts));
+  }
+  async function refreshOhlSnapshotWork(opts = {}) {
     if (!S.project.area) {
       if (!opts.auto) C.openDrawer("area");
       return;
@@ -2788,14 +2791,17 @@ window.SAMIStudioEngine = function (C, O) {
       return fs;
     };
     const adopt = async (fs, { cached = false } = {}) => {
+      if (project !== S.project || generation !== S.areaGeneration) return;
       applyEdits(fs);
-      await C.replaceSourceFeatures(
+      const replaced = await C.replaceSourceFeatures(
         "builtin:ohl-osm",
         fs,
-        "OHL intelligence snapshot",
+        "OHL intelligence snapshot", project, generation,
       );
       if (project !== S.project || generation !== S.areaGeneration)
         return false;
+      if (!replaced && !fs.length && existingMapped.length)
+        return {status:"retained",count:existingMapped.length,message:"No replacement OHL records; previous snapshot kept."};
       project.hiddenTypes = project.hiddenTypes.filter((t) => t !== "service");
       project.serviceVisibility.ohl = true;
       project.meta = project.meta || {};
@@ -2816,7 +2822,7 @@ window.SAMIStudioEngine = function (C, O) {
         C.toast(
           `${lineCount} mapped OHL line records and ${supportCount} mapped support references saved${cached ? " from the last-known-good cache" : ""}. Verify before safety-critical use.`,
         );
-      return true;
+      return {status:cached ? "retained" : fs.length ? "ready" : "empty", count:fs.length, message:cached ? "Using stored OHL records." : fs.length ? "Mapped OHL records loaded." : "No mapped OHL returned. Verify site conditions."};
     };
     try {
       const bbox = [bounds[1], bounds[0], bounds[3], bounds[2]].join(","),
@@ -2836,16 +2842,15 @@ window.SAMIStudioEngine = function (C, O) {
           C.toast(
             "No replacement OHL records were returned. SAMI retained the last-known-good mapped OHL snapshot instead of clearing it.",
           );
-        return;
+        return {status:"retained",count:existingMapped.length,message:project.meta.ohlLastRefreshError};
       }
       if (!fs.length) {
         const cached = loadOhlFallback(bounds);
         if (cached?.features?.length) {
-          await adopt(cached.features, { cached: true });
-          return;
+          return await adopt(cached.features, { cached: true });
         }
       }
-      await adopt(fs);
+      return await adopt(fs);
     } catch (e) {
       if (project !== S.project || generation !== S.areaGeneration) return;
       if (sameSnapshot && existingMapped.length) {
@@ -2857,16 +2862,16 @@ window.SAMIStudioEngine = function (C, O) {
           C.toast(
             "OHL live refresh failed. The last-known-good mapped snapshot has been retained.",
           );
-        return;
+        return {status:"retained",count:existingMapped.length,message:project.meta.ohlLastRefreshError};
       }
       const cached = loadOhlFallback(bounds);
       if (cached?.features?.length) {
-        await adopt(cached.features, { cached: true });
+        const result = await adopt(cached.features, { cached: true });
         if (!opts.auto)
           C.toast(
             "Live OHL source was unavailable, so SAMI restored the last-known-good local snapshot.",
           );
-        return;
+        return result;
       }
       project.meta = project.meta || {};
       project.meta.ohlStale = true;
@@ -2878,6 +2883,7 @@ window.SAMIStudioEngine = function (C, O) {
             e.message +
             ". No saved snapshot was removed.",
         );
+      return {status:cached?.features?.length ? "retained" : "error",message:e.message || "OHL source unavailable; existing records kept."};
     }
   }
   function updateLaunchGate() {
@@ -3044,7 +3050,7 @@ window.SAMIStudioEngine = function (C, O) {
     else if (k === "a") activateMaster("area");
     else if (k === "f") activateMaster(e.shiftKey ? "freeArea" : "freeLine");
     else if (k === "p") activateMaster("place");
-    else if (k === "m") C.startTool("measure", { snap: true });
+    else if (k === "m") window.SAMIWorkspace?.runAction("dimensionTool");
     else if (k === "s") {
       ui.snap = !ui.snap;
       S.options.snap = ui.snap;
@@ -3091,6 +3097,7 @@ window.SAMIStudioEngine = function (C, O) {
           width: Math.max(0.1, Math.min(500, +a.width || 1)),
           category: "My shapes",
           symbolPartsJSON: JSON.stringify(a.parts),
+          symbolSpace: a.symbolSpace || "footprint",
           angle: 0,
           dimensionLocked:
             !a.needsScale &&
@@ -3183,14 +3190,14 @@ window.SAMIStudioEngine = function (C, O) {
       importShapePack(e.target.files?.[0]);
       e.target.value = "";
     };
-    $("#askCollapse").onclick = () => {
+    ($("#askCollapse") || {}).onclick = () => {
       document.body.classList.toggle("ask-collapsed");
       $("#askCollapse").setAttribute(
         "aria-expanded",
         String(!document.body.classList.contains("ask-collapsed")),
       );
     };
-    $("#baseCollapse").onclick = () => {
+    ($("#baseCollapse") || {}).onclick = () => {
       document.body.classList.toggle("base-collapsed");
       $("#baseCollapse").setAttribute(
         "aria-expanded",
@@ -3311,7 +3318,9 @@ window.SAMIStudioEngine = function (C, O) {
       const clean = C.simplifyLine ? C.simplifyLine(ps, 0.25) : ps,
         pr = G.projection(clean[0]),
         ring = clean.map(pr.xy),
-        ang = Math.atan2(ring[1][0] - ring[0][0], ring[1][1] - ring[0][1]),
+        ang = typeof opt.padBearing === "number" && Number.isFinite(opt.padBearing)
+          ? opt.padBearing * Math.PI / 180
+          : Math.atan2(ring[1][0] - ring[0][0], ring[1][1] - ring[0][1]),
         u = [Math.sin(ang), Math.cos(ang)],
         v = [Math.cos(ang), -Math.sin(ang)],
         local = ring.map((p) => [
@@ -3630,147 +3639,7 @@ window.SAMIStudioEngine = function (C, O) {
       symbolPartsJSON: JSON.stringify(parts),
     };
   let dockReady = false;
-  function dockSection(id, title, nodes, open = true) {
-    const d = document.createElement("details");
-    d.className = "dock-section";
-    d.id = id;
-    d.open = open;
-    d.innerHTML =
-      "<summary><span>" +
-      title +
-      '</span><button class="detach-panel" title="Detach panel" aria-label="Detach ' +
-      title +
-      '">↗</button></summary><div class="dock-body"></div>';
-    for (const n of nodes) if (n) d.lastElementChild.append(n);
-    $("#studioDock").append(d);
-    d.querySelector("button").onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const floating = d.classList.toggle("floating-panel");
-      d.open = true;
-      d.style.left = floating ? Math.min(innerWidth - 320, 360) + "px" : "";
-      d.style.top = floating ? "120px" : "";
-      e.currentTarget.textContent = floating ? "↙" : "↗";
-      e.currentTarget.title = floating ? "Return to sidebar" : "Detach panel";
-    };
-    let drag;
-    d.firstElementChild.addEventListener("pointerdown", (e) => {
-      if (!d.classList.contains("floating-panel") || e.target.closest("button"))
-        return;
-      drag = {
-        id: e.pointerId,
-        x: e.clientX,
-        y: e.clientY,
-        l: d.offsetLeft,
-        t: d.offsetTop,
-      };
-      d.firstElementChild.setPointerCapture(e.pointerId);
-    });
-    d.firstElementChild.addEventListener("pointermove", (e) => {
-      if (!drag || drag.id !== e.pointerId) return;
-      d.style.left =
-        Math.max(0, Math.min(innerWidth - 160, drag.l + e.clientX - drag.x)) +
-        "px";
-      d.style.top =
-        Math.max(60, Math.min(innerHeight - 80, drag.t + e.clientY - drag.y)) +
-        "px";
-      e.preventDefault();
-    });
-    d.firstElementChild.addEventListener("pointerup", () => (drag = null));
-    return d;
-  }
-  function mountDock() {
-    const dock = document.createElement("aside");
-    dock.id = "studioDock";
-    dock.setAttribute("aria-label", "Studio sidebar");
-    $("#workspace").append(dock);
-    dock.innerHTML =
-      '<div class="dock-title"><strong>WORKSPACE</strong><button id="dockFold" title="Collapse sidebar">‹</button></div>';
-    dock.append($("#toolRail"));
-    dockSection("dockTools", "Drawing tools", [
-      $(".master-toolbar"),
-      $("#drawStatus"),
-    ]);
-    dockSection("dockOptions", "Items & properties", [$("#drawer")]);
-    dockSection(
-      "dockBase",
-      "Map & history",
-      [$(".canvas-toolbar"), $(".area-chip")],
-      false,
-    );
-    dockSection(
-      "dockAssistant",
-      "Ask SAMI",
-      [$(".ask-bar-wrap"), $("#samiPanel")],
-      false,
-    );
-    dockSection("dockBuilder", "Shape builder", [], true).hidden = true;
-    dockSection("dockDialog", "Options", [$("#modal")], true).hidden = true;
-    const toggle = () => {
-      document.body.classList.toggle("dock-collapsed");
-      S.map.invalidateSize({ pan: false });
-    };
-    $("#dockFold").onclick = toggle;
-    $("#railCollapse").onclick = toggle;
-    const reopen = document.createElement("button");
-    reopen.id = "dockReopen";
-    reopen.className = "header-btn";
-    reopen.textContent = "☰";
-    reopen.title = "Show sidebar";
-    reopen.onclick = toggle;
-    $(".top-actions").prepend(reopen);
-    $("#closeDrawer").onclick = () => {
-      $("#dockOptions").open = false;
-    };
-    $("#askCollapse").hidden = true;
-    $("#baseCollapse").hidden = true;
-    $("#selectionBar").hidden = true;
-    const smooth = document.createElement("button");
-    smooth.id = "smoothingToggle";
-    smooth.title = "Smoothing: straighten freehand lines and edges";
-    smooth.setAttribute("aria-pressed", "true");
-    smooth.className = "active";
-    smooth.textContent = "Smoothing";
-    smooth.onclick = () => {
-      ui.smoothing = !ui.smoothing;
-      smooth.classList.toggle("active", ui.smoothing);
-      smooth.setAttribute("aria-pressed", String(ui.smoothing));
-    };
-    $(".master-toolbar").append(smooth);
-    new MutationObserver(() => {
-      if (!window.document) return;
-      const active = !$("#modal").classList.contains("hidden");
-      $("#dockDialog").hidden = !active;
-      if (active) {
-        $("#dockDialog").open = true;
-        document.body.classList.remove("dock-collapsed");
-      }
-    }).observe($("#modal"), { attributes: true, attributeFilter: ["class"] });
-    new MutationObserver(() => {
-      if (!window.document) return;
-      if ($("#samiPanel").classList.contains("open")) {
-        $("#dockAssistant").open = true;
-        document.body.classList.remove("dock-collapsed");
-      }
-    }).observe($("#samiPanel"), {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    $("#samiPanel").classList.add("open");
-    dockReady = true;
-    document.body.classList.add("studio-docked");
-    C.openDrawer("assets");
-    S.map.invalidateSize({ pan: false });
-    window.addEventListener("resize", () => {
-      for (const panel of $$(".floating-panel")) {
-        panel.style.left =
-          Math.max(0, Math.min(innerWidth - 160, panel.offsetLeft)) + "px";
-        panel.style.top =
-          Math.max(60, Math.min(innerHeight - 80, panel.offsetTop)) + "px";
-      }
-      if (S.mode === "create") drawCreator();
-    });
-  }
+
   const oldOpenDrawer = openDrawer;
   openDrawer = function (k, reveal = false) {
     oldOpenDrawer(k, reveal);
@@ -4747,8 +4616,7 @@ window.SAMIStudioEngine = function (C, O) {
     const source = S.project.features.find((x) => x.id === id),
       position = supports(source).find((p) => supportKey(p) === key);
     if (!position) return;
-    const uid = "ohl-node-" + key,
-      existing = S.project.features.find(
+    const existing = S.project.features.find(
         (x) => x.properties.ohlNodeKey === key,
       ),
       size = kind === "pole" || kind === "terminal" ? 0.55 : 7,
