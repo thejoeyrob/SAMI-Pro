@@ -1121,11 +1121,7 @@
       state.project[state.mode === "plan" ? "planBaseStyle" : "exploreBase"] = base;
       saveSoon();
     }
-<<<<<<< HEAD
     if (base === "drawing" && planBaseNeedsCapture() && !state.planCaptureError)
-=======
-    if (base === "drawing" && planBaseNeedsCapture())
->>>>>>> origin/main
       queueMicrotask(() => capturePlanBase(true));
     render();
   }
@@ -1961,83 +1957,57 @@
   function renderPlanBase() {
     state.planBaseGroup.clearLayers();
     if (state.base !== "drawing" || !state.project.planBase?.length) return;
-    const placed = [];
-    for (const f of state.project.planBase) {
-      let g;
-      try {
-        g = G.clipGeometry(f.geometry, planBounds());
-      } catch {
-        continue;
-      }
-      if (!g) continue;
-      const m = f.properties;
-      if (m.baseClass === "tree" && g.type === "Point") {
-        const center = g.coordinates,
-          pr = G.projection(center),
-          r = +m.radius || 3,
-          ring = Array.from({ length: 49 }, (_, i) => {
-            const a = (i * Math.PI) / 24,
-              rr = r * (1 + 0.1 * Math.sin(a * 12));
+    const bounds = planBounds(), placed = new Map(), batchSize = 200;
+    let batch = [], batchIdx = 0;
+    const processBatch = () => {
+      const end = Math.min(batchIdx + batchSize, state.project.planBase.length);
+      for (let i = batchIdx; i < end; i++) {
+        const f = state.project.planBase[i];
+        let g;
+        try {
+          g = G.clipGeometry(f.geometry, bounds);
+        } catch {
+          continue;
+        }
+        if (!g) continue;
+        const m = f.properties;
+        if (m.baseClass === "tree" && g.type === "Point") {
+          const center = g.coordinates, pr = G.projection(center), r = +m.radius || 3;
+          const ring = Array.from({length:24}, (_, i) => {
+            const a = (i * Math.PI) / 12, rr = r * (1 + 0.1 * Math.sin(a * 12));
             return latlng(pr.ll([Math.cos(a) * rr, Math.sin(a) * rr]));
           });
-        L.polygon(ring, {
-          color: "#7e9583",
-          weight: 0.6,
-          fillColor: "#f5f8f3",
-          fillOpacity: 0.6,
-          interactive: false,
-        }).addTo(state.planBaseGroup);
-        for (const pair of [
-          [
-            [0, -r * 0.25],
-            [0, r * 0.25],
-          ],
-          [
-            [-r * 0.25, 0],
-            [r * 0.25, 0],
-          ],
-        ])
-          L.polyline(pair.map(pr.ll).map(latlng), {
-            color: "#6b8070",
-            weight: 0.7,
-            interactive: false,
-          }).addTo(state.planBaseGroup);
-        continue;
-      }
-      L.geoJSON(
-        { ...f, geometry: g },
-        {
-          style: () => baseStyle({ ...f, geometry: g }),
-          pointToLayer: (ff, ll) =>
-            L.circleMarker(ll, { ...baseStyle(f), radius: 2 }),
-        },
-      ).addTo(state.planBaseGroup);
-      if (m.name) {
-        const b = G.boundsOf(g);
-        let c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
-        try {
-          const p = JSON.parse(m.labelPointJSON);
-          if (G.inside(p, planBounds())) c = p;
-        } catch {}
-        const pos = state.map.latLngToContainerPoint(latlng(c));
-        if (
-          placed.some(
-            (p) => Math.abs(p.x - pos.x) < 65 && Math.abs(p.y - pos.y) < 17,
-          )
-        )
+          L.polygon(ring, {color:"#7e9583", weight:0.6, fillColor:"#f5f8f3", fillOpacity:0.6, interactive:false}).addTo(state.planBaseGroup);
           continue;
-        placed.push(pos);
-        L.marker(latlng(c), {
-          interactive: false,
-          icon: L.divIcon({
-            className: "base-text-label",
-            html: "<span>" + esc(m.name) + "</span>",
-            iconSize: [130, 18],
-            iconAnchor: [65, 9],
-          }),
+        }
+        L.geoJSON({...f, geometry:g}, {
+          style: () => baseStyle(f),
+          pointToLayer: (ff, ll) => L.circleMarker(ll, {...baseStyle(f), radius:2}),
         }).addTo(state.planBaseGroup);
+        if (m.name) {
+          const b = G.boundsOf(g), c = [(b[0]+b[2])/2, (b[1]+b[3])/2];
+          let labelPos = c;
+          try {
+            const p = JSON.parse(m.labelPointJSON);
+            if (G.inside(p, bounds)) labelPos = p;
+          } catch {}
+          const x = Math.round(labelPos[1]*1000), y = Math.round(labelPos[0]*1000);
+          const key = x+","+y;
+          if (!placed.has(key)) {
+            placed.set(key, true);
+            L.marker(latlng(labelPos), {
+              interactive:false,
+              icon:L.divIcon({className:"base-text-label", html:"<span>"+esc(m.name)+"</span>", iconSize:[130,18], iconAnchor:[65,9]})
+            }).addTo(state.planBaseGroup);
+          }
+        }
       }
-    }
+      batchIdx = end;
+      if (batchIdx < state.project.planBase.length) {
+        requestAnimationFrame(processBatch);
+      }
+    };
+    processBatch();
   }
   function renderRoutes() {
     state.routeGroup.clearLayers();
@@ -2565,15 +2535,10 @@
       }
     }
     if (!corners.length || !prevPoint) return c;
-<<<<<<< HEAD
     const snapDistances = [10, 8, 6, 4, 2];
     const pr = G.projection(c);
     let bestSnap = null;
     let bestDist = Infinity;
-=======
-    const snapDistances = [5, 4, 3, 2];
-    const pr = G.projection(c);
->>>>>>> origin/main
     for (const snapDist of snapDistances) {
       const snapThresholdDeg = (snapDist / 111000) * 1.5;
       for (const corner of corners) {
@@ -2592,7 +2557,6 @@
         const mag2 = Math.hypot(outgoingDx, outgoingDy);
         if (mag1 > 0 && mag2 > 0) {
           const cosAngle = dotProduct / (mag1 * mag2);
-<<<<<<< HEAD
           if (cosAngle < -0.3 && dist < bestDist) {
             bestSnap = corner;
             bestDist = dist;
@@ -2600,13 +2564,6 @@
         }
       }
       if (bestSnap) return bestSnap;
-=======
-          if (cosAngle < -0.5) {
-            return corner;
-          }
-        }
-      }
->>>>>>> origin/main
     }
     return c;
   }
@@ -3596,11 +3553,7 @@
   }
   function areaHTML() {
     const b = state.project.area,
-<<<<<<< HEAD
       bleed = Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
-=======
-      bleed = +state.project.planBleed || PLAN_BLEED_DEFAULT,
->>>>>>> origin/main
       meta = state.project.planBaseMeta,
       detail = planDetailLevel();
     return (
@@ -5944,11 +5897,7 @@
       throw Error(
         "Define the Site Drawing area before issuing the Site Drawing sheet.",
       );
-<<<<<<< HEAD
     if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail(planDetailLevel());
-=======
-    if (opt.pages.site && opt.style === "cad") await ensureExportCadDetail();
->>>>>>> origin/main
     saveDocumentIssueMeta(opt);
     return await window.SAMIDocumentEngine.generate(copy(state.project), { ...opt, onProgress: updateExportStep });
   }
@@ -6020,13 +5969,9 @@
       return;
     }
     closeModal();
-<<<<<<< HEAD
     state.exportBusy = true;
     showExportLoading("Preparing document…");
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-=======
-    showExportLoading("Preparing document…");
->>>>>>> origin/main
     try {
       updateExportStep("Processing site drawing…");
       const blob = await buildSiteLogisticsPDF(opt),
@@ -6037,10 +5982,7 @@
           ".pdf";
       closeExportLoading();
       if (action === "preview") {
-<<<<<<< HEAD
         closeExportLoading();
-=======
->>>>>>> origin/main
         updateExportStep("Building PDF preview…");
         const url = URL.createObjectURL(blob),
           w = window.open(url, "_blank", "noopener");
@@ -6075,12 +6017,9 @@
       console.error(e);
       closeExportLoading();
       toast("PDF: " + (e.message || "Document generation failed."));
-<<<<<<< HEAD
     } finally {
       state.exportBusy = false;
       document.body.classList.remove("export-loading-active");
-=======
->>>>>>> origin/main
     }
   }
   let toastTimer;
@@ -6301,11 +6240,7 @@
       '<div class="route-endpoint"><div>' +
       field(
         "routeStart",
-<<<<<<< HEAD
         "Start · address, postcode or coordinates",
-=======
-        "Address · postcode · ///what3words · lat,lng",
->>>>>>> origin/main
         h.startText || "",
       ) +
       '<div class="subtle">' +
@@ -6321,11 +6256,7 @@
       '<div class="route-endpoint"><div>' +
       field(
         "routeEnd",
-<<<<<<< HEAD
         "Destination · site entrance",
-=======
-        "Address · postcode · ///what3words · lat,lng",
->>>>>>> origin/main
         h.endText || "",
       ) +
       '<div class="subtle">' +
@@ -7099,7 +7030,6 @@
     $$('[data-base="drawing"], [data-action="capturePlanBase"]').forEach(
       (b) => b.classList.toggle("cad-processing", active),
     );
-<<<<<<< HEAD
     window.dispatchEvent(new Event("sami:cadstatus"));
   }
   function planBaseNeedsCapture(requiredDetail) {
@@ -7124,9 +7054,6 @@
     state.planCapturePromise = task;
     return task.finally(() => { if (state.planCapturePromise === task) state.planCapturePromise = null; });
   }
-  async function capturePlanBaseWork(silent = false, detailOverride = null) {
-=======
-  }
   function planBaseNeedsCapture(requiredDetail) {
     if (!state.project.area) return false;
     const meta = state.project.planBaseMeta,
@@ -7138,12 +7065,17 @@
       (PLAN_DETAIL_RANK[meta.detail] || 0) < (PLAN_DETAIL_RANK[need] || 0)
     );
   }
-  async function ensureExportCadDetail() {
-    if (!state.project.area) return;
-    if (planBaseNeedsCapture("high")) await capturePlanBase(true, "high");
-  }
   async function capturePlanBase(silent = false, detailOverride = null) {
->>>>>>> origin/main
+    const owner = state.project, generation = state.areaGeneration;
+    if (state.planCapturePromise && state.planCaptureOwner === owner && state.planCaptureGeneration === generation)
+      return state.planCapturePromise;
+    state.planCaptureOwner = owner;
+    state.planCaptureGeneration = generation;
+    const task = capturePlanBaseWork(silent, detailOverride);
+    state.planCapturePromise = task;
+    return task.finally(() => { if (state.planCapturePromise === task) state.planCapturePromise = null; });
+  }
+  async function capturePlanBaseWork(silent = false, detailOverride = null) {
     if (!state.project.area) {
       if (!silent) openDrawer("area");
       return;
@@ -7162,15 +7094,10 @@
         );
       return;
     }
-<<<<<<< HEAD
     state.planCaptureError = null;
     state.planCapturing = true;
     updateCadProcessingUI(true);
     window.dispatchEvent(new Event("sami:cadstatus"));
-=======
-    state.planCapturing = true;
-    updateCadProcessingUI(true);
->>>>>>> origin/main
     if (!silent)
       toast(
         "Capturing " +
@@ -7183,11 +7110,7 @@
         q =
           "[out:json][timeout:30];(" +
           tags.map((t) => t + "(" + bbox + ");").join("") +
-<<<<<<< HEAD
           ");out body geom(" + bbox + ");";
-=======
-          ");(._;>;);out body;";
->>>>>>> origin/main
       const data = await overpassQuery(q);
       if (
         captureProject !== state.project ||
@@ -7195,6 +7118,7 @@
       )
         return;
       const features = overpassFeatures(data)
+        .slice(0, 9000)
         .map((f) => {
           let g;
           try {
@@ -7204,8 +7128,7 @@
           }
           return g ? { ...f, geometry: g } : null;
         })
-        .filter(Boolean)
-        .slice(0, 9000);
+        .filter(Boolean);
       const previous = state.project.planBase?.length
         ? {
             capturedAt: state.project.planBaseMeta?.capturedAt || "",
@@ -7222,11 +7145,7 @@
       state.project.planBaseMeta = {
         capturedAt: new Date().toISOString(),
         source: "Stored OpenStreetMap vector snapshot · bounded site capture",
-<<<<<<< HEAD
         bleed: Number(state.project.planBleed ?? PLAN_BLEED_DEFAULT),
-=======
-        bleed: +state.project.planBleed || PLAN_BLEED_DEFAULT,
->>>>>>> origin/main
         detail,
         bbox: boundsText(b),
         featureCount: features.length,
@@ -7244,7 +7163,6 @@
             "-detail map features stored. Roads use metre-width geometry where available / inferred.",
         );
     } catch (e) {
-<<<<<<< HEAD
       if (captureProject === state.project && captureGeneration === state.areaGeneration) {
         state.planCaptureError = e.message;
         toast("CAD detail unavailable. Existing drawing retained. " + e.message);
@@ -7255,13 +7173,6 @@
         updateCadProcessingUI(false);
         window.dispatchEvent(new Event("sami:cadstatus"));
       }
-=======
-      if (!silent) toast("Detailed plan capture: " + e.message);
-      else console.warn(e);
-    } finally {
-      state.planCapturing = false;
-      updateCadProcessingUI(false);
->>>>>>> origin/main
     }
   }
   const serviceRefreshes = new Map();
@@ -8319,15 +8230,12 @@
         : $("#askInput").value.trim()
           ? "Send request"
           : "Ask SAMI";
-<<<<<<< HEAD
     const aiConfigured = !!samiAiEndpoint(),
       capability = $("#assistantCapability");
     if (capability)
       capability.textContent = aiConfigured
         ? "AI endpoint configured · availability not verified"
         : "Local commands · AI not connected";
-=======
->>>>>>> origin/main
     const ariaLabel = active
       ? "Stop listening"
       : $("#askInput").value.trim()
