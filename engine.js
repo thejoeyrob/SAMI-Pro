@@ -7098,6 +7098,7 @@
     state.planCapturing = true;
     updateCadProcessingUI(true);
     window.dispatchEvent(new Event("sami:cadstatus"));
+    console.log("🗺️ CAD CAPTURE START: detail=" + detail);
     if (!silent)
       toast(
         "Capturing " +
@@ -7111,24 +7112,34 @@
           "[out:json][timeout:30];(" +
           tags.map((t) => t + "(" + bbox + ");").join("") +
           ");out body geom(" + bbox + ");";
-      const data = await overpassQuery(q);
+      console.log("📡 OVERPASS QUERY: calling API...", q.substring(0, 100));
+      const data = await Promise.race([
+        overpassQuery(q),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("CAD capture timeout after 10s")), 10000))
+      ]);
+      console.log("✅ OVERPASS RESPONSE: got " + (data?.elements?.length || 0) + " elements");
       if (
         captureProject !== state.project ||
         captureGeneration !== state.areaGeneration
-      )
+      ) {
+        console.log("⚠️ Project/generation changed during capture, aborting");
         return;
+      }
+      console.log("🔄 Processing features: clipping geometry...");
       const features = overpassFeatures(data)
         .slice(0, 9000)
         .map((f) => {
           let g;
           try {
             g = G.clipGeometry(f.geometry, b);
-          } catch {
+          } catch (e) {
+            console.log("❌ Clip error:", e.message);
             return null;
           }
           return g ? { ...f, geometry: g } : null;
         })
         .filter(Boolean);
+      console.log("✨ Processed " + features.length + " valid features");
       const previous = state.project.planBase?.length
         ? {
             capturedAt: state.project.planBaseMeta?.capturedAt || "",
@@ -7154,7 +7165,11 @@
         previous,
       };
       commit();
-      if (state.mode === "plan") state.map.invalidateSize({ pan: false });
+      console.log("💾 CAD data committed to project");
+      if (state.mode === "plan") {
+        state.map.invalidateSize({ pan: false });
+        console.log("🖼️ Rendering CAD on map...");
+      }
       if (!silent)
         toast(
           features.length +
@@ -7162,7 +7177,9 @@
             detail +
             "-detail map features stored. Roads use metre-width geometry where available / inferred.",
         );
+      console.log("🎉 CAD CAPTURE SUCCESS!");
     } catch (e) {
+      console.error("❌ CAD CAPTURE ERROR:", e);
       if (captureProject === state.project && captureGeneration === state.areaGeneration) {
         state.planCaptureError = e.message;
         toast("CAD detail unavailable. Existing drawing retained. " + e.message);
