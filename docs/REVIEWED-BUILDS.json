@@ -1,0 +1,142 @@
+[
+  {
+    "name": "SAMI-Pro-2.8.2-UI-RENOVATION.zip",
+    "sha256": "67b3a7685218a1e6bdec9736fc9cf84151632e985f1719b3d86ca8b776266368",
+    "bytes": 8783310
+  },
+  {
+    "name": "SAMI_v0.8.0_STUDIO_FLAT_PWA.zip",
+    "sha256": "6a19b90f5909e7932fe001d827442c2b133b528870cde06832447f1328f505fe",
+    "bytes": 519445
+  },
+  {
+    "name": "SAMI_v0.9.5_INTEGRATED_SALES_PITCH_ROOT_FLAT_PWA.zip",
+    "sha256": "2c216729a66c4acdd9297fcb95fba098b63499f8d43ff811e7e963fe388fc4f4",
+    "bytes": 1680902
+  },
+  {
+    "name": "SAMI_v0.8.0_MAP_FIRST_VISIO_CAD_STENCIL_FLAT_PWA.zip",
+    "sha256": "1f96b2f695d9bb8c1a0300835c12388b4c46e3dea42c3c4176e98d1e30f43802",
+    "bytes": 1627639
+  },
+  {
+    "name": "SAMI_v2_4_1_OHL_FIX.zip",
+    "sha256": "de1f3a558223f1aec0d500e6aac75a5eb2d50885caf593f62d60ed3022974e9e",
+    "bytes": 3997324
+  },
+  {
+    "name": "SAMI_v2_7_13_FIELD_CAD_SERVICES_ROOT_FLAT_PWA.zip",
+    "sha256": "3505b043efbc3c0f6c9f93199ad08cb13a3eda848d256fdf4f8094f0b31c16bd",
+    "bytes": 7485738
+  },
+  {
+    "name": "SAMI_v0.9.1_STRUCTURED_WORKSPACE_PRIVATE_SOURCE.zip",
+    "sha256": "249fffba4e5193b49a8851f02cff3beb09ed046047495936355ac25ee7c4e478",
+    "bytes": 1587267
+  },
+  {
+    "name": "SAMI_v0.4.0_SITE_DRAWING_INTERACTION_FLAT_PWA.zip",
+    "sha256": "5b8c6eb5bcbd1a81a539e283100d7e167e12458897e5cf8f9b4ccb63efd15ff6",
+    "bytes": 1701918
+  },
+  {
+    "name": "SAMI-Pro-2.9.0-STUDIO-FLAT-PWA.zip",
+    "sha256": "32e7e356d2ca635cdd4620afdfb2a823a99b883a67673adf0e3d7daa7cb5caf2",
+    "bytes": 4279125
+  },
+  {
+    "name": "SAMI_v2_7_6_CURSOR_DRAG_LIGHT_THEMES_ROOT_FLAT_PWA.zip",
+    "sha256": "fa728976f99addfad9d30d3159cda76714bf2b8ec3adda047b63fcb342ed2a35",
+    "bytes": 4799018
+  },
+  {
+    "name": "SAMI_v0.5.0_PUBLIC_SERVICES_DOCUMENT_ENGINE_FLAT_PWA.zip",
+    "sha256": "74c4a134a3fa7fdf174961275e4ff2062b8cd258bd1c29eb1facda1f2c255fc1",
+    "bytes": 1725265
+  },
+  {
+    "name": "SAMI-Pro-2.8.0-FLAT-PWA.zip",
+    "sha256": "ab8c434fa8add33e45a7fd82da6b813b6791fa251a14f01bb2f3611cdfa5bd52",
+    "bytes": 8401830
+  },
+  {
+    "name": "SAMI_v2_7_15_CARPLAY_COMPANION_SOURCE.zip",
+    "sha256": "42249fc68342ef76258408a2dc95314b03c788ba6bc0906fa5f5ea1bdac16636",
+    "bytes": 138797
+  },
+  {
+    "name": "SAMI_v2_7_15_CARPLAY_READY_ROOT_FLAT_PWA.zip",
+    "sha256": "a255ab7a46dd8af1c071466e9906396e222b25d105910b4a28bd5a8a9456e13b",
+    "bytes": 7499808
+  },
+  {
+    "name": "SAMI_v2_7_14_FIELD_TOUCH_SERVICES_UI_ROOT_FLAT_PWA.zip",
+    "sha256": "ae1f74d966ac0fe88d77343b0573494c26d59efadf1dfe493ed3d68f7c9942cd",
+    "bytes": 7491035
+  },
+  {
+    "name": "SAMI_v2_7_18_RECOVERED_DARK_WELCOME_FLAT_PWA.zip",
+    "sha256": "d571de02f9e3451cd8a85732c29f39042c600ebe3e9aaa1eea1c9163941478fb",
+    "bytes": 7507779
+  },
+  {
+    "name": "SAMI_v0.6.0_DRAWING_UX_GROUPING_FLAT_PWA.zip",
+    "sha256": "6837ff8fc246b5907c225d9dbd37cc1bf1ffad4f5a1c07fbf234d223884ecf1f",
+    "bytes": 1608546
+  },
+  {
+    "name": "SAMI_v0.3.0_HGV_SITE_PLANNING_FLAT_PWA.zip",
+    "sha256": "31e5bd5ac8e17d5feec596d3406e44d388c5303fb7daf16d0c66c14a6412c109",
+    "bytes": 1694238
+  },
+  {
+    "name": "SAMI-Pro-2.8.3-CLEAN-FLAT-PWA.zip",
+    "sha256": "077a51e5ea2fb92c6f9070e9eb1522ee15fb13948a6da5e54a8a6338452b3f28",
+    "bytes": 3593628
+  },
+  {
+    "name": "SAMI_v2.3.0_PRODUCTION_ROOT_FLAT_PWA.zip",
+    "sha256": "0277d043284b30f34a4db815dee6d05a79966f53f94ed9f200f424c8959e7f20",
+    "bytes": 3992581
+  },
+  {
+    "name": "SAMI_v2_7_0_BROWSER_PROMO_PDF_REFINEMENT_ROOT_FLAT_PWA.zip",
+    "sha256": "540ebf8f85950e3234b7d8693149f382a19088ba8d342e1ef492872c79e917f8",
+    "bytes": 4142066
+  },
+  {
+    "name": "SAMI_v2_7_5_MEASURE_ALIGNMENT_OHL_RESILIENCE_ROOT_FLAT_PWA.zip",
+    "sha256": "09745cdca1e4fd6d3c93accaf8de7f1f44557a9c63ce7963e27005a65f064b31",
+    "bytes": 4791720
+  },
+  {
+    "name": "SAMI_v2_7_13_CLEAN_WORKSPACE_W3W_AI_READY_ROOT_FLAT_PWA.zip",
+    "sha256": "4fdfcb9eb00fc5f8b4854cee986ffa56ba99f3db156e9c9995e73aaab4978fbc",
+    "bytes": 4797116
+  },
+  {
+    "name": "SAMI_v2_7_1_COMPLETE_ROOT_FLAT_PWA.zip",
+    "sha256": "352a870dd2136f949c254fa95edfa72d41a48570223abaf34bf32ab5b5c79460",
+    "bytes": 4533997
+  },
+  {
+    "name": "SAMI_v2_7_9_STABLE_FUNCTION_RESTORE_ROOT_FLAT_PWA.zip",
+    "sha256": "054898e71042587a426b6b30d05d51db93df4c582722f0c398db1fd5aff6dd30",
+    "bytes": 4798228
+  },
+  {
+    "name": "SAMI_v2_7_11_NATIVE_TOUCH_MEASUREMENT_ROOT_FLAT_PWA.zip",
+    "sha256": "b4889daa56bdf26a9385a2b336534445d348286644ce9ac3c4b39c162f6671be",
+    "bytes": 4792335
+  },
+  {
+    "name": "SAMI_v2_7_7_FIELD_RELIABILITY_ROOT_FLAT_PWA.zip",
+    "sha256": "f4a56c97c0a46cdacf2557ca936dc54cfb7ae0ce55934a54051defd6bca3dc82",
+    "bytes": 5178202
+  },
+  {
+    "name": "SAMI_v2_7_2_COMPLETE_ROOT_FLAT_PWA.zip",
+    "sha256": "cd95ef9c29ca4f02b47f9c876bd2408c9b4d5102b2eef904a8b0947205ae6002",
+    "bytes": 4787710
+  }
+]

@@ -31,8 +31,8 @@ domain or under an open license.
 
 3. Third-party components
    The Software includes third-party open-source libraries (see
-   LEAFLET-LICENSE.txt, POLYGON-CLIPPING-LICENSE.md, and
-   QR-CODE-LICENSE.txt), each of which remains licensed under its own
+   docs/THIRD-PARTY-NOTICES.md and
+   docs/POLYGON-CLIPPING-LICENSE.md), each of which remains licensed under its own
    respective terms. Nothing in this license affects those terms.
 
 4. No warranty

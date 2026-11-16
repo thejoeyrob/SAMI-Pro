@@ -1,0 +1,290 @@
+[
+  {
+    "build": "ask-sami",
+    "engines": 1,
+    "bytes": 340284,
+    "lines": 9947,
+    "sha": "fae2a1ca798e",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "sami-pro",
+    "engines": 1,
+    "bytes": 356296,
+    "lines": 10162,
+    "sha": "a7e74a003be1",
+    "captureFns": 2,
+    "captureNeedsFns": 2,
+    "planningModule": true,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_7_FIELD_RELIABILITY_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 224462,
+    "lines": 520,
+    "sha": "c0a7e37bc588",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": false,
+    "networkScript": true
+  },
+  {
+    "build": "SAMI_v2_7_14_FIELD_TOUCH_SERVICES_UI_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 320205,
+    "lines": 9488,
+    "sha": "38c4f3ab95cb",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": false,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_6_CURSOR_DRAG_LIGHT_THEMES_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 223484,
+    "lines": 522,
+    "sha": "2602ed4c5bb5",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v0.8.0_STUDIO_FLAT_PWA",
+    "engines": 0
+  },
+  {
+    "build": "SAMI-Pro-2.8.3-CLEAN-FLAT-PWA",
+    "engines": 1,
+    "bytes": 340284,
+    "lines": 9947,
+    "sha": "fae2a1ca798e",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_15_CARPLAY_READY_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 320205,
+    "lines": 9488,
+    "sha": "38c4f3ab95cb",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": false,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v0.9.1_STRUCTURED_WORKSPACE_PRIVATE_SOURCE",
+    "engines": 0
+  },
+  {
+    "build": "SAMI_v0.3.0_HGV_SITE_PLANNING_FLAT_PWA",
+    "engines": 0
+  },
+  {
+    "build": "SAMI_v2_7_0_BROWSER_PROMO_PDF_REFINEMENT_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 221117,
+    "lines": 521,
+    "sha": "ad0df2fb1302",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_13_CLEAN_WORKSPACE_W3W_AI_READY_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 225130,
+    "lines": 526,
+    "sha": "e09a4c972210",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_15_CARPLAY_COMPANION_SOURCE",
+    "engines": 0
+  },
+  {
+    "build": "SAMI-Pro-2.8.2-UI-RENOVATION",
+    "engines": 1,
+    "bytes": 342012,
+    "lines": 9996,
+    "sha": "53d76606f843",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_11_NATIVE_TOUCH_MEASUREMENT_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 223485,
+    "lines": 522,
+    "sha": "1e68a42e961d",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_2_COMPLETE_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 222061,
+    "lines": 521,
+    "sha": "d30c22d2d403",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_1_COMPLETE_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 222061,
+    "lines": 521,
+    "sha": "d30c22d2d403",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI-Pro-2.9.0-STUDIO-FLAT-PWA",
+    "engines": 1,
+    "bytes": 353690,
+    "lines": 10120,
+    "sha": "304efb85e667",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": true,
+    "maxZoomRestricted": false,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_5_MEASURE_ALIGNMENT_OHL_RESILIENCE_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 223484,
+    "lines": 522,
+    "sha": "2602ed4c5bb5",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v0.8.0_MAP_FIRST_VISIO_CAD_STENCIL_FLAT_PWA",
+    "engines": 0
+  },
+  {
+    "build": "SAMI_v2.3.0_PRODUCTION_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 213347,
+    "lines": 482,
+    "sha": "8249e0ff1e4a",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_9_STABLE_FUNCTION_RESTORE_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 223484,
+    "lines": 522,
+    "sha": "3c9a46a4f0f2",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_7_18_RECOVERED_DARK_WELCOME_FLAT_PWA",
+    "engines": 1,
+    "bytes": 321425,
+    "lines": 9507,
+    "sha": "5a61a2475385",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": false,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v2_4_1_OHL_FIX",
+    "engines": 1,
+    "bytes": 213347,
+    "lines": 482,
+    "sha": "8249e0ff1e4a",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v0.4.0_SITE_DRAWING_INTERACTION_FLAT_PWA",
+    "engines": 0
+  },
+  {
+    "build": "SAMI_v0.5.0_PUBLIC_SERVICES_DOCUMENT_ENGINE_FLAT_PWA",
+    "engines": 0
+  },
+  {
+    "build": "SAMI-Pro-2.8.0-FLAT-PWA",
+    "engines": 1,
+    "bytes": 341948,
+    "lines": 9995,
+    "sha": "7863262128bb",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": true,
+    "networkScript": false
+  },
+  {
+    "build": "SAMI_v0.6.0_DRAWING_UX_GROUPING_FLAT_PWA",
+    "engines": 0
+  },
+  {
+    "build": "SAMI_v0.9.5_INTEGRATED_SALES_PITCH_ROOT_FLAT_PWA",
+    "engines": 0
+  },
+  {
+    "build": "SAMI_v2_7_13_FIELD_CAD_SERVICES_ROOT_FLAT_PWA",
+    "engines": 1,
+    "bytes": 317750,
+    "lines": 9421,
+    "sha": "679919635456",
+    "captureFns": 1,
+    "captureNeedsFns": 1,
+    "planningModule": false,
+    "maxZoomRestricted": false,
+    "networkScript": false
+  }
+]

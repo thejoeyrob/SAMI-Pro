@@ -1,0 +1,803 @@
+{
+  "name": "SAMI Elite",
+  "version": "3.0.0",
+  "status": "release-candidate-source",
+  "preparedAt": "2026-11-16",
+  "historicalBuildsReviewed": 28,
+  "excludedBuild": "SAMI v2.6",
+  "deploymentId": "dpl_2WvTApiqwdJDchknSrEergEwc4a2",
+  "verification": {
+    "coreTests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "productionWebBuild": "passed",
+    "capacitorIosSync": "passed",
+    "xcodeCompile": "not-run",
+    "signedIPA": "not-created",
+    "appStoreUpload": "not-performed"
+  },
+  "files": [
+    {
+      "path": ".env.example",
+      "bytes": 558,
+      "sha256": "a9c4e85d1924963ea4e7d9e3bfa711ac3236aafba1d6fb9732ca64e3b382b01d"
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "bytes": 1398,
+      "sha256": "34aa04330bcbebc7e687fc0c94b2c96349bb0a9a0c48f2b029c7e712b1aa416d"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 246,
+      "sha256": "e4fdd22ca5637d765e5d4eea51fb1ac858adc9e09d67e2c3fd23b0f083937359"
+    },
+    {
+      "path": ".vercelignore",
+      "bytes": 44,
+      "sha256": "d3e48d179345917f0ba26e8cc70a693c67d489cd085a2016822ef170f33e6c59"
+    },
+    {
+      "path": "CLAUDE-HANDOVER.md",
+      "bytes": 4147,
+      "sha256": "58ae844a717315952a88336bf744464948eeaa3c7e606cbf73610bb25f834dc6"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 2065,
+      "sha256": "4e1056fb27c0d4040734991a49cec3c381e1b11ce768482b270d5abb2685da01"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2581,
+      "sha256": "25f44ecdb224898f09b183028a00d2e45692ba9bee45eedb7190b83c3e1dbd7d"
+    },
+    {
+      "path": "api/[action].js",
+      "bytes": 117,
+      "sha256": "5f7e16b40fe5bdb52b4f041a2761120cdff0153ab21a0927bbbf757023a85875"
+    },
+    {
+      "path": "capacitor.config.ts",
+      "bytes": 287,
+      "sha256": "3fa7e6d8b86e59717a788f4d89baf669c300d20ad545534613534789b9e5097a"
+    },
+    {
+      "path": "dist/assets/browser-uS0nRQLk.js",
+      "bytes": 10374,
+      "sha256": "9de48bf0c27dd05019fcf60e7b2f828d143563a249d8c4808f251e9569798084"
+    },
+    {
+      "path": "dist/assets/dist-BmnedzSf.js",
+      "bytes": 7839,
+      "sha256": "8c9acd5a7d4e0c8a141d24eaaa47e5744afa1ae42a848436015e7a7d7e69a897"
+    },
+    {
+      "path": "dist/assets/dist-c1WmSfyB.js",
+      "bytes": 25289,
+      "sha256": "af137ec668d524085ce4af1a3c2c33c85d81dffd45139e3c88eff93a8c969c6a"
+    },
+    {
+      "path": "dist/assets/esm-CF9_b4QS.js",
+      "bytes": 9773,
+      "sha256": "2742cf69ddff6b6a2a19f33cdb4637622a716b90c739bd1d49f6f103c1c10356"
+    },
+    {
+      "path": "dist/assets/esm-ChwnGsFU.js",
+      "bytes": 408,
+      "sha256": "7db2cbdc1c06d2627016593a9ca518d732cefd0d71da63cd12e698a090ff4e22"
+    },
+    {
+      "path": "dist/assets/esm-Dl_erHyC.js",
+      "bytes": 821,
+      "sha256": "f47871d5e595f9478d4e1ecc96ed5f9e8954abc311f8bcdbd1ac775c2901d28c"
+    },
+    {
+      "path": "dist/assets/esm-DogO9DaX.js",
+      "bytes": 344,
+      "sha256": "35bca9fb153ecd80ecb3231f1c80c6d1d48192c1ba2315bed99bbfd499c48407"
+    },
+    {
+      "path": "dist/assets/html2canvas-Bw0OShmD.js",
+      "bytes": 199409,
+      "sha256": "45da258667658d3dcf1d97298cdf19ad8e15379a0215849fb3d20c5264d85e8b"
+    },
+    {
+      "path": "dist/assets/imports-Dx_D5J1f.js",
+      "bytes": 3819,
+      "sha256": "f8fb28a7c1a0d141fd4db0dd3973280a2e320d8f269354239d284b050a986814"
+    },
+    {
+      "path": "dist/assets/index-BitHOqby.js",
+      "bytes": 184214,
+      "sha256": "31eae14fac76eccf50b9344ab5f551a33e028b84d053e2fbb4a4a8bffa83b4ab"
+    },
+    {
+      "path": "dist/assets/index-EKkbA07C.css",
+      "bytes": 47276,
+      "sha256": "8c286d183a9f8452ccbf250a9b8ccdc2257e11a85d7dcb4981d52185237ea782"
+    },
+    {
+      "path": "dist/assets/index.es-BJFQuTDE.js",
+      "bytes": 151424,
+      "sha256": "d64c832cf99229cbbfa9481525b392601f7cfbe3b9a9b715dff7f04a4b899ca6"
+    },
+    {
+      "path": "dist/assets/jspdf.es.min-SFGxe0Ls.js",
+      "bytes": 392803,
+      "sha256": "6fa638ca0e5fe83efbd65ec31461edd947fba6ee520207f0a013763d6cdd56b8"
+    },
+    {
+      "path": "dist/assets/map-77bHF9BH.js",
+      "bytes": 148604,
+      "sha256": "9bfaa0ab7646f01b6973e6fc992afff5d267edb5571bd7b4464b69ac746f57f5"
+    },
+    {
+      "path": "dist/assets/map-Ds4Udj8m.css",
+      "bytes": 15125,
+      "sha256": "a6d669f6fa190c53b19e26a19fb668269dd84b7b05ff1617c517dae6c660b483"
+    },
+    {
+      "path": "dist/assets/purify.es-Dzkdzyfv.js",
+      "bytes": 28503,
+      "sha256": "ac1a997bd0a2ac30ef742f142173798aaaa5163c9921985257f42cc90717ee52"
+    },
+    {
+      "path": "dist/assets/react-KPuNr9iS.js",
+      "bytes": 218747,
+      "sha256": "f016c4c895bc9bb14a28217b34a00e75d7523062173aecef91a67ef7ed2fd297"
+    },
+    {
+      "path": "dist/assets/rolldown-runtime-XKyaHtl9.js",
+      "bytes": 726,
+      "sha256": "548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"
+    },
+    {
+      "path": "dist/assets/svg2pdf.es.min-D4ii4jF2.js",
+      "bytes": 86454,
+      "sha256": "01a12ddaa046f24fb1eeb9e58ec1bb4d45868b35f6c00d716a7871783c8b4a2b"
+    },
+    {
+      "path": "dist/assets/synapse-I42WLusp.js",
+      "bytes": 602,
+      "sha256": "94d01ee160e96bc75b06b96cc8c3c650a24c6eb0d55b9e3f6a931aaa14fd3411"
+    },
+    {
+      "path": "dist/assets/web-B3KafcrC.js",
+      "bytes": 2094,
+      "sha256": "6779b8f1a7b731f4365c2a24c47a34201cfcf86f09c517760b0627315796e917"
+    },
+    {
+      "path": "dist/assets/web-DWrHmqzf.js",
+      "bytes": 8498,
+      "sha256": "1992512c06aa7b2f060a48a9ed2ffe3d74b791bf82f430b5f3b2ff52b0197ee3"
+    },
+    {
+      "path": "dist/assets/web-ThOMMhhL.js",
+      "bytes": 372,
+      "sha256": "d6bd55f1c032ca62ba5ab59afe9640117dd56daa236056b10726347876953572"
+    },
+    {
+      "path": "dist/brand/apple-touch-icon.png",
+      "bytes": 10099,
+      "sha256": "f5643e269578a25f952865d62e200612cae2804ebcb1d2fb87ac0ef13161d011"
+    },
+    {
+      "path": "dist/brand/icon-192.png",
+      "bytes": 11200,
+      "sha256": "5bee72a948f759e1a8e48e7091f5fe85fa11f2ca90c4e15fc58435932ffd8d90"
+    },
+    {
+      "path": "dist/brand/icon-512.png",
+      "bytes": 64098,
+      "sha256": "e98aaec99fbbf0fcc11d9006d69304853b09eac4945dab7a34fb8e5a5a53c075"
+    },
+    {
+      "path": "dist/brand/qa.css",
+      "bytes": 383,
+      "sha256": "35bbd89ad3376abcfc874b8e87bbf6f072d572f27b61d456542c773e916e1fc2"
+    },
+    {
+      "path": "dist/brand/qa.html",
+      "bytes": 558,
+      "sha256": "4fc6ef8bfa9a944758edfa8dc536ccff801360d044a446b06705711526e35823"
+    },
+    {
+      "path": "dist/brand/qa.js",
+      "bytes": 197,
+      "sha256": "9f81a75f2464ff943826e0a671472bad1f057fcedfd67ab671f1dc22e96ed9af"
+    },
+    {
+      "path": "dist/brand/wordmark.png",
+      "bytes": 173537,
+      "sha256": "eb168c8e3ce6d8400163d3673e87e077e25f9fa4c16a23d820465a30546fbc6c"
+    },
+    {
+      "path": "dist/index.html",
+      "bytes": 1055,
+      "sha256": "08bd47551bf804a7bffaca3a10e6b545bcc8cbb1b309abf2451f601f918cd290"
+    },
+    {
+      "path": "dist/manifest.webmanifest",
+      "bytes": 396,
+      "sha256": "dd4518438950c874315082ec6fb1ccdf8d1d0b90d399a48d16794662e82695cf"
+    },
+    {
+      "path": "dist/sw.js",
+      "bytes": 1586,
+      "sha256": "92d5e34048fe9997e0567d758e3877635eef6c1cad9748d1f22cf9a15c8af09e"
+    },
+    {
+      "path": "docs/APPLE-RELEASE.md",
+      "bytes": 3765,
+      "sha256": "c467733acab25e73a3a01d472713ed47ebca2f92de735077faeaf2c34987b90b"
+    },
+    {
+      "path": "docs/BUILD-ASSESSMENT.md",
+      "bytes": 11460,
+      "sha256": "08c117eea7187a10e6a5bd18ad7c46dd8f415c62919b7ee372a2bb70e86437f3"
+    },
+    {
+      "path": "docs/BUILD-COMPARISON.json",
+      "bytes": 6699,
+      "sha256": "b3b1b5bdd15b2aac21ab00737ddb23db10b4093c13c76ff4dcd2272595ec5bc2"
+    },
+    {
+      "path": "docs/DEPLOYMENT-HANDOVER.md",
+      "bytes": 5100,
+      "sha256": "0ed82f20991467eaef44afd1640687ebe328247bc64d582364cb09f5bfde1963"
+    },
+    {
+      "path": "docs/POLYGON-CLIPPING-LICENSE.md",
+      "bytes": 1327,
+      "sha256": "864ae9e4ed75e1571a3bcf5dc9070264213445b32e7e2af5bf60eba46fb656d0"
+    },
+    {
+      "path": "docs/REVIEWED-BUILDS.json",
+      "bytes": 4851,
+      "sha256": "49193d4e69f5504bac597eb9b531b246e7fe40df08be54951ecf995e7626cb68"
+    },
+    {
+      "path": "docs/THIRD-PARTY-NOTICES.md",
+      "bytes": 196215,
+      "sha256": "15347bfef4ebb9bdfacb2bd17cb89eb6c2354b959d504a5561db5c2f6301a134"
+    },
+    {
+      "path": "docs/VERIFICATION.md",
+      "bytes": 7708,
+      "sha256": "8128a8f635719d701eaed457c45124e28cdbdbc9cc2842045c1551b882d7d8a4"
+    },
+    {
+      "path": "index.html",
+      "bytes": 655,
+      "sha256": "3d46788557c2395443f8eccfb2f736a308a9fc7bdb622acc56b84db608c1240a"
+    },
+    {
+      "path": "ios/.gitignore",
+      "bytes": 206,
+      "sha256": "2b7132a9943d2622e51e656897ca5162f56b121b40b423dedce1fbc699dba88a"
+    },
+    {
+      "path": "ios/App/App/AppDelegate.swift",
+      "bytes": 2504,
+      "sha256": "481e2ad8672b14acbd3e3df65acdc6d046526ae542b7bec903cf842fc68d9e49"
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png",
+      "bytes": 128858,
+      "sha256": "f70f381eda41df7c742d61abaf7b700950ddf1b6253e1a8234559018e2d02033"
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "bytes": 218,
+      "sha256": "5c09bec6eede599b14fa9e4c44b03e7febebc930615a0cd70f02981c09dfe48a"
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/Contents.json",
+      "bytes": 62,
+      "sha256": "972ec1fd42325872438eb085ac29e94f51c10788ec18ec5549439950866c541d"
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/Splash.imageset/Contents.json",
+      "bytes": 403,
+      "sha256": "041481917eb249533ac6dd63d283bc6190b2d0642a93deda11b2ed0f6f7b605a"
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-1.png",
+      "bytes": 41273,
+      "sha256": "1b5002b74a5500e697298ced06ca2811ac33f2771f236f3c720ff23243890530"
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-2.png",
+      "bytes": 41273,
+      "sha256": "1b5002b74a5500e697298ced06ca2811ac33f2771f236f3c720ff23243890530"
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732.png",
+      "bytes": 41273,
+      "sha256": "1b5002b74a5500e697298ced06ca2811ac33f2771f236f3c720ff23243890530"
+    },
+    {
+      "path": "ios/App/App/Base.lproj/LaunchScreen.storyboard",
+      "bytes": 1994,
+      "sha256": "87a42e842164d75f39cca56a2cf743652f4d8e858f2eba12ae21a8ddcd9a21c6"
+    },
+    {
+      "path": "ios/App/App/Base.lproj/Main.storyboard",
+      "bytes": 1019,
+      "sha256": "7b7dc7acc67134bfaa80e5ce9c9068ba53db5369b9b70248aa7439fc2b09daae"
+    },
+    {
+      "path": "ios/App/App/Info.plist",
+      "bytes": 2861,
+      "sha256": "0e36272cc80d50632e97a063ecf4122221eb5163f5756b4718ced437de7b5ec0"
+    },
+    {
+      "path": "ios/App/App/PrivacyInfo.xcprivacy",
+      "bytes": 1760,
+      "sha256": "5a6b6cb3a408838174c674070d681fb5af82e934c8683fb8db3a2172066d06fc"
+    },
+    {
+      "path": "ios/App/App/SceneDelegate.swift",
+      "bytes": 899,
+      "sha256": "738b9b96bb71d34d80cd8c1183cf7f8f6f2e789c64e46fb5fe6777a35ae12dfd"
+    },
+    {
+      "path": "ios/App/App/capacitor.config.json",
+      "bytes": 298,
+      "sha256": "9a63fa2f2316b4aa0392dfa7fc7dccba2a82c265d0612461cf101d33a3aa0b5f"
+    },
+    {
+      "path": "ios/App/App/config.xml",
+      "bytes": 185,
+      "sha256": "e9dcda493e663c5c4db9e3cb3bd968477a6e90aa8840bcbba40d72ed54b767ce"
+    },
+    {
+      "path": "ios/App/App/public/assets/browser-uS0nRQLk.js",
+      "bytes": 10374,
+      "sha256": "9de48bf0c27dd05019fcf60e7b2f828d143563a249d8c4808f251e9569798084"
+    },
+    {
+      "path": "ios/App/App/public/assets/dist-BmnedzSf.js",
+      "bytes": 7839,
+      "sha256": "8c9acd5a7d4e0c8a141d24eaaa47e5744afa1ae42a848436015e7a7d7e69a897"
+    },
+    {
+      "path": "ios/App/App/public/assets/dist-c1WmSfyB.js",
+      "bytes": 25289,
+      "sha256": "af137ec668d524085ce4af1a3c2c33c85d81dffd45139e3c88eff93a8c969c6a"
+    },
+    {
+      "path": "ios/App/App/public/assets/esm-CF9_b4QS.js",
+      "bytes": 9773,
+      "sha256": "2742cf69ddff6b6a2a19f33cdb4637622a716b90c739bd1d49f6f103c1c10356"
+    },
+    {
+      "path": "ios/App/App/public/assets/esm-ChwnGsFU.js",
+      "bytes": 408,
+      "sha256": "7db2cbdc1c06d2627016593a9ca518d732cefd0d71da63cd12e698a090ff4e22"
+    },
+    {
+      "path": "ios/App/App/public/assets/esm-Dl_erHyC.js",
+      "bytes": 821,
+      "sha256": "f47871d5e595f9478d4e1ecc96ed5f9e8954abc311f8bcdbd1ac775c2901d28c"
+    },
+    {
+      "path": "ios/App/App/public/assets/esm-DogO9DaX.js",
+      "bytes": 344,
+      "sha256": "35bca9fb153ecd80ecb3231f1c80c6d1d48192c1ba2315bed99bbfd499c48407"
+    },
+    {
+      "path": "ios/App/App/public/assets/html2canvas-Bw0OShmD.js",
+      "bytes": 199409,
+      "sha256": "45da258667658d3dcf1d97298cdf19ad8e15379a0215849fb3d20c5264d85e8b"
+    },
+    {
+      "path": "ios/App/App/public/assets/imports-Dx_D5J1f.js",
+      "bytes": 3819,
+      "sha256": "f8fb28a7c1a0d141fd4db0dd3973280a2e320d8f269354239d284b050a986814"
+    },
+    {
+      "path": "ios/App/App/public/assets/index-BitHOqby.js",
+      "bytes": 184214,
+      "sha256": "31eae14fac76eccf50b9344ab5f551a33e028b84d053e2fbb4a4a8bffa83b4ab"
+    },
+    {
+      "path": "ios/App/App/public/assets/index-EKkbA07C.css",
+      "bytes": 47276,
+      "sha256": "8c286d183a9f8452ccbf250a9b8ccdc2257e11a85d7dcb4981d52185237ea782"
+    },
+    {
+      "path": "ios/App/App/public/assets/index.es-BJFQuTDE.js",
+      "bytes": 151424,
+      "sha256": "d64c832cf99229cbbfa9481525b392601f7cfbe3b9a9b715dff7f04a4b899ca6"
+    },
+    {
+      "path": "ios/App/App/public/assets/jspdf.es.min-SFGxe0Ls.js",
+      "bytes": 392803,
+      "sha256": "6fa638ca0e5fe83efbd65ec31461edd947fba6ee520207f0a013763d6cdd56b8"
+    },
+    {
+      "path": "ios/App/App/public/assets/map-77bHF9BH.js",
+      "bytes": 148604,
+      "sha256": "9bfaa0ab7646f01b6973e6fc992afff5d267edb5571bd7b4464b69ac746f57f5"
+    },
+    {
+      "path": "ios/App/App/public/assets/map-Ds4Udj8m.css",
+      "bytes": 15125,
+      "sha256": "a6d669f6fa190c53b19e26a19fb668269dd84b7b05ff1617c517dae6c660b483"
+    },
+    {
+      "path": "ios/App/App/public/assets/purify.es-Dzkdzyfv.js",
+      "bytes": 28503,
+      "sha256": "ac1a997bd0a2ac30ef742f142173798aaaa5163c9921985257f42cc90717ee52"
+    },
+    {
+      "path": "ios/App/App/public/assets/react-KPuNr9iS.js",
+      "bytes": 218747,
+      "sha256": "f016c4c895bc9bb14a28217b34a00e75d7523062173aecef91a67ef7ed2fd297"
+    },
+    {
+      "path": "ios/App/App/public/assets/rolldown-runtime-XKyaHtl9.js",
+      "bytes": 726,
+      "sha256": "548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"
+    },
+    {
+      "path": "ios/App/App/public/assets/svg2pdf.es.min-D4ii4jF2.js",
+      "bytes": 86454,
+      "sha256": "01a12ddaa046f24fb1eeb9e58ec1bb4d45868b35f6c00d716a7871783c8b4a2b"
+    },
+    {
+      "path": "ios/App/App/public/assets/synapse-I42WLusp.js",
+      "bytes": 602,
+      "sha256": "94d01ee160e96bc75b06b96cc8c3c650a24c6eb0d55b9e3f6a931aaa14fd3411"
+    },
+    {
+      "path": "ios/App/App/public/assets/web-B3KafcrC.js",
+      "bytes": 2094,
+      "sha256": "6779b8f1a7b731f4365c2a24c47a34201cfcf86f09c517760b0627315796e917"
+    },
+    {
+      "path": "ios/App/App/public/assets/web-DWrHmqzf.js",
+      "bytes": 8498,
+      "sha256": "1992512c06aa7b2f060a48a9ed2ffe3d74b791bf82f430b5f3b2ff52b0197ee3"
+    },
+    {
+      "path": "ios/App/App/public/assets/web-ThOMMhhL.js",
+      "bytes": 372,
+      "sha256": "d6bd55f1c032ca62ba5ab59afe9640117dd56daa236056b10726347876953572"
+    },
+    {
+      "path": "ios/App/App/public/brand/apple-touch-icon.png",
+      "bytes": 10099,
+      "sha256": "f5643e269578a25f952865d62e200612cae2804ebcb1d2fb87ac0ef13161d011"
+    },
+    {
+      "path": "ios/App/App/public/brand/icon-192.png",
+      "bytes": 11200,
+      "sha256": "5bee72a948f759e1a8e48e7091f5fe85fa11f2ca90c4e15fc58435932ffd8d90"
+    },
+    {
+      "path": "ios/App/App/public/brand/icon-512.png",
+      "bytes": 64098,
+      "sha256": "e98aaec99fbbf0fcc11d9006d69304853b09eac4945dab7a34fb8e5a5a53c075"
+    },
+    {
+      "path": "ios/App/App/public/brand/qa.css",
+      "bytes": 383,
+      "sha256": "35bbd89ad3376abcfc874b8e87bbf6f072d572f27b61d456542c773e916e1fc2"
+    },
+    {
+      "path": "ios/App/App/public/brand/qa.html",
+      "bytes": 558,
+      "sha256": "4fc6ef8bfa9a944758edfa8dc536ccff801360d044a446b06705711526e35823"
+    },
+    {
+      "path": "ios/App/App/public/brand/qa.js",
+      "bytes": 197,
+      "sha256": "9f81a75f2464ff943826e0a671472bad1f057fcedfd67ab671f1dc22e96ed9af"
+    },
+    {
+      "path": "ios/App/App/public/brand/wordmark.png",
+      "bytes": 173537,
+      "sha256": "eb168c8e3ce6d8400163d3673e87e077e25f9fa4c16a23d820465a30546fbc6c"
+    },
+    {
+      "path": "ios/App/App/public/cordova.js",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ios/App/App/public/cordova_plugins.js",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ios/App/App/public/index.html",
+      "bytes": 1055,
+      "sha256": "08bd47551bf804a7bffaca3a10e6b545bcc8cbb1b309abf2451f601f918cd290"
+    },
+    {
+      "path": "ios/App/App/public/manifest.webmanifest",
+      "bytes": 396,
+      "sha256": "dd4518438950c874315082ec6fb1ccdf8d1d0b90d399a48d16794662e82695cf"
+    },
+    {
+      "path": "ios/App/App/public/sw.js",
+      "bytes": 1586,
+      "sha256": "92d5e34048fe9997e0567d758e3877635eef6c1cad9748d1f22cf9a15c8af09e"
+    },
+    {
+      "path": "ios/App/App.xcodeproj/project.pbxproj",
+      "bytes": 15389,
+      "sha256": "cc9b1df21be1bf8038d4f9470270cc82f80c2131e0c20ea61b1c0cafd09e1e0d"
+    },
+    {
+      "path": "ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+      "bytes": 238,
+      "sha256": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542"
+    },
+    {
+      "path": "ios/App/CapApp-SPM/.gitignore",
+      "bytes": 165,
+      "sha256": "4b958e2b4dd57319aadef2551153c74b9cb5ffe9f89d6e3e491122a94913f016"
+    },
+    {
+      "path": "ios/App/CapApp-SPM/Package.swift",
+      "bytes": 1414,
+      "sha256": "5564f970b3c74732f0f930249d3012c34eb9458f5220f879e13990e87ca290e8"
+    },
+    {
+      "path": "ios/App/CapApp-SPM/README.md",
+      "bytes": 162,
+      "sha256": "42c535861f4a866e35f85764ed6af1ea046d6a409bf9852ecb00e5d292a1626e"
+    },
+    {
+      "path": "ios/App/CapApp-SPM/Sources/CapApp-SPM/CapApp-SPM.swift",
+      "bytes": 33,
+      "sha256": "70bf9dafddc35e3877dfb133a996f5be7ccd1e132897a98fdbf4869ff605ece9"
+    },
+    {
+      "path": "ios/capacitor-cordova-ios-plugins/CordovaPluginsResources.podspec",
+      "bytes": 379,
+      "sha256": "6ace787f88f8c8da88526ed2ecdf0b9bd659cdb64f56bd5e73a684e0d26b7e06"
+    },
+    {
+      "path": "ios/capacitor-cordova-ios-plugins/resources/.gitkeep",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "ios/capacitor-cordova-ios-plugins/sources/.gitkeep",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "ios/debug.xcconfig",
+      "bytes": 23,
+      "sha256": "4838938a72b913b99cfda54a43bbe73f05893071dc6e3702b0adc44794b64272"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 132771,
+      "sha256": "9faf5063490ecc00c359197ce6799e0eb40ae2b565f5d8d8a2cc7d8edc646513"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1373,
+      "sha256": "1aef62ffb804986761250faca26c23e84a7e8e9af0f0741fad893554bd344364"
+    },
+    {
+      "path": "playwright.config.ts",
+      "bytes": 632,
+      "sha256": "e9d8d229b51e6341941e0a8ccea651618df274da92868c555c66c64377f130ed"
+    },
+    {
+      "path": "public/brand/apple-touch-icon.png",
+      "bytes": 10099,
+      "sha256": "f5643e269578a25f952865d62e200612cae2804ebcb1d2fb87ac0ef13161d011"
+    },
+    {
+      "path": "public/brand/icon-192.png",
+      "bytes": 11200,
+      "sha256": "5bee72a948f759e1a8e48e7091f5fe85fa11f2ca90c4e15fc58435932ffd8d90"
+    },
+    {
+      "path": "public/brand/icon-512.png",
+      "bytes": 64098,
+      "sha256": "e98aaec99fbbf0fcc11d9006d69304853b09eac4945dab7a34fb8e5a5a53c075"
+    },
+    {
+      "path": "public/brand/qa.css",
+      "bytes": 383,
+      "sha256": "35bbd89ad3376abcfc874b8e87bbf6f072d572f27b61d456542c773e916e1fc2"
+    },
+    {
+      "path": "public/brand/qa.html",
+      "bytes": 558,
+      "sha256": "4fc6ef8bfa9a944758edfa8dc536ccff801360d044a446b06705711526e35823"
+    },
+    {
+      "path": "public/brand/qa.js",
+      "bytes": 197,
+      "sha256": "9f81a75f2464ff943826e0a671472bad1f057fcedfd67ab671f1dc22e96ed9af"
+    },
+    {
+      "path": "public/brand/wordmark.png",
+      "bytes": 173537,
+      "sha256": "eb168c8e3ce6d8400163d3673e87e077e25f9fa4c16a23d820465a30546fbc6c"
+    },
+    {
+      "path": "public/manifest.webmanifest",
+      "bytes": 396,
+      "sha256": "dd4518438950c874315082ec6fb1ccdf8d1d0b90d399a48d16794662e82695cf"
+    },
+    {
+      "path": "scripts/archive-ios.sh",
+      "bytes": 1543,
+      "sha256": "ae0bd822d87042e858b0ab5cd9189d61075fc818bf3819bb3e7dfd95998bcff8"
+    },
+    {
+      "path": "scripts/check-cloud.py",
+      "bytes": 2334,
+      "sha256": "68d88a5ed821b16f6a3e64727323f1121d953f47fd8e7942716f4d6fb680a050"
+    },
+    {
+      "path": "scripts/check-live.py",
+      "bytes": 1427,
+      "sha256": "94a231e6a520ec412da6d1d3d6755e0bcad558bb0b2d1bc46a4fc7b19ce6c995"
+    },
+    {
+      "path": "scripts/service-worker.mjs",
+      "bytes": 1516,
+      "sha256": "739f556b01a024fae16fb57bc1cdb729e9e6e76ce2d47bc1512af8f7a91c4f0b"
+    },
+    {
+      "path": "server/assistant.mjs",
+      "bytes": 4297,
+      "sha256": "a4ee395883c4af1fd38952c504d25db5e3bba02b0d92c6f5b176ca48cd1623c3"
+    },
+    {
+      "path": "server/cloud.mjs",
+      "bytes": 4580,
+      "sha256": "5660410e2a77704fbb5646aaef7cb80ff5b462f3dd7fcbc1c88604ee00284050"
+    },
+    {
+      "path": "server/dev.mjs",
+      "bytes": 823,
+      "sha256": "3015e53c1cd8e58fccc58f8b46091e366f7bb212afbf839d2426c1ae60414492"
+    },
+    {
+      "path": "server/handlers.mjs",
+      "bytes": 4433,
+      "sha256": "a469e9f340e8de77b2baf2f46578af956ef8466be2540232bb29ac939454530d"
+    },
+    {
+      "path": "server/upstream.mjs",
+      "bytes": 27047,
+      "sha256": "04773a974087910ec6c7b56e45cca86824b2ff80204ce5168ebb13749d852c4a"
+    },
+    {
+      "path": "src/App.tsx",
+      "bytes": 124937,
+      "sha256": "03c4cba35a73f13aa87f04f1f8ec9f1b1fca2fdebb24fe050820f95a618cba08"
+    },
+    {
+      "path": "src/components/MapCanvas.tsx",
+      "bytes": 18765,
+      "sha256": "81dae3072349718543446ca02f9e7c293c11dea0145f1acfdfdd2f160f4408a1"
+    },
+    {
+      "path": "src/components/PlanPreview.tsx",
+      "bytes": 570,
+      "sha256": "82f61086f68fd56ca4ba7fe110e5824b6108389da48dd9811520e42dd7d91872"
+    },
+    {
+      "path": "src/components/UI.tsx",
+      "bytes": 2804,
+      "sha256": "48cb10ab4dadf8cbcf3298a2900d5b40537d5ad416031b60a43c3247ab312b83"
+    },
+    {
+      "path": "src/core/assets.mjs",
+      "bytes": 13473,
+      "sha256": "d1dcdd7698ca46457d58f70611b1783ab4dd438d26bd84715a5bf2a361230c8e"
+    },
+    {
+      "path": "src/core/commands.mjs",
+      "bytes": 6966,
+      "sha256": "1a50b77882d8dc5aa80bbb8c6ebcdc85fd0480e398aca6de65c866715c8fd334"
+    },
+    {
+      "path": "src/core/demo.mjs",
+      "bytes": 3625,
+      "sha256": "cf59a11dcfa506468db6b73c6814e643deef132524b96e993bad5f84e87f0414"
+    },
+    {
+      "path": "src/core/documents.mjs",
+      "bytes": 21099,
+      "sha256": "26e98dd71c1004aa306ce1983aa3193419e9607c45b89028b934414d4061cdd6"
+    },
+    {
+      "path": "src/core/geometry-source.cjs",
+      "bytes": 21912,
+      "sha256": "055efcd47ba3d09287370e9d91551d7d5f1d399e300abbbc4a7cfbd20ed93aa7"
+    },
+    {
+      "path": "src/core/geometry.mjs",
+      "bytes": 21854,
+      "sha256": "b3064f7220d7cb5c29cb812f8895cea98100eff4ddc7cc39231632f1c8c4af60"
+    },
+    {
+      "path": "src/core/imports.mjs",
+      "bytes": 5876,
+      "sha256": "443fff43de014a5cd496c533fec169a0820e6b971b2fe62f6ed664b808acb25b"
+    },
+    {
+      "path": "src/core/model.mjs",
+      "bytes": 14207,
+      "sha256": "4834fa9c1c0e88765f7f45cfc0635e60956f18275bd28e56947379d27c95397d"
+    },
+    {
+      "path": "src/core/network.mjs",
+      "bytes": 1838,
+      "sha256": "9120b6ca33369593458761815b2e19e6516c7aad070f495f4ecf6c5b28ccc72f"
+    },
+    {
+      "path": "src/core/polygon-clipping.cjs",
+      "bytes": 29053,
+      "sha256": "1bd1335a65dac024dcba9843c60160b3b53faa46967b1b3ae2a4d5ef0ff04fce"
+    },
+    {
+      "path": "src/core/storage.ts",
+      "bytes": 958,
+      "sha256": "ee4728282f22a338ae348d3f86d48ecacd43cff97f674328ce017efbb65dd201"
+    },
+    {
+      "path": "src/main.tsx",
+      "bytes": 466,
+      "sha256": "609c99d2f19f5080836732990350065c121ba7fd343bc46ddbfd6590ececd0d7"
+    },
+    {
+      "path": "src/styles.css",
+      "bytes": 60041,
+      "sha256": "5d28906f0818e3feae380a6303fb1efdeef64cd9b73ea13397f82028d7df7fc7"
+    },
+    {
+      "path": "src/types.ts",
+      "bytes": 1547,
+      "sha256": "2e2437da13263d225eccc348494d6c096d1fd87d60ae226e6306395b789a95d8"
+    },
+    {
+      "path": "tests/browser/workspace.spec.ts",
+      "bytes": 3930,
+      "sha256": "9684fdeda5c9c724417440039be393d88495b57169c07025eda960ef0a73bee4"
+    },
+    {
+      "path": "tests/core.test.mjs",
+      "bytes": 8086,
+      "sha256": "6d5775e438100388a02265a1c596185924ac093ee33c31ae1af3b7c2ad10223a"
+    },
+    {
+      "path": "tests/legacy-geometry.test.mjs",
+      "bytes": 3445,
+      "sha256": "da4a234010b4cb8b2e6137e3d2614b1a4ea0746939272dd1d3cec10e2b673f72"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 565,
+      "sha256": "4964c42bf0b5ff3f4b5ee748aa1182995c3ee387640a54b1e5e523aa023b688f"
+    },
+    {
+      "path": "vercel.json",
+      "bytes": 1489,
+      "sha256": "c63700929d7235ac26e0a03f19e2c941149113316f66a2714ba45818a9941c53"
+    },
+    {
+      "path": "vite.config.ts",
+      "bytes": 565,
+      "sha256": "0a0fb4b56a6e087f0627b0821dc1f116284f447f40eb7ef2e6802e5717fbb4d1"
+    }
+  ],
+  "documentationUpdated": "2026-11-16: corrected domain delegation diagnosis; recorded resumed access blockers"
+}
