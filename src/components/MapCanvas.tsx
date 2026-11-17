@@ -552,7 +552,7 @@ export function MapCanvas(props: Props) {
       className={`map-canvas ${props.basemap === "cad" ? "cad-background" : ""}`}
       ref={el}
       role="application"
-      aria-label="Interactive site plan. Choose a drawing tool, then tap the map. Use Add centre point for precise placement."
+      aria-label="Interactive site plan. Choose a drawing tool from the left sidebar, then tap the map to place points. Use the working area button to adjust your site boundary."
     />
   );
 }

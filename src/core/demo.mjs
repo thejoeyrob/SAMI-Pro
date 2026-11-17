@@ -20,7 +20,7 @@ export function demoProject() {
     rect = (x, y, w, h, props) =>
       feature(props.type || "area", G.rectangle(pt(x, y), w, h), props);
   p.area = [...pt(-100, -72), ...pt(100, 72)];
-  p.view = { center: p.origin, zoom: 18, basemap: "cad" };
+  p.view = { center: p.origin, zoom: 18, basemap: "satellite" };
   p.planBase = [
     rect(-36, 28, 66, 40, {
       type: "building",

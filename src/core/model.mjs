@@ -31,7 +31,7 @@ export function newProject(name = "Untitled site", origin = [-2.127, 52.586]) {
       revision: "P01",
       notes: "",
     },
-    view: { center: origin, zoom: 18, basemap: "cad" },
+    view: { center: origin, zoom: 18, basemap: "satellite" },
     library: [],
   };
 }
@@ -276,7 +276,7 @@ export function migrateProject(raw) {
     )
       delete out.meta.logo;
     if (!G.validCoord(out.view?.center))
-      out.view = { center: out.origin, zoom: 18, basemap: "cad" };
+      out.view = { center: out.origin, zoom: 18, basemap: "satellite" };
     return out;
   }
   if (
@@ -304,7 +304,7 @@ export function migrateProject(raw) {
   n.origin = n.area
     ? [(n.area[0] + n.area[2]) / 2, (n.area[1] + n.area[3]) / 2]
     : centerOf(n.features);
-  n.view = { center: n.origin, zoom: 18, basemap: "cad" };
+  n.view = { center: n.origin, zoom: 18, basemap: "satellite" };
   n.meta = {
     ...n.meta,
     client: p.client || "",

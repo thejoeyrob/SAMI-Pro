@@ -153,7 +153,7 @@ const TOOL_LABELS: Record<string, string> = {
   "edit-points": "Edit points",
 };
 const DRAW_TOOLS: any[] = [
-  ["boundary", "Site boundary", SquareDashed, "Define the drawing extent"],
+  ["boundary", "Working area", SquareDashed, "Draw a rectangle to set the site boundary"],
   ["stone", "Stone area", Grid2X2, "Tap around an area"],
   ["stone-road", "Stone road", Route, "Draw a road with a width"],
   ["area", "Compound", Box, "Draw any enclosed area"],
@@ -2898,16 +2898,16 @@ export function App() {
                 <div className="boundary-prompt">
                   <SquareDashed size={27} />
                   <div>
-                    <strong>Start with your site.</strong>
+                    <strong>Define your working area.</strong>
                     <p>
-                      Find the location, then mark the area you want to plan.
+                      Locate the site, then draw a rectangle around the area you want to plan. You can adjust it anytime.
                     </p>
                   </div>
                   <button
                     className="primary"
                     onClick={() => startTool("boundary")}
                   >
-                    Define boundary
+                    Set working area
                   </button>
                 </div>
               )}
@@ -2996,12 +2996,14 @@ export function App() {
                                   : `${points.length} points · tap to add${points.length >= 2 ? " · Finish when ready" : ""}`}
                         </span>
                       </div>
-                      <button
-                        className="secondary small"
-                        onClick={() => mapApi.current?.addCenter()}
-                      >
-                        Add centre point
-                      </button>
+                      {tool !== "boundary" && (
+                        <button
+                          className="secondary small"
+                          onClick={() => mapApi.current?.addCenter()}
+                        >
+                          Add here
+                        </button>
+                      )}
                       {points.length >= 2 &&
                         !["boundary", "measure", "box"].includes(tool) && (
                           <button
