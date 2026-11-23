@@ -34,7 +34,17 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           SAMI_BUILD_NUMBER: ${{ github.run_number }}
-        run: bash scripts/archive-ios.sh
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY: ${{ secrets.ASC_KEY }}
+        run: |
+          # Write ASC API key to file
+          if [ -n "$ASC_KEY" ]; then
+            mkdir -p ~/.appstoreconnect/keys
+            echo "$ASC_KEY" > ~/.appstoreconnect/keys/AuthKey_${ASC_KEY_ID}.p8
+            export ASC_KEY_PATH=~/.appstoreconnect/keys/AuthKey_${ASC_KEY_ID}.p8
+          fi
+          bash scripts/archive-ios.sh
 
       - name: Submit to TestFlight
         env:
