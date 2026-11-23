@@ -46,8 +46,18 @@ jobs:
             echo "ERROR: No .ipa file found!"
             exit 1
           fi
-          echo "Submitting: $IPA_FILE"
-          xcrun altool --upload-app --file "$IPA_FILE" --type ios --username "$APPLE_ID" --password "$APP_PASSWORD"
+          echo "Found IPA: $IPA_FILE"
+          echo "Submitting to App Store Connect..."
+
+          # Use xcrun to submit via App Store Connect
+          xcrun altool --upload-app \
+            --file "$IPA_FILE" \
+            --type ios \
+            --username "$APPLE_ID" \
+            --password "$APP_PASSWORD" \
+            --show-progress
+
+          echo "✅ Binary submitted to TestFlight!"
 
       - name: Upload IPA artifact
         if: always()
