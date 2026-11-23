@@ -13,11 +13,11 @@ if [[ -n "${ASC_KEY_PATH:-}" ]]; then
   : "${ASC_ISSUER_ID:?Set the App Store Connect issuer ID}"
   args=(-authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
 fi
-xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath build/SAMI-Elite.xcarchive DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="$SAMI_BUILD_NUMBER" CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates "${args[@]}" archive
+xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath build/SAMI-Elite.xcarchive DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="$SAMI_BUILD_NUMBER" CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates ${args[@]+"${args[@]}"} archive
 python3 - <<'PY'
 import plistlib,os
 options={'method':'app-store-connect','teamID':os.environ['APPLE_TEAM_ID'],'signingStyle':'automatic','uploadSymbols':True,'manageAppVersionAndBuildNumber':False,'destination':'export'}
 with open('build/ExportOptions.plist','wb') as f:plistlib.dump(options,f)
 PY
-xcodebuild -exportArchive -archivePath build/SAMI-Elite.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist -allowProvisioningUpdates "${args[@]}"
+xcodebuild -exportArchive -archivePath build/SAMI-Elite.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist -allowProvisioningUpdates ${args[@]+"${args[@]}"}
 echo 'Signed IPA exported in build/export. Upload using Xcode Organizer or Transporter.'
