@@ -237,7 +237,8 @@ export function App() {
     [speechListening, setSpeechListening] = useState(false),
     [showConfirmBoundaryModal, setShowConfirmBoundaryModal] = useState(false),
     [boundaryMetricsForConfirm, setBoundaryMetricsForConfirm] = useState<{ hectares: number; perimeter: number } | null>(null),
-    [pendingBoundary, setPendingBoundary] = useState<Bounds | null>(null);
+    [pendingBoundary, setPendingBoundary] = useState<Bounds | null>(null),
+    [showRedefineConfirm, setShowRedefineConfirm] = useState(false);
   const mapApi = useRef<MapAPI | null>(null),
     projectRef = useRef<Project | null>(null),
     history = useRef<{ past: Project[]; future: Project[] }>({
@@ -523,9 +524,10 @@ export function App() {
       setDataStatuses({});
       setShowConfirmBoundaryModal(false);
       setBoundaryMetricsForConfirm(null);
+      setPendingBoundary(null);
       setTimeout(() => loadData("cad"), 0);
       notify(
-        "Site boundary confirmed. CAD is ready; load map detail when you need it.",
+        "Site area confirmed. CAD is loading...",
       );
     } catch (e) {
       notify((e as Error).message);
@@ -559,8 +561,10 @@ export function App() {
   const cancelBoundaryConfirmation = () => {
     setShowConfirmBoundaryModal(false);
     setBoundaryMetricsForConfirm(null);
+    setPendingBoundary(null);
     setPoints([]);
-    setTool("select");
+    setTool("boundary");
+    notify("Boundary not confirmed. Redraw or redefine.");
   };
   const finishDrawing = (pts = points) => {
     if (!project) return;
@@ -3805,28 +3809,41 @@ export function App() {
         showModal={showConfirmBoundaryModal}
         metrics={boundaryMetricsForConfirm}
         onConfirm={() => {
-          setShowConfirmBoundaryModal(false);
           if (pendingBoundary) {
             finalizeBoundary(pendingBoundary);
-            setPendingBoundary(null);
-            setBoundaryMetricsForConfirm(null);
           }
         }}
         onRedefine={() => {
-          setShowConfirmBoundaryModal(false);
-          setBoundaryMetricsForConfirm(null);
-          setPendingBoundary(null);
-          // Reset to boundary drawing mode
-          setTool("boundary");
-          setPoints([]);
-          notify("Redefining site boundary. Click to redraw.");
+          setShowRedefineConfirm(true);
         }}
-        onCancel={() => {
-          setShowConfirmBoundaryModal(false);
-          setBoundaryMetricsForConfirm(null);
-          setPendingBoundary(null);
-        }}
+        onCancel={cancelBoundaryConfirmation}
       />
+      {showRedefineConfirm && (
+        <Modal
+          onClose={() => setShowRedefineConfirm(false)}
+          heading="Clear Site Boundary"
+          buttons={[
+            {
+              label: "Cancel",
+              variant: "secondary",
+              onClick: () => setShowRedefineConfirm(false),
+            },
+            {
+              label: "Clear",
+              variant: "danger",
+              onClick: () => {
+                setShowRedefineConfirm(false);
+                redefineBoundary();
+              },
+            },
+          ]}
+        >
+          <p>
+            This will clear the site boundary and all associated work (services,
+            snapshots, etc.). Continue?
+          </p>
+        </Modal>
+      )}
     </>
   );
 }

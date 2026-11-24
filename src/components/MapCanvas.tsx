@@ -82,6 +82,17 @@ export function MapCanvas(props: Props) {
         if (!p.multi) p.onClear();
         return;
       }
+
+      // Check boundary protection
+      if (p.project.areaLocked && p.project.area) {
+        const area = p.project.area;
+        // Check if point is within the confirmed boundary
+        if (c[0] < area[0] || c[0] > area[2] || c[1] < area[1] || c[1] > area[3]) {
+          p.onMapError("Stay within the confirmed site area.");
+          return;
+        }
+      }
+
       let point = c;
       if (p.snap) {
         let nearest: Coord | null = null,
