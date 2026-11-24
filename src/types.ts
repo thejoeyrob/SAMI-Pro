@@ -24,6 +24,9 @@ export type Project = {
   revision: number;
   origin: Coord;
   area: Bounds | null;
+  areaConfirmed: boolean;
+  areaLocked: boolean;
+  areaMetrics: { hectares: number; perimeter: number; centroidLat: number; centroidLng: number } | null;
   features: Feature[];
   planBase: Feature[];
   snapshots: Record<

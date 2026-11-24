@@ -233,7 +233,9 @@ export function App() {
     [nudge, setNudge] = useState(1),
     [focus, setFocus] = useState(false),
     [imagePending, setImagePending] = useState<string | null>(null),
-    [speechListening, setSpeechListening] = useState(false);
+    [speechListening, setSpeechListening] = useState(false),
+    [showConfirmBoundaryModal, setShowConfirmBoundaryModal] = useState(false),
+    [boundaryMetricsForConfirm, setBoundaryMetricsForConfirm] = useState<{ hectares: number; perimeter: number } | null>(null);
   const mapApi = useRef<MapAPI | null>(null),
     projectRef = useRef<Project | null>(null),
     history = useRef<{ past: Project[]; future: Project[] }>({
@@ -461,6 +463,102 @@ export function App() {
     commit((p) => ({ ...p, features: groupFeatures(p.features, selected) }));
   const ungroup = () =>
     commit((p) => ({ ...p, features: ungroupFeatures(p.features, selected) }));
+  const confirmBoundary = (bounds: Bounds) => {
+    if (!project) return;
+    try {
+      // Calculate area metrics for confirmation modal
+      const width = bounds[2] - bounds[0];
+      const height = bounds[3] - bounds[1];
+      const areaSquareMetres = width * height;
+      const areaHectares = areaSquareMetres / 10000;
+      const perimeter = 2 * (width + height);
+      const centroidLat = (bounds[1] + bounds[3]) / 2;
+      const centroidLng = (bounds[0] + bounds[2]) / 2;
+
+      setBoundaryMetricsForConfirm({
+        hectares: parseFloat(areaHectares.toFixed(2)),
+        perimeter: parseFloat(perimeter.toFixed(2)),
+      });
+      setShowConfirmBoundaryModal(true);
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  };
+  const finalizeBoundary = (bounds: Bounds) => {
+    if (!project) return;
+    try {
+      // Calculate area metrics
+      const width = bounds[2] - bounds[0];
+      const height = bounds[3] - bounds[1];
+      const areaSquareMetres = width * height;
+      const areaHectares = areaSquareMetres / 10000;
+      const perimeter = 2 * (width + height);
+      const centroidLat = (bounds[1] + bounds[3]) / 2;
+      const centroidLng = (bounds[0] + bounds[2]) / 2;
+
+      // Abort any pending requests and increment epoch
+      for (const r of Object.values(requests.current)) r.abort();
+      epoch.current++;
+
+      // Commit the boundary with metrics and locked state
+      commit((p) => ({
+        ...p,
+        area: bounds,
+        areaConfirmed: true,
+        areaLocked: true,
+        areaMetrics: {
+          hectares: parseFloat(areaHectares.toFixed(2)),
+          perimeter: parseFloat(perimeter.toFixed(2)),
+          centroidLat,
+          centroidLng,
+        },
+        origin: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
+        planBase: [],
+        snapshots: {},
+      }));
+
+      setDataStatuses({});
+      setShowConfirmBoundaryModal(false);
+      setBoundaryMetricsForConfirm(null);
+      setTimeout(() => loadData("cad"), 0);
+      notify(
+        "Site boundary confirmed. CAD is ready; load map detail when you need it.",
+      );
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  };
+  const redefineBoundary = () => {
+    if (!project) return;
+    try {
+      // Clear the boundary and metrics
+      commit((p) => ({
+        ...p,
+        area: null,
+        areaConfirmed: false,
+        areaLocked: false,
+        areaMetrics: null,
+        origin: p.origin,
+        planBase: [],
+        snapshots: {},
+      }));
+
+      setDataStatuses({});
+      setShowConfirmBoundaryModal(false);
+      setBoundaryMetricsForConfirm(null);
+      setPoints([]);
+      setTool("boundary");
+      notify("Boundary cleared. Draw a new boundary to continue.");
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  };
+  const cancelBoundaryConfirmation = () => {
+    setShowConfirmBoundaryModal(false);
+    setBoundaryMetricsForConfirm(null);
+    setPoints([]);
+    setTool("select");
+  };
   const finishDrawing = (pts = points) => {
     if (!project) return;
     try {
@@ -486,20 +584,7 @@ export function App() {
               .map((f) => f.id),
           );
         else {
-          for (const r of Object.values(requests.current)) r.abort();
-          epoch.current++;
-          commit((p) => ({
-            ...p,
-            area: b,
-            origin: [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2],
-            planBase: [],
-            snapshots: {},
-          }));
-          setDataStatuses({});
-          setTimeout(() => loadData("cad"), 0);
-          notify(
-            "Site boundary set. CAD is ready; load map detail when you need it.",
-          );
+          confirmBoundary(b);
         }
       } else if (tool === "trakway") {
         const result = trakwayRun(pts, { ...PRODUCTS[product], lanes });
