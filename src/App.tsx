@@ -89,6 +89,7 @@ import type {
 import { PlanPreview } from "./components/PlanPreview";
 import { MapCanvas, type MapAPI } from "./components/MapCanvas";
 import { IconButton, Field, Status, Modal, Busy } from "./components/UI";
+import { ConfirmBoundaryModal } from "./components/ConfirmBoundaryModal";
 import G from "./core/geometry.mjs";
 import {
   newProject,
@@ -235,7 +236,8 @@ export function App() {
     [imagePending, setImagePending] = useState<string | null>(null),
     [speechListening, setSpeechListening] = useState(false),
     [showConfirmBoundaryModal, setShowConfirmBoundaryModal] = useState(false),
-    [boundaryMetricsForConfirm, setBoundaryMetricsForConfirm] = useState<{ hectares: number; perimeter: number } | null>(null);
+    [boundaryMetricsForConfirm, setBoundaryMetricsForConfirm] = useState<{ hectares: number; perimeter: number } | null>(null),
+    [pendingBoundary, setPendingBoundary] = useState<Bounds | null>(null);
   const mapApi = useRef<MapAPI | null>(null),
     projectRef = useRef<Project | null>(null),
     history = useRef<{ past: Project[]; future: Project[] }>({
@@ -475,6 +477,7 @@ export function App() {
       const centroidLat = (bounds[1] + bounds[3]) / 2;
       const centroidLng = (bounds[0] + bounds[2]) / 2;
 
+      setPendingBoundary(bounds);
       setBoundaryMetricsForConfirm({
         hectares: parseFloat(areaHectares.toFixed(2)),
         perimeter: parseFloat(perimeter.toFixed(2)),
@@ -2452,6 +2455,28 @@ export function App() {
         >
           <Pencil size={15} /> Project details
         </button>
+        {project?.areaConfirmed && (
+          <button
+            className="secondary full danger-action"
+            onClick={() => {
+              if (
+                confirm(
+                  "This will clear all existing work and reset the site boundary. Continue?",
+                )
+              ) {
+                setProject({
+                  ...project,
+                  area: null,
+                  areaConfirmed: false,
+                });
+                setTool("boundary");
+                notify("Redefining site boundary. Click to redraw.");
+              }
+            }}
+          >
+            <Unlock size={15} /> Clear site boundary
+          </button>
+        )}
         <div className="overview-tip">
           <Sparkles size={19} />
           <h3>A simpler way to plan.</h3>
@@ -2975,6 +3000,12 @@ export function App() {
                   label="Use my location"
                   onClick={locate}
                 />
+                {project?.areaConfirmed && (
+                  <div className="lock-badge" title="Site boundary confirmed">
+                    <Lock size={14} />
+                    <span>Locked</span>
+                  </div>
+                )}
               </div>
               <div className="north-indicator">
                 N<Navigation size={17} />
@@ -3770,6 +3801,32 @@ export function App() {
           </div>
         </Modal>
       )}
+      <ConfirmBoundaryModal
+        showModal={showConfirmBoundaryModal}
+        metrics={boundaryMetricsForConfirm}
+        onConfirm={() => {
+          setShowConfirmBoundaryModal(false);
+          if (pendingBoundary) {
+            finalizeBoundary(pendingBoundary);
+            setPendingBoundary(null);
+            setBoundaryMetricsForConfirm(null);
+          }
+        }}
+        onRedefine={() => {
+          setShowConfirmBoundaryModal(false);
+          setBoundaryMetricsForConfirm(null);
+          setPendingBoundary(null);
+          // Reset to boundary drawing mode
+          setTool("boundary");
+          setPoints([]);
+          notify("Redefining site boundary. Click to redraw.");
+        }}
+        onCancel={() => {
+          setShowConfirmBoundaryModal(false);
+          setBoundaryMetricsForConfirm(null);
+          setPendingBoundary(null);
+        }}
+      />
     </>
   );
 }
