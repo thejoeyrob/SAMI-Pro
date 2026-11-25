@@ -1,6 +1,13 @@
 // SAMI Elite 3.0.0 - Local/Offline Services
 // All services run locally without backend dependencies
 
+import {
+  getLocalCAD,
+  getLocalConstraints,
+  getLocalServices,
+  OFFLINE_DATA,
+} from "./offline-data.mjs";
+
 export class LocalServiceError extends Error {
   constructor(message, status = 502) {
     super(message);
@@ -43,28 +50,14 @@ export async function localWords(body) {
   };
 }
 
-// Local CAD - returns empty (user loads via import or manual drawing)
+// Local CAD - returns offline data or empty with import instructions
 export async function localMapData(kind, bounds) {
-  // Returns minimal CAD data - user draws manually or imports survey data
-  return {
-    state: "empty",
-    message: "Local mode: Import survey/CAD data or draw manually",
-    features: [],
-    cached: false,
-    source: "Local (offline)",
-    bounds,
-  };
+  return getLocalCAD(bounds);
 }
 
-// Local constraints - returns empty
+// Local constraints - returns reference data with import instructions
 export async function localConstraints(bounds) {
-  return {
-    state: "empty",
-    message: "Local mode: Import constraint data as needed",
-    features: [],
-    source: "Local (offline)",
-    bounds,
-  };
+  return getLocalConstraints(bounds);
 }
 
 // Local routing - returns unavailable message
@@ -102,8 +95,9 @@ export async function handleLocalService(action, body) {
       return await localWords(body);
     case "cad":
     case "ohl":
-    case "services":
       return await localMapData(action, body.bounds);
+    case "services":
+      return getLocalServices(body.bounds);
     case "constraints":
       return await localConstraints(body.bounds);
     case "route":
