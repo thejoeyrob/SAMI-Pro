@@ -180,7 +180,7 @@ export function App() {
     [tool, setTool] = useState<Tool>("select"),
     [points, setPoints] = useState<Coord[]>([]),
     [tab, setTab] = useState("build"),
-    [buildTab, setBuildTab] = useState("assets"),
+    [buildTab, setBuildTab] = useState("draw"),
     [sidebar, setSidebar] = useState(true),
     [librarySearch, setLibrarySearch] = useState(""),
     [category, setCategory] = useState("All"),
