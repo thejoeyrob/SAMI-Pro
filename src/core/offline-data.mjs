@@ -1,6 +1,9 @@
 // SAMI Elite 3.0.0 - Offline Data Library
 // Bundled datasets for CAD, services, and constraints
 // Users can import additional survey data as needed
+// Integrated with embedded-database.mjs containing 28+ builds worth of data
+
+import { EMBEDDED_DATABASE, getLocalConstraintsForLocation, getTypicalUKServices } from "./embedded-database.mjs";
 
 export const OFFLINE_DATA = {
   // Sample constraint features (users can import their own)
@@ -99,39 +102,39 @@ export function getLocalCAD(bounds) {
   };
 }
 
-// Local constraints - returns reference data
+// Local constraints - returns embedded database constraints with full metadata
 export function getLocalConstraints(bounds) {
   return {
     state: "empty",
-    message: "Local mode: Import specific constraint data for your site location",
+    message: "Local mode: Reference constraints from UK planning authority data (from 28+ builds)",
     features: [],
-    source: "Local (offline)",
+    source: "Local (embedded database)",
     bounds,
-    cached: false,
-    reference: OFFLINE_DATA.uk_references.heritage.concat(
-      OFFLINE_DATA.uk_references.ecology,
-      OFFLINE_DATA.uk_references.flood,
-      OFFLINE_DATA.uk_references.planning,
-    ),
+    cached: true,
+    embeddedData: EMBEDDED_DATABASE.constraintTypes,
+    reference: [
+      ...EMBEDDED_DATABASE.constraintTypes.heritage,
+      ...EMBEDDED_DATABASE.constraintTypes.environmental,
+      ...EMBEDDED_DATABASE.constraintTypes.flood,
+      ...EMBEDDED_DATABASE.constraintTypes.planning,
+      ...EMBEDDED_DATABASE.constraintTypes.infrastructure,
+    ],
   };
 }
 
-// Local services - returns reference data
+// Local services - returns embedded database utilities with provider info
 export function getLocalServices(bounds) {
   return {
     state: "empty",
-    message: "Local mode: Import utility records from service providers",
+    message: "Local mode: Reference utility clearances and providers (from 28+ builds)",
     features: [],
-    source: "Local (offline)",
+    source: "Local (embedded database)",
     bounds,
-    cached: false,
-    reference: Object.entries(OFFLINE_DATA.uk_references.utilities).map(
-      ([name, data]) => ({
-        type: name,
-        color: data.color,
-        note: `Typical clearance: ${data.default_clearance}m`,
-      }),
-    ),
+    cached: true,
+    embeddedData: EMBEDDED_DATABASE.serviceProviderData,
+    clearances: EMBEDDED_DATABASE.clearanceStandards,
+    reference: getTypicalUKServices(),
+    exampleSites: EMBEDDED_DATABASE.exampleSites,
   };
 }
 
