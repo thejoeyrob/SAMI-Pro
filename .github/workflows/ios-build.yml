@@ -37,6 +37,16 @@ jobs:
           echo "--- what3words (convert-to-coordinates)"
           curl -s -w '\nHTTP %{http_code}\n' -H "$ORIGIN" -H 'Content-Type: application/json' \
             -d '{"query":"///filled.count.soap"}' "$BASE/api/search" | head -c 600; echo
+          for t in \
+            'search|{"query":"SW1A 1AA"}' \
+            'route|{"from":[-0.1419,51.5014],"to":[-0.1276,51.5072],"vehicle":{"height":4,"width":2.55,"length":16.5,"weight":44}}' \
+            'ohl|{"bounds":[-1.4720,52.9170,-1.4680,52.9190]}' \
+            'constraints|{"bounds":[-1.4720,52.9170,-1.4680,52.9190]}' \
+            'assistant|{"message":"Create a 15 by 15 m pad in Lion panels","context":{}}'; do
+            a=${t%%|*}; b=${t#*|}
+            echo "--- $a"
+            curl -s -m 30 -w '\nHTTP %{http_code} in %{time_total}s\n' -H "$ORIGIN" -H 'Content-Type: application/json' -d "$b" "$BASE/api/$a" | head -c 500; echo
+          done
           echo "--- OSM street tile with no referer (as the iOS app requests it)"
           curl -s -o /dev/null -w 'HTTP %{http_code}\n' -A 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148' https://tile.openstreetmap.org/16/32745/21789.png
           if [ "$code" != "200" ] || ! grep -q '"version"' health.json; then
