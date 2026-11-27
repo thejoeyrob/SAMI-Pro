@@ -126,7 +126,7 @@ import {
   getSetting,
   setSetting,
 } from "./core/storage";
-import { request, apiBase } from "./core/network.mjs";
+import { request, publicBase } from "./core/network.mjs";
 import { demoProject } from "./core/demo.mjs";
 import {
   localCommand,
@@ -1024,10 +1024,7 @@ export function App() {
   }, []);
   const shareCloud = async () => {
     if (!cloudInfo) return;
-    const base =
-        window.location.protocol === "capacitor:"
-          ? "https://sami.site"
-          : window.location.origin,
+    const base = publicBase(),
       url = base + "/#project=" + cloudInfo.key;
     try {
       if (navigator.share) await navigator.share({ title: project?.name, url });
